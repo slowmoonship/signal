@@ -1,0 +1,25 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+
+# 数据层：SQLite 事实源不入库，导出的 JSON 入库（见 docs/PLAN.md §3.3）
+**/data/*.db
+**/data/*.db-wal
+**/data/*.db-shm
+
+# 编辑器与系统
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# 环境变量：绝不入库（ADR-002 的付费 key 会放这里）
+.env
+.env.*
+!.env.example
+
+# 日志与临时文件
+*.log
+*.tmp

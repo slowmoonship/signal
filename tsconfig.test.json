@@ -1,0 +1,20 @@
+{
+  "// ": "测试与配置文件单独做类型检查：它们不属于任何 package 的 build 产物",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "declaration": false,
+    "declarationMap": false,
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@slowmoonship/metrics": ["./packages/metrics/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/test/**/*.ts",
+    "vitest.config.ts",
+    "eslint.config.js"
+  ]
+}

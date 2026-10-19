@@ -1,0 +1,5 @@
+{
+  "// ": "solution-style：只声明引用，自身不产出文件",
+  "files": [],
+  "references": [{ "path": "./packages/metrics" }, { "path": "./packages/ingest" }]
+}

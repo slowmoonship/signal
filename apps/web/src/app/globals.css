@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+/*
+ * Phase 0 只放最少的 token，真正的视觉规范在 Phase 3 落地 docs/DESIGN.md。
+ * 约束（CLAUDE.md §视觉红线）：只用灰阶，不用阴影 / 胶囊圆角 / 彩色按钮 / 渐变。
+ */
+
+@theme {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  background-color: #ffffff;
+  color: #18181b;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #09090b;
+    color: #e4e4e7;
+  }
+}

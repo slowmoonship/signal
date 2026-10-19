@@ -1,0 +1,35 @@
+{
+  "name": "signal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace @slowmoonship/web",
+    "build": "npm run build --workspaces --if-present",
+    "db:init": "npm run db:init --workspace @slowmoonship/ingest",
+    "db:reset": "npm run db:reset --workspace @slowmoonship/ingest",
+    "ingest:btc": "npm run ingest:btc --workspace @slowmoonship/ingest",
+    "metrics:validate": "npm run validate --workspace @slowmoonship/metrics",
+    "sources": "npm run sources --workspace @slowmoonship/ingest",
+    "typecheck": "tsc --build --force && tsc -p tsconfig.test.json && npm run typecheck --workspace @slowmoonship/web",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.1",
+    "vitest": "^3.2.7"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@slowmoonship/ingest",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "ingest:btc": "tsx src/cli.ts btc",
+    "db:init": "tsx src/cli.ts db:init",
+    "db:reset": "tsx src/cli.ts db:reset",
+    "sources": "tsx src/cli.ts sources",
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@slowmoonship/metrics": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
