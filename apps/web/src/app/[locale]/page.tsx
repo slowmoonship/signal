@@ -44,23 +44,23 @@ export default async function IndexPage({
   return (
     <div>
       <h1 className="text-2xl font-semibold tracking-tight">{t.tagline}</h1>
-      <p className="mt-2 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="mt-2 font-mono text-xs text-ink-muted">
         {newest
           ? `${t.updatedAt} ${formatUtcDateTime(newest)} UTC`
           : `${t.updatedAt} —`}
       </p>
 
       {hasFixture(data) ? (
-        <p className="mt-6 border border-zinc-300 px-3 py-2 font-mono text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="mt-6 border border-rule-strong px-3 py-2 font-mono text-xs text-ink-muted">
           {t.fixtureBanner}
         </p>
       ) : null}
 
-      <p className="mt-6 max-w-prose text-sm text-zinc-500 dark:text-zinc-400">{t.unitNote}</p>
+      <p className="mt-6 max-w-prose text-sm text-ink-muted">{t.unitNote}</p>
 
       {groups.map((group) => (
         <section key={group.category} className="mt-10">
-          <h2 className="text-xs font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-500">
+          <h2 className="text-xs font-medium uppercase tracking-widest text-ink-subtle">
             {t.categories[group.category]}
           </h2>
           <div className="mt-2">
@@ -93,9 +93,9 @@ function Row({
 
   if (!result || !result.ok) {
     return (
-      <div className="flex items-baseline justify-between gap-4 border-b border-zinc-200 py-2.5 last:border-b-0 dark:border-zinc-800">
-        <span className="text-zinc-500 dark:text-zinc-500">{def.name[locale]}</span>
-        <span className="font-mono text-xs text-zinc-400 dark:text-zinc-500">
+      <div className="flex flex-col gap-1 border-b border-rule py-2.5 last:border-b-0 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+        <span className="text-ink-muted">{def.name[locale]}</span>
+        <span className="font-mono text-xs text-ink-subtle">
           {result?.reason === 'invalid' ? t.invalidFile : t.noData}
         </span>
       </div>

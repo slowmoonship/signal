@@ -3,8 +3,8 @@
 > 面向公众的加密资产市场与链上指标目录与监控网站。
 > 阶段一仅 BTC，架构预留 ETH / SOL。
 >
-> 状态：**Phase 0–2 已完成**（骨架 / 规范 / 适配器接口；18 个指标定义 + 静态页面；真实免费源抓取已跑通）。
-> Phase 3（视觉与主题）进行中。
+> 状态：**Phase 0–3 已完成**（骨架 / 规范 / 适配器接口；18 个指标定义 + 静态页面；真实免费源抓取已跑通；视觉规范落地）。
+> Phase 4（自动化）进行中。
 > 本文所有数据源均已于 2026-10-19 从本机实测验证（见 §4）。
 > 已确认决策见 §0 与 `docs/DECISIONS.md`。
 
@@ -328,9 +328,31 @@ signal/
    新增 `canBeNegative`，这类指标一律不展示"较 N 天前变化"。
 4. 难度、币种数、矿池集中度等"每天只采样一次"的指标，页面原本会显示一个空的"7 日变化"标签。
 
-### Phase 3 — 视觉与主题（1.5 天）
+### Phase 3 — 视觉与主题（1.5 天）✅ 已完成 2026-10-19
 DESIGN.md token 落地（zinc 灰阶、无阴影、无胶囊、字重驱动层级、mono 元信息）；明暗主题无闪烁；详情页 lightweight-charts；中文排版微调；移动端与键盘可达性
 **验收**：明暗两态与 leerob 观感一致；中英文长文本均无溢出
+
+**实际交付**：`docs/DESIGN.md`（token、字体、排版层级、移动端与键盘）；`globals.css` 的
+`:root` + 媒体查询 + `@theme inline` 三段主题；`next/font` 接入 Inter + Noto Sans SC；
+首页行与详情页数值在 320px 竖排；跳过导航链接与 `:focus-visible` 焦点环；
+`apps/web/test/theme.test.ts` 8 条守卫（视觉红线第一次会红）。
+
+**与原计划的偏离**：
+1. **图表不是 lightweight-charts**，是手写服务端 SVG（ADR-009 已在 Phase 1 修正，
+   本阶段只是落实）；静态日更快照用不上 50 KB 客户端 JS。
+2. **不提供手动主题切换开关**（ADR-011）。加开关就要在首帧前注入脚本防闪烁，
+   而 `prefers-color-scheme` 在首帧已确定，闪烁本就不存在。
+3. **`--font-mono` 未打包 web 字体**：元信息全是数字与短标签，系统等宽足够。
+
+**踩到的坑**（值得记，因为它看起来像"配好了"）：
+第一版把明暗两套颜色都写进 `@theme`，暗色那套嵌在媒体查询里。构建产物中暗色块只剩
+`dark:` 工具类，`--color-ink` 全局只出现一次——Tailwind v4 的 `@theme` 只在**构建期**求值，
+`text-ink` 早被编译成固定浅色十六进制，暗色主题永远不会生效。
+必须用 `@theme inline` 让工具类在运行时解析 `var(--ink)`。现已有测试专门守这一点。
+
+**未覆盖的验收项**："与 leerob 观感一致"依赖人眼。本机没有可用的无头浏览器
+（无 chromium / playwright），因此明暗两态、320px 排版是**按 CSS 推导 + 构建产物核对**确认的，
+没有截图佐证。若日后引入 Playwright，值得补一轮真正的渲染验收。
 
 ### Phase 4 — 自动化（1 天）
 GitHub Actions 日更 workflow（`schedule` + `workflow_dispatch`）；`stale` 状态与新鲜度文案；SEO 元信息、hreflang、OG 图；typecheck/lint 进 CI
@@ -383,6 +405,7 @@ typecheck + ESLint 进 CI 且 PR 必须通过；约定式提交（`feat:`/`fix:`
 
 ## 下一步
 
-Phase 0–2 已执行完毕并各自提交：18 份真实快照已发布，站点读的就是真数据。
-下一阶段为 Phase 3：视觉与主题（`docs/DESIGN.md` token 落地、明暗主题无闪烁、
-移动端与键盘可达性）。
+Phase 0–3 已执行完毕并各自提交：18 份真实快照已发布，站点读的就是真数据；
+视觉规范落地并由测试守住。
+下一阶段为 Phase 4：自动化（GitHub Actions 日更 workflow、新鲜度文案、SEO 元信息、
+typecheck/lint 进 CI）。Phase 5 上线**需你明确批准**，当前任务明确不部署。

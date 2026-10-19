@@ -1,29 +1,145 @@
 @import 'tailwindcss';
 
 /*
- * Phase 0 只放最少的 token，真正的视觉规范在 Phase 3 落地 docs/DESIGN.md。
- * 约束（CLAUDE.md §视觉红线）：只用灰阶，不用阴影 / 胶囊圆角 / 彩色按钮 / 渐变。
+ * 视觉规范 —— 完整版见 docs/DESIGN.md。
+ *
+ * 三条不可让步的约束（CLAUDE.md §视觉红线）：
+ * 1. 只用灰阶。涨跌不染色：靠 + / − 符号表达，
+ *    而且"涨"对不同指标含义相反（矿工收入涨是好，费率涨不是），染色等于替读者下判断。
+ * 2. 不用阴影、胶囊圆角、彩色按钮、渐变。层级靠字重与间距。
+ * 3. 元信息（时间、来源、数值单位）用等宽字体。
+ *
+ * 明暗主题跟随系统，不做切换开关：
+ * 一旦允许手动切换，就必须在首帧之前知道用户选了什么，
+ * 而那意味着一段内联脚本——对一个日更快照的静态站来说不值得。
+ * `@media (prefers-color-scheme)` 在第一帧就已确定，因此不存在闪烁。
  */
 
-@theme {
-  --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-    'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
-}
-
+/*
+ * 灰阶的**真实取值**放在 `:root`，暗色覆盖放在媒体查询里，
+ * 最后由 `@theme inline` 把语义名映射到这些变量。
+ *
+ * 为什么是这三段，而不是在 `@theme` 里把两套颜色各写一遍：
+ * Tailwind v4 的 `@theme` 只在**构建期**求值。把暗色值也塞进 `@theme`
+ * （哪怕嵌套在媒体查询里），产出的仍是一组被后者覆盖的 `:root` 常量——
+ * 而 `text-ink` 早已被编译成固定的浅色十六进制，暗色主题根本不生效。
+ * `inline` 让工具类直接引用 `var(--ink)`，值在运行时才解析，
+ * 媒体查询里的覆盖才真正起作用。
+ *
+ * 组件只认 ink / ink-muted / ink-subtle / rule / surface 这几个名字，
+ * 不散落 zinc-300 / zinc-700 这类具体色阶——调对比度只改这一处。
+ */
 :root {
   color-scheme: light dark;
-}
 
-body {
-  background-color: #ffffff;
-  color: #18181b;
+  --surface: #ffffff;
+  --surface-sunken: #fafafa; /* 悬停行，比纯白略低一档，不引入第二个色相 */
+  --ink: #18181b;
+  --ink-muted: #52525b; /* 正文次级：说明文字、来源名 */
+  --ink-subtle: #a1a1aa; /* 时间戳等最弱元信息 */
+  --rule: #e4e4e7; /* 分隔线 */
+  --rule-strong: #d4d4d8; /* 图表坐标轴、告警框这类需要"够看得见"的线 */
 }
 
 @media (prefers-color-scheme: dark) {
-  body {
-    background-color: #09090b;
-    color: #e4e4e7;
+  :root {
+    --surface: #09090b;
+    --surface-sunken: #18181b;
+    --ink: #e4e4e7;
+    --ink-muted: #a1a1aa;
+    --ink-subtle: #71717a;
+    --rule: #27272a;
+    --rule-strong: #3f3f46;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-rule: var(--rule);
+  --color-rule-strong: var(--rule-strong);
+}
+
+@theme {
+  /* Inter 覆盖拉丁字母与数字，Noto Sans SC 覆盖中文；两者由 next/font 注入为
+     `--font-inter` / `--font-noto-sans-sc`（见 src/lib/fonts.ts）。
+     变量之后仍保留完整系统字体栈：web font 没加载成功时退回本机 CJK 字体，
+     而不是让中文掉成字面高度不匹配的系统默认字形。 */
+  --font-sans:
+    var(--font-inter), var(--font-noto-sans-sc), ui-sans-serif, system-ui,
+    -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans SC',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--ink);
+  /* 中文没有词间空格，长数字与长链接在 320px 宽度上必须能断行，
+     否则一个市值数字就能撑破布局。 */
+  overflow-wrap: break-word;
+}
+
+/* 元信息一律等宽 + 等宽数字，否则一列数字会因为字宽不同而抖动 */
+.font-mono,
+code,
+kbd {
+  font-feature-settings: 'tnum' 1;
+}
+
+/*
+ * 键盘可达性。
+ *
+ * 只在 :focus-visible 时显示焦点环：鼠标点击不出现焦点环，
+ * 但键盘 Tab 出来的元素必须看得见在哪——深色主题下浏览器默认焦点环
+ * 常常和背景撞色，等于没有。
+ */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/*
+ * 跳过导航链接。首页 18 行都是链接，键盘用户每翻一页都要 Tab 过它们；
+ * 平时把它移出视口（不是 display:none——那样它就无法被聚焦），
+ * 聚焦时再让它回到文档流里。
+ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+}
+
+.skip-link:focus {
+  position: static;
+  display: inline-block;
+  margin: 0.5rem 0;
+  padding: 0.25rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  border: 1px solid var(--ink);
+}
+
+::selection {
+  background-color: var(--ink);
+  color: var(--surface);
+}
+
+/*
+ * 尊重系统的"减少动态效果"。
+ * 站点本身几乎没有动画，但 hover 过渡与后续可能加的东西都该在这里被关掉。
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

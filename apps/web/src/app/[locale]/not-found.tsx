@@ -19,10 +19,10 @@ export default async function NotFound({
   return (
     <div className="py-16">
       <h1 className="text-2xl font-semibold tracking-tight">{t.notFoundTitle}</h1>
-      <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{t.notFoundBody}</p>
+      <p className="mt-2 text-sm text-ink-muted">{t.notFoundBody}</p>
       <Link
         href={`/${isLocale(locale ?? '') ? locale : 'en'}`}
-        className="mt-6 inline-block text-sm text-zinc-500 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+        className="mt-6 inline-block text-sm text-ink-muted hover:text-ink hover:underline"
       >
         ← {t.backToIndex}
       </Link>

@@ -73,38 +73,38 @@ export default async function MetricPage({ params }: { params: Params }) {
     <article>
       <Link
         href={`/${locale}`}
-        className="text-xs text-zinc-500 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+        className="text-xs text-ink-muted hover:text-ink hover:underline"
       >
         ← {t.backToIndex}
       </Link>
 
       <header className="mt-6">
-        <p className="text-xs font-medium uppercase tracking-widest text-zinc-500 dark:text-zinc-500">
+        <p className="text-xs font-medium uppercase tracking-widest text-ink-subtle">
           {t.categories[def.category]}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{def.name[locale]}</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-500">
+        <p className="mt-1 text-sm text-ink-subtle">
           {locale === 'zh' ? def.name.en : def.name.zh}
         </p>
 
-        <p className="mt-6 font-mono text-3xl tabular-nums">
+        <p className="mt-6 font-mono text-2xl tabular-nums break-words sm:text-3xl">
           {value ?? MISSING}
           {/* 变化为 null 时（窗口被关闭、样本不足、基期缺失）连标签一起不显示：
               留一个空的"7 日变化"会让读者以为有变化没算出来 */}
           {change !== null ? (
-            <span className="ml-4 align-middle font-mono text-sm text-zinc-500 dark:text-zinc-400">
+            <span className="ml-4 align-middle font-mono text-sm text-ink-subtle">
               {formatSignedPercent(change, locale) ?? ''}
               <span className="ml-1 text-xs">{t.changeWindow}</span>
             </span>
           ) : null}
         </p>
         {latest ? (
-          <p className="mt-1 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 font-mono text-xs text-ink-subtle">
             {formatUtcDateTime(new Date(latest.ts * 1000).toISOString())} UTC
           </p>
         ) : null}
 
-        <p className="mt-4 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-4 font-mono text-xs text-ink-muted">
           <Link href={`/${nextLocale}/metrics/${def.id}`} hrefLang={nextLocale} className="hover:underline">
             {locale === 'en' ? '中文' : 'English'}
           </Link>
@@ -112,13 +112,13 @@ export default async function MetricPage({ params }: { params: Params }) {
       </header>
 
       {result.ok && result.value.fixture === true ? (
-        <p className="mt-6 border border-zinc-300 px-3 py-2 font-mono text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+        <p className="mt-6 border border-rule-strong px-3 py-2 font-mono text-xs text-ink-muted">
           {t.fixtureBanner}
         </p>
       ) : null}
 
       {!result.ok ? (
-        <p className="mt-8 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="mt-8 text-sm text-ink-muted">
           {result.reason === 'invalid' ? `${t.invalidFile}（${result.detail ?? ''}）` : t.noDataHint}
         </p>
       ) : null}

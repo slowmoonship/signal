@@ -26,6 +26,7 @@ export default tseslint.config(
             'vitest.config.ts',
             'eslint.config.js',
             'packages/*/test/*.ts',
+            'apps/web/test/*.ts',
             'apps/web/*.config.ts',
             'apps/web/*.config.mjs',
           ],

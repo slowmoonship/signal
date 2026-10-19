@@ -15,6 +15,7 @@ import { LOCALES } from '@slowmoonship/metrics'
 
 import { LocaleSwitch } from '@/components/LocaleSwitch'
 import { getDictionary, isLocale } from '@/i18n/dictionaries'
+import { fontVariables } from '@/lib/fonts'
 
 import '../globals.css'
 
@@ -62,16 +63,21 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body className="font-sans antialiased">
+      <body className={`${fontVariables} font-sans antialiased`}>
         <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-5 sm:px-6">
+          {/* 首页有 18 行链接，键盘用户每翻一页都要 Tab 过它们；
+              跳过链接是唯一便宜的解法——不加它就只能靠用户自己按 Tab 到吐。 */}
+          <a className="skip-link" href="#content">
+            {t.skipToContent}
+          </a>
           <header className="flex items-baseline justify-between py-6">
             <span className="text-sm font-semibold tracking-tight">{t.siteTitle}</span>
             <LocaleSwitch locale={locale} path={`/${locale}`} />
           </header>
-          <main className="flex-1 pb-16">{children}</main>
-          <footer className="border-t border-zinc-200 py-6 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-500">
-            {t.footerNote}
-          </footer>
+          <main id="content" className="flex-1 pb-16">
+            {children}
+          </main>
+          <footer className="border-t border-rule py-6 text-xs text-ink-subtle">{t.footerNote}</footer>
         </div>
       </body>
     </html>

@@ -34,8 +34,8 @@ export type MetricRowProps = {
 
 export function MetricRow({
   def,
-  locale,
   points,
+  locale,
   href,
   changeWindowDays,
   stale,
@@ -49,25 +49,21 @@ export function MetricRow({
   return (
     <Link
       href={href}
-      className="group flex items-baseline justify-between gap-4 border-b border-zinc-200 py-2.5 transition-colors last:border-b-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+      // 320px 上并排放不下：市值 `$1,646,907,492,049.81` 有 21 个字符，
+      // 等宽 14px 下就要 176px，再加变化列就把指标名挤没。
+      // 所以窄屏竖排、宽屏才回到一行——不是加滚动条，是换排版。
+      className="group flex flex-col gap-1 border-b border-rule py-2.5 transition-colors last:border-b-0 hover:bg-surface-sunken sm:flex-row sm:items-baseline sm:justify-between sm:gap-4"
     >
-      <span className="min-w-0">
-        <span className="text-zinc-900 group-hover:underline dark:text-zinc-100">
-          {def.name[locale]}
-        </span>
-        {stale ? (
-          <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-500">{t.stale}</span>
-        ) : null}
+      <span className="min-w-0 text-ink group-hover:underline">
+        {def.name[locale]}
+        {stale ? <span className="ml-2 text-xs text-ink-subtle">{t.stale}</span> : null}
       </span>
 
-      <span className="flex shrink-0 items-baseline gap-4 font-mono text-sm tabular-nums">
-        <span
-          className="min-w-[7rem] text-right text-zinc-900 dark:text-zinc-100"
-          title={latest ? String(latest.value) : undefined}
-        >
+      <span className="flex shrink-0 items-baseline justify-between gap-4 font-mono text-sm tabular-nums sm:justify-end">
+        <span className="text-right text-ink" title={latest ? String(latest.value) : undefined}>
           {value ?? MISSING}
         </span>
-        <span className="min-w-[4.5rem] text-right text-zinc-500 dark:text-zinc-500">
+        <span className="w-[4.5rem] shrink-0 text-right text-ink-subtle">
           {formatSignedPercent(change, locale) ?? ''}
         </span>
       </span>

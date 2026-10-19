@@ -44,6 +44,7 @@ export type Dictionary = Readonly<{
   fixtureBanner: string
   unitNote: string
   footerNote: string
+  skipToContent: string
   notFoundTitle: string
   notFoundBody: string
   backToIndex: string
@@ -96,6 +97,7 @@ const en: Dictionary = {
   fixtureBanner: 'Fixture data — synthetic, generated locally for development. Not real market data.',
   unitNote: 'Values are daily and UTC. Missing days are left blank; they are never filled with zero.',
   footerNote: 'Daily snapshots. No live data, no polling.',
+  skipToContent: 'Skip to content',
   notFoundTitle: 'Not found',
   notFoundBody: 'No such metric.',
   backToIndex: 'Back to index',
@@ -146,6 +148,7 @@ const zh: Dictionary = {
   fixtureBanner: 'Fixture 数据 —— 本地合成的开发用数据，不是真实市场数据。',
   unitNote: '数值为日频、UTC。缺失的日期留空，不会用零填充。',
   footerNote: '每日一个快照。无实时数据，不轮询。',
+  skipToContent: '跳到正文',
   notFoundTitle: '未找到',
   notFoundBody: '没有这个指标。',
   backToIndex: '返回目录',

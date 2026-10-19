@@ -17,7 +17,7 @@ export function LocaleSwitch({ locale, path }: { locale: Locale; path: string })
     <Link
       href={path.replace(/^\/(en|zh)(?=\/|$)/, `/${next}`)}
       hrefLang={next}
-      className="font-mono text-xs text-zinc-500 hover:text-zinc-900 hover:underline dark:text-zinc-400 dark:hover:text-zinc-100"
+      className="font-mono text-xs text-ink-muted hover:text-ink hover:underline"
     >
       {localeLabel(next)}
     </Link>

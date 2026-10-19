@@ -36,7 +36,7 @@ export function MetricChart({ def, locale, points }: Props) {
   const known = points.filter((p) => p.value !== null)
 
   if (known.length === 0) {
-    return <p className="py-8 text-sm text-zinc-500 dark:text-zinc-500">{t.chartNoData}</p>
+    return <p className="py-8 text-sm text-ink-muted">{t.chartNoData}</p>
   }
 
   if (known.length === 1) {
@@ -46,11 +46,11 @@ export function MetricChart({ def, locale, points }: Props) {
       <div className="py-8">
         <p className="font-mono text-2xl tabular-nums">
           {value ?? '—'}
-          <span className="ml-3 text-xs text-zinc-500">
+          <span className="ml-3 text-xs text-ink-subtle">
             {only ? formatUtcDay(only.ts) : ''}
           </span>
         </p>
-        <p className="mt-3 max-w-prose text-sm text-zinc-500 dark:text-zinc-400">{t.chartSinglePoint}</p>
+        <p className="mt-3 max-w-prose text-sm text-ink-muted">{t.chartSinglePoint}</p>
       </div>
     )
   }
@@ -95,10 +95,12 @@ export function MetricChart({ def, locale, points }: Props) {
     <figure className="mt-2">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className="w-full text-zinc-300 dark:text-zinc-700"
+        className="w-full"
         role="img"
         aria-label={`${def.name[locale]} — ${t.chartWindow} ${firstDate} – ${lastDate}`}
       >
+        {/* 网格线最弱、数据线最重：同一张图里两者用同一套语义 token，
+            明暗两态只切换取值，不切换层级关系。 */}
         {ticks.map((tick) => (
           <g key={tick}>
             <line
@@ -106,14 +108,14 @@ export function MetricChart({ def, locale, points }: Props) {
               x2={VIEW_W - PAD.right}
               y1={y(tick)}
               y2={y(tick)}
-              stroke="currentColor"
+              className="stroke-rule"
               strokeWidth="1"
               strokeDasharray="2 4"
             />
             <text
               x={VIEW_W - PAD.right + 6}
               y={y(tick) + 3}
-              className="fill-zinc-500 font-mono text-[10px] dark:fill-zinc-500"
+              className="fill-ink-subtle font-mono text-[10px]"
             >
               {formatAxisTick(tick, locale)}
             </text>
@@ -125,27 +127,27 @@ export function MetricChart({ def, locale, points }: Props) {
             key={i}
             points={seg}
             fill="none"
-            stroke="currentColor"
+            className="stroke-ink"
             strokeWidth="1"
             strokeLinejoin="round"
           />
         ))}
 
-        {last ? <circle cx={x(last.ts)} cy={y(last.value ?? 0)} r="2" fill="currentColor" /> : null}
+        {last ? <circle cx={x(last.ts)} cy={y(last.value ?? 0)} r="2" className="fill-ink" /> : null}
 
-        <text x={PAD.left} y={VIEW_H - 6} className="fill-zinc-500 font-mono text-[10px]">
+        <text x={PAD.left} y={VIEW_H - 6} className="fill-ink-subtle font-mono text-[10px]">
           {firstDate}
         </text>
         <text
           x={VIEW_W - PAD.right}
           y={VIEW_H - 6}
           textAnchor="end"
-          className="fill-zinc-500 font-mono text-[10px]"
+          className="fill-ink-subtle font-mono text-[10px]"
         >
           {lastDate}
         </text>
       </svg>
-      <figcaption className="mt-2 flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
+      <figcaption className="mt-2 flex flex-wrap justify-between gap-x-4 text-xs text-ink-muted">
         <span>
           {t.chartWindow}: {firstDate} – {lastDate}
         </span>

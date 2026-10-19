@@ -31,7 +31,9 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['packages/**/test/**/*.test.ts'],
+    // apps/web 也要进测试范围：视觉红线（只用灰阶）目前靠人肉 review 守着，
+    // 而它一旦破防不会有任何运行时报错——所以需要一条可执行的守卫。
+    include: ['packages/**/test/**/*.test.ts', 'apps/web/test/**/*.test.ts'],
     globals: false,
     server: {
       deps: {
