@@ -19,7 +19,7 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          // 测试文件与根配置文件不属于任何 package 的 tsconfig include，
+          // 测试文件与根/工具配置文件不属于任何 package 的 tsconfig include，
           // 需要显式允许，否则 project service 拒绝解析它们。
           // 注意：allowDefaultProject 不支持 `**`，新增嵌套测试目录时要在此补一行。
           allowDefaultProject: [
@@ -29,6 +29,10 @@ export default tseslint.config(
             'apps/web/*.config.ts',
             'apps/web/*.config.mjs',
           ],
+          // 默认工程的匹配数上限只有 8，超过就直接解析失败。
+          // 测试文件一多就会撞上（这些文件本来就都不在任何 build 产物里，
+          // 提高上限不会拖慢常规检查）。
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 32,
         },
         tsconfigRootDir: import.meta.dirname,
       },

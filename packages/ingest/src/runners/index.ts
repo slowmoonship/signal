@@ -13,6 +13,7 @@ import {
   type MetricContract,
   type MetricDefinition,
   type MetricSnapshot,
+  type PublishedMetric,
   type SourceRef,
   type UtcSeconds,
 } from '@slowmoonship/metrics'
@@ -218,9 +219,9 @@ function publishAll(opts: IngestOptions, outcomes: readonly MetricOutcome[]): nu
     const points = opts.store.readPoints(outcome.metricId)
     const meta = opts.store.readMeta(outcome.metricId)
     if (!meta) continue
-    publishJson(dir, `${outcome.metricId}.json`, {
+    const file: PublishedMetric = {
       metricId: outcome.metricId,
-      asset: meta.asset,
+      asset: meta.asset as Asset,
       contract: parseJson<MetricContract>(meta.contractJson, outcome.metricId, 'contract'),
       points,
       sourceTime: meta.sourceTime,
@@ -228,7 +229,10 @@ function publishAll(opts: IngestOptions, outcomes: readonly MetricOutcome[]): nu
       stale: meta.stale,
       sources: parseJson<SourceRef[]>(meta.sourcesJson, outcome.metricId, 'sources'),
       warnings: parseJson<string[]>(meta.warningsJson, outcome.metricId, 'warnings'),
-    })
+    }
+    // 发布物必须是真实抓取结果。fixture 只能写进 fixtures/，
+    // 一旦有人把合成数据混进发布目录，这里直接拒绝。
+    publishJson(dir, `${outcome.metricId}.json`, file)
     count += 1
   }
   return count

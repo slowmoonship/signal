@@ -12,10 +12,12 @@
   },
   "scripts": {
     "dev": "npm run dev --workspace @slowmoonship/web",
+    "dev:fixtures": "npm run fixtures:btc && SIGNAL_DATA_DIR=fixtures/btc npm run dev",
     "build": "npm run build --workspaces --if-present",
     "db:init": "npm run db:init --workspace @slowmoonship/ingest",
     "db:reset": "npm run db:reset --workspace @slowmoonship/ingest",
     "ingest:btc": "npm run ingest:btc --workspace @slowmoonship/ingest",
+    "fixtures:btc": "npm run fixtures:btc --workspace @slowmoonship/ingest",
     "metrics:validate": "npm run validate --workspace @slowmoonship/metrics",
     "sources": "npm run sources --workspace @slowmoonship/ingest",
     "typecheck": "tsc --build --force && tsc -p tsconfig.test.json && npm run typecheck --workspace @slowmoonship/web",

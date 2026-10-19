@@ -5,8 +5,15 @@
 
 ## 状态
 
-**Phase 0 完成** —— 项目骨架、开发规范、数据适配器接口与数据质量约束已就位。
-指标定义为空，页面为占位。Phase 1 起填充指标。
+**Phase 1 完成，Phase 2 进行中。**
+
+- Phase 0：项目骨架、开发规范、数据适配器接口与数据质量约束。
+- Phase 1：18 个 BTC 指标定义（中英双语文案齐全）、首页与详情页、明暗主题、历史曲线。
+  页面数据当前来自 `fixtures/btc`（合成数据，页面顶部有明确告警条），
+  用于在没有真实数据时验证页面、格式化与空值语义。
+- Phase 2：接入真实免费源，把 `public/data` 变成真实快照。
+
+想看现在的站点：`npm run fixtures:btc && npm run dev:fixtures`。
 
 ## 仓库结构
 
@@ -24,6 +31,8 @@ docs/               规划、指标编写规范、架构决策记录
 ```bash
 npm install
 npm run dev              # 启动站点（http://localhost:3000，自动重定向到 /en 或 /zh）
+npm run dev:fixtures     # 生成 fixture 并用它启动站点（Phase 1 的验证方式）
+npm run fixtures:btc     # 只生成 fixture（写入 fixtures/btc，绝不写 public/data）
 npm run ingest:btc       # 抓取 BTC 指标（默认 dry-run；--live 才落库发布）
 npm run sources          # 列出已注册适配器与付费墙指标
 npm run db:init          # 初始化 SQLite
@@ -55,7 +64,7 @@ Coin Metrics 免费层把美元计价的费用类指标（`FeeTotUSD`/`RevUSD`/`
 | `CLAUDE.md` | **最高约束来源**，每次会话自动加载 |
 | `docs/PLAN.md` | MVP 范围、架构、实施计划、数据源实测结果 |
 | `docs/METRIC_AUTHORING.md` | 新增指标的唯一权威流程与必填字段 |
-| `docs/DECISIONS.md` | 架构决策记录（ADR-001 ~ 008） |
+| `docs/DECISIONS.md` | 架构决策记录（ADR-001 ~ 010） |
 
 ## 数据质量红线
 

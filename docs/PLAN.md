@@ -3,7 +3,8 @@
 > 面向公众的加密资产市场与链上指标目录与监控网站。
 > 阶段一仅 BTC，架构预留 ETH / SOL。
 >
-> 状态：**Phase 0 已完成**（骨架 / 规范 / 数据适配器接口），Phase 1 待批准。
+> 状态：**Phase 0、Phase 1 已完成**（骨架 / 规范 / 适配器接口；18 个指标定义 + 静态页面，数据为 fixture）。
+> Phase 2（真实抓取）进行中。
 > 本文所有数据源均已于 2026-10-19 从本机实测验证（见 §4）。
 > 已确认决策见 §0 与 `docs/DECISIONS.md`。
 
@@ -59,6 +60,7 @@ On-chain Activity                            更新于 2026-10-19 08:00 UTC
 ### 2.2 指标清单（MVP 共 18 个）
 
 **A. 市场 Market（4）** — `price` `market-cap` `supply` `price-at-hash` 等
+> 实际实现中第 4 个为 `price-change-7d`，见 §6 Phase 1 的偏差记录。
 
 **B. 链上活动 On-chain（5）**
 
@@ -77,6 +79,7 @@ On-chain Activity                            更新于 2026-10-19 08:00 UTC
 | `fees-total` | 每日总手续费 | `FeeTotNtv` |
 | `miner-revenue` | 矿工发行收入 | `IssTotNtv` |
 | `mempool-congestion` | 内存池拥堵度 | mempool `/fees/recommended` |
+| ↑ 实际实现为 `recommended-fee-rate`（推荐费率），理由见 §6 Phase 1 偏差记录 2 | | |
 | `block-tx-count` | 每区块交易笔数 | Blockstream `tx_count` |
 | `block-weight` | 区块权重 | Blockstream `weight` |
 
@@ -274,14 +277,37 @@ signal/
 `git init`、npm workspaces 三包、Next.js + Tailwind v4 + TS 打通；SQLite schema 与 `defineMetric` 类型定稿；`middleware` 语言协商
 **验收**：`npm run dev` 起站点，`npm run db:init` 成功
 
-### Phase 1 — 指标注册表 + 静态内容（1.5 天）
+### Phase 1 — 指标注册表 + 静态内容（1.5 天）✅ 已完成 2026-10-19
 实现 `MetricDefinition` 与 registry；用**假数据**写全 18 个指标定义（中英双语文案齐全）；首页列表与详情页骨架
 **验收**：首页 18 行分类正确；详情页展示解释、计算逻辑、来源；切换 `/zh` 全站文案随之切换
 *此阶段不碰网络，先把内容形态与双语体系定死*
 
-### Phase 2 — 抓取管线（2 天）
+**实际交付**
+- 18 个指标定义（market 4 / onchain 5 / fees 5 / mining 4），每条含中英双语名称、说明、计算逻辑、历史口径备注，
+  并通过 `validateMetric` 的机器自检（双语齐全、来源非空、口径自洽、派生依赖完整）。
+- `/[locale]` 下的首页与 `/[locale]/metrics/[id]` 详情页，**构建期全静态生成**：2 个语言 × (1 + 18) = 38 页 + 404。
+  详情页含服务端渲染的 SVG 历史曲线（ADR-009）。
+- 数据来自 `fixtures/btc`（`SIGNAL_DATA_DIR` 切换），带 `fixture: true` 标记，页面顶部显示"非真实市场数据"告警条。
+  fixture 生成器拒绝写入 `public/data`（ADR-010）。
+- 时间显示一律显式 `YYYY-MM-DD[ HH:mm]` UTC，不用 locale 相关的 `Intl.DateTimeFormat`：
+  同一个 UTC 日在不同 locale 下会渲染成三种写法，读者无法确认两处时间是否同一天。
+
+**与本文档的偏差（记录在案）**
+1. `price-at-hash` → **`price-change-7d`**。原文案描述的是一个需要哈希率做分母的派生指标，
+   但免费源拿不到稳定的历史哈希率日频序列，算出来的是一条假曲线。改为 7 日价格变化：
+   数据源直给价格、本地做日历日对齐的百分比变化，口径可验证，且对读者更有用。
+2. `mempool-congestion` → **`recommended-fee-rate`**。mempool.space 的 `/fees/recommended`
+   返回的是 `hourFee`——一个**推荐费率**，不是拥堵度指标（拥堵度需要全网算力与难度的比值，
+   免费源拿不到）。按数据源实际给的数字命名，而不是给它安一个它没有测量的名字。
+3. 详情页图表不用 lightweight-charts，改为服务端渲染 SVG（ADR-009）。
+
+### Phase 2 — 抓取管线（2 天）🚧 进行中
 4 个 source adapter（`auth` 字段就位）+ 幂等 upsert + 容错；BTC runner 跑通 §4.4 白名单内 13 个指标；派生计算（净流入、矿池 HHI/Top3）；`export` 产出 JSON
 **验收**：`npm run ingest:btc` 后 18 项全部有真实值与更新时间；删库重跑结果一致
+
+**待办**：Blockstream 适配器（`difficulty` / `block-tx-count` / `block-weight`）；
+mempool `PoolConcentration` 的 HHI 计算；runner 接入 `derivation`（difference / percentChange）
+与多来源 fallback；适配器统一使用 `LABEL_SEMANTICS`。
 
 ### Phase 3 — 视觉与主题（1.5 天）
 DESIGN.md token 落地（zinc 灰阶、无阴影、无胶囊、字重驱动层级、mono 元信息）；明暗主题无闪烁；详情页 lightweight-charts；中文排版微调；移动端与键盘可达性
@@ -338,6 +364,6 @@ typecheck + ESLint 进 CI 且 PR 必须通过；约定式提交（`feat:`/`fix:`
 
 ## 下一步
 
-`CLAUDE.md` / `docs/METRIC_AUTHORING.md` / `docs/DECISIONS.md` 已落地，Phase 0 已执行完毕。
-下一阶段为 Phase 1（指标注册表 + 静态内容），待批准后开始。
+Phase 0、Phase 1 已执行完毕并各自提交。下一阶段为 Phase 2：接真实免费源，
+把 `public/data` 从空目录变成 18 份真实快照，页面的 fixture 告警条随之消失。
 `docs/DESIGN.md` 在 Phase 3 前编写即可。

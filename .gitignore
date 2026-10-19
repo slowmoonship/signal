@@ -9,6 +9,13 @@ dist/
 **/data/*.db-wal
 **/data/*.db-shm
 
+# fixture 由 `npm run fixtures:btc` 确定性生成，不入库：
+# 生成器是事实，产物只是缓存，入库只会让每次重生成都变成一次无意义 diff。
+# public/data/*.json（真实发布数据）相反，必须入库——它就是站点内容。
+fixtures/
+# 生成器源码在 packages/ingest/src/fixtures/，不受影响：上一行锚定仓库根，
+# 不会向下匹配 packages/ 下的同名目录。
+
 # 编辑器与系统
 .DS_Store
 .idea/

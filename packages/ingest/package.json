@@ -10,6 +10,7 @@
   },
   "scripts": {
     "ingest:btc": "tsx src/cli.ts btc",
+    "fixtures:btc": "tsx src/cli.ts fixtures:btc",
     "db:init": "tsx src/cli.ts db:init",
     "db:reset": "tsx src/cli.ts db:reset",
     "sources": "tsx src/cli.ts sources",

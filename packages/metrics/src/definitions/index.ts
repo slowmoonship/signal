@@ -1,14 +1,16 @@
 /**
  * 指标定义集合。
  *
- * MVP 阶段只定义 BTC（Phase 1 起填充）。
- * 加 ETH/SOL = 新建 `eth/` 目录 + 在此导入，页面层无需改动。
+ * BTC 已落地；ETH / SOL 按 ADR-006 的扩展缝新增同级目录后在此导入，
+ * 页面层无需改动。
  */
 
 import { createRegistry } from '../registry.js'
 import type { MetricDefinition } from '../types.js'
+import { btcMetrics } from './btc/index.js'
 
-// Phase 1 起：`import * as btc from './btc/index.js'`
-const DEFINITIONS: readonly MetricDefinition[] = []
+const DEFINITIONS: readonly MetricDefinition[] = [...btcMetrics]
 
 export const registry = createRegistry(DEFINITIONS)
+
+export { btcMetrics }

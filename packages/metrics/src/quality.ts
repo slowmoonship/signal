@@ -248,7 +248,96 @@ export function validateMetric(def: MetricDefinition, knownIds?: ReadonlySet<str
     }
   }
 
+  checkDerivation(def, push)
+  checkChangeWindow(def, push)
+
   return out
+}
+
+/**
+ * 变化列窗口的合法性。
+ *
+ * 只有两种合法值：省略（用默认 7 天）或显式 `null`（这一列不展示）。
+ * 写成 0、负数或 3.5 会在页面上变成"除以 0 天"或静默取到错误的基期。
+ */
+function checkChangeWindow(
+  def: MetricDefinition,
+  push: (level: IssueLevel, code: string, message: string) => void,
+): void {
+  const w = def.changeWindowDays
+  if (w === undefined || w === null) return
+  if (!Number.isInteger(w) || w < 1) {
+    push(
+      'error',
+      'changeWindow.invalid',
+      `changeWindowDays 必须是正整数天数或 null（关闭该列），实为 ${String(w)}`,
+    )
+  }
+}
+
+/**
+ * 派生声明的自洽性。
+ *
+ * 派生的父序列必须能被真正取到：写错一个指标名（比如把 `FlowOutExNtv`
+ * 拼成 `FlowOutExNTV`）如果没人拦，runner 会取不到数据而产出全 null 序列，
+ * 页面上就成了"一条平直的零线"——比报错更难发现。
+ */
+function checkDerivation(
+  def: MetricDefinition,
+  push: (level: IssueLevel, code: string, message: string) => void,
+): void {
+  const d = def.derivation
+  if (!d) return
+
+  const upstreamNames = new Set(def.sources.map((s) => s.metric).filter(isNonEmpty))
+
+  if (d.kind === 'difference') {
+    for (const [role, name] of [
+      ['left', d.left],
+      ['right', d.right],
+    ] as const) {
+      if (!upstreamNames.has(name)) {
+        push(
+          'error',
+          'derivation.unlistedSource',
+          `derivation.${role} 引用了 "${name}"，但它不在 sources 中。` +
+            `派生所需的每条上游序列都必须写进 sources，否则无法取数。`,
+        )
+      }
+    }
+    if (d.left === d.right) {
+      push('error', 'derivation.selfSubtract', 'difference 的左右两侧不能是同一个指标')
+    }
+    if (def.deriveFrom !== undefined && def.deriveFrom.length === 0) {
+      push('error', 'derivation.emptyDeriveFrom', '声明了 derivation 却给了空的 deriveFrom')
+    }
+    return
+  }
+
+  if (d.kind === 'percentChange') {
+    if (!Number.isInteger(d.windowDays) || d.windowDays < 1) {
+      push(
+        'error',
+        'derivation.windowDays',
+        `windowDays 必须是正整数天数，实为 ${String(d.windowDays)}`,
+      )
+    }
+    if (def.deriveFrom === undefined) {
+      push(
+        'error',
+        'derivation.missingDeriveFrom',
+        'percentChange 必须声明 deriveFrom（滚动变化的基准序列）',
+      )
+      return
+    }
+    if (!def.deriveFrom.includes(d.base)) {
+      push(
+        'error',
+        'derivation.baseNotParent',
+        `derivation.base "${d.base}" 不在 deriveFrom [${def.deriveFrom.join(', ')}] 中`,
+      )
+    }
+  }
 }
 
 // ── 时间工具 ────────────────────────────────────────────

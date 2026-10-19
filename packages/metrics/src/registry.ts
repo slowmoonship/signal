@@ -65,7 +65,12 @@ export class MetricRegistry {
     const ids = new Set(this.#byId.keys())
     const issues: MetricIssue[] = []
     for (const def of this.all()) {
-      issues.push(...validateMetric(def, ids))
+      // 重复 id 的检查需要"除自己以外"的 id 集合：
+      // 直接把全表传进去会让每个指标都把自己当成重复项。
+      // （注册阶段 register 已拦下重复，这里是给绕过 register 的构造路径兜底。）
+      const others = new Set(ids)
+      others.delete(def.id)
+      issues.push(...validateMetric(def, others))
       if (def.deriveFrom) {
         for (const parent of def.deriveFrom) {
           const parentDef = this.#byId.get(parent)

@@ -12,10 +12,21 @@ import { rmSync } from 'node:fs'
 import { DEFAULT_DB_PATH, SnapshotStore } from './store/db.js'
 import { consoleLogger, runIngest } from './runners/index.js'
 import { publishDir } from './paths.js'
+import {
+  FIXTURE_DIR,
+  fixtureSummary,
+  generateFixtures,
+  writeFixtures,
+} from './fixtures/generate.js'
 import type { FetchContext } from './sources/types.js'
 import { adapters, DENIED_METRICS } from './sources/index.js'
 
 const TIMEOUT_MS = 30_000
+
+function flag(args: readonly string[], name: string): string | undefined {
+  const i = args.indexOf(name)
+  return i >= 0 ? args[i + 1] : undefined
+}
 
 function makeCtx(): FetchContext {
   return {
@@ -65,6 +76,22 @@ async function main(): Promise<number> {
         store.close()
       }
     }
+    case 'fixtures:btc': {
+      const endDate = flag(rest, '--end') ?? '2026-10-19'
+      const days = Number(flag(rest, '--days') ?? '400')
+      if (!Number.isInteger(days) || days < 2) {
+        console.error('--days 必须是 ≥ 2 的整数')
+        return 1
+      }
+      const outDir = flag(rest, '--out') ?? FIXTURE_DIR
+      const files = generateFixtures({ endDate, days, outDir })
+      const bytes = writeFixtures(files, outDir)
+      console.log(`✓ 已生成 ${files.size} 份 fixture → ${outDir}（${(bytes / 1024).toFixed(0)} KB）`)
+      console.log(`  结束日 ${endDate}，历史 ${days} 天`)
+      console.log(fixtureSummary(files))
+      console.log(`\n⚠ 这些是合成数据，不能当作真实市场数据发布。用 npm run dev:fixtures 查看。`)
+      return 0
+    }
     case 'sources': {
       console.log(`已注册适配器 ${adapters.length} 个：`)
       for (const a of adapters) {
@@ -76,10 +103,12 @@ async function main(): Promise<number> {
     }
     default: {
       console.log(`用法：
-  tsx src/cli.ts btc [--live]   抓取 BTC 指标（默认 dry-run）
-  tsx src/cli.ts db:init        初始化数据库
-  tsx src/cli.ts db:reset       删库重建（破坏性）
-  tsx src/cli.ts sources        列出已注册适配器与付费墙指标`)
+  tsx src/cli.ts btc [--live]                  抓取 BTC 指标（默认 dry-run）
+  tsx src/cli.ts fixtures:btc [--end D] [--days N] [--out DIR]
+                                              生成合成 fixture（仅开发/测试）
+  tsx src/cli.ts db:init                       初始化数据库
+  tsx src/cli.ts db:reset                      删库重建（破坏性）
+  tsx src/cli.ts sources                       列出已注册适配器与付费墙指标`)
       return 0
     }
   }

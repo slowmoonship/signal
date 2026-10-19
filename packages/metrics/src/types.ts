@@ -76,6 +76,15 @@ export type Point = Readonly<{
   value: number | null
 }>
 
+/**
+ * 去掉品牌的观测点。
+ *
+ * 派生与格式化只关心 `ts` 是 UTC 纪元秒，不关心它是否被类型系统验证过。
+ * 用这个结构类型签名，`Point`（运行期已校验）与发布文件读回的裸 `number`
+ * 都能直接传进去，不必在 web 层做品牌断言。
+ */
+export type SeriesPoint = Readonly<{ ts: number; value: number | null }>
+
 // ── 语义契约 ────────────────────────────────────────────
 
 /**
@@ -139,6 +148,23 @@ export type HistoryCoverage = Readonly<{
   mayBeRevised: boolean
 }>
 
+// ── 派生计算 ──────────────────────────────────────────────
+
+/**
+ * 派生指标的计算方式。
+ *
+ * 只有两种形态，因为只有这两种推导是**不引入新假设**的：
+ * - 逐点相减：两个上游序列相减（交易所净流入 = 流入 − 流出）
+ * - 滚动百分比变化：同一序列的 t 与 t−N 点相比（7 日涨跌幅）
+ *
+ * `left` / `right` / `base` 既可以是已注册指标 id（从库里已有序列推导），
+ * 也可以是上游指标名（同源取两条序列相减）。两者都必须是 `sources` 里
+ * 已声明的指标，否则定义校验会报错——避免拼错指标名却静默产出 0。
+ */
+export type Derivation =
+  | Readonly<{ kind: 'difference'; left: string; right: string }>
+  | Readonly<{ kind: 'percentChange'; base: string; windowDays: number }>
+
 // ── 指标定义 ────────────────────────────────────────────
 
 export type FormatSpec =
@@ -169,8 +195,23 @@ export type MetricDefinition = Readonly<{
   missingPolicy: MissingPolicy
   /** 涨跌是否有内在好坏。null = 中性，不染涨跌色 */
   betterWhen: BetterWhen
-  /** 派生指标的父指标 id。undefined = 直接来自某一来源 */
+  /** 派生指标的父指标 id（必须是已注册的指标）。undefined = 非本注册表内派生 */
   deriveFrom?: readonly string[]
+  /**
+   * 派生计算方式。省略 = 该数值由某个上游端点直接给出，未经本地运算。
+   *
+   * 矿池集中度属于后者：HHI 由单次响应里的矿池份额分布算出，
+   * 分布本身不是一个对外发布的指标，因此不写成 difference / percentChange。
+   */
+  derivation?: Derivation
+  /**
+   * 首页与详情页"较 N 天前"那一列的窗口天数。
+   *
+   * 省略 = 用全局默认的 7 天。显式 `null` = **不展示这一列**：
+   * 对"7 日价格变化"这类本身就是变化量的指标，
+   * 再对它做一次百分比变化等于回答读者没问的问题。
+   */
+  changeWindowDays?: number | null
 }>
 
 // ── 发布快照 ────────────────────────────────────────────
