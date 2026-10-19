@@ -1,0 +1,145 @@
+name: 每日抓取
+
+# 每天一次。分钟数刻意取 17 而不是 0：整点是全网 GitHub Actions 的峰值时刻，
+# 定时任务会在队列里排很久才开始跑。错开整点后启动时间可预期，
+# 抓取窗口也就稳定落在同一个时段。
+#
+# 页面数据新鲜度上限就是日更（CLAUDE.md 硬约束），所以每天一次即足够；
+# 加密行情跨天的修订很少，不存在需要小时级的口径。
+on:
+  schedule:
+    # 06:17 UTC。GitHub 的 schedule 一律按 UTC 解释，这里不写时区后缀。
+    - cron: '17 6 * * *'
+  # 手动触发：换数据源、验证适配器、或排查"今天为什么没数据"时用。
+  # 手动触发与定时触发走完全相同的步骤，同样只在数据变化时才提交。
+  workflow_dispatch:
+
+# 串行执行且不取消旧的运行：两个抓取 job 同时往 main 推数据必然产生冲突，
+# 而中途取消的抓取只会留下一半跑完的结果。宁可排队，也不并发、也不打断。
+concurrency:
+  group: ingest-btc
+  cancel-in-progress: false
+
+# 需要写权限：public/data/*.json 就是站点内容，抓取完成后由本 workflow 直接提交回仓库。
+# 这是唯一一处需要 contents: write 的原因。
+#
+# 如果仓库对主分支启用了保护（禁止直接 push / 要求 PR），这个 workflow 会推不上去，
+# 且失败点在 push 这一步——数据已经抓到并落盘，只是没进仓库。
+# 那时的可选做法，按侵入性从低到高：
+#   1. 为 workflow 专用的机器人账号放开"允许直接推送"的例外（最小改动）；
+#   2. 改成开 issue 或 PR，把待发布的数据交给人 review 后合入（最稳，但每天多一道人工）；
+#   3. 换成不走 GitHub Actions 的定时发布通道。
+# 无论选哪个，都不应当靠"失败了就算了"来兜底——那等于让站点静默地停在旧数据上。
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    name: 抓取并发布 BTC 指标
+    runs-on: ubuntu-latest
+    # 18 个指标串行抓取，每个 HTTP 请求 30s 超时；20 分钟是留给网络重试的余量，
+    # 不是留给机器的。超时未完成时 runner 会被杀掉，此时不会提交任何东西。
+    timeout-minutes: 30
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          # 全历史：提交与 push 都要在本地完成，基于浅克隆做出来的提交
+          # 在服务端会因父提交缺失而无法正确挂到分支上。
+          fetch-depth: 0
+
+      # node 22：node:sqlite 在 22.5.0 才可用，Node 20 上没有这个内置模块，
+      # SnapshotStore 一构造就会抛错。根 package.json 的 engines 为 ">=22.5.0"。
+      # action 固定到 major tag 而非 SHA 是为了可读与可 review；代价是 tag 可被重新指向。
+      # 若要钉 SHA：把这里与 ci.yml 的 `@v4` 一并换成 `<40位SHA>  # v4.x.y`，
+      # 并用 Dependabot 的 github-actions 更新器维护，别手工记 SHA。
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: 按锁文件安装
+        run: npm ci
+
+      # 幂等：SnapshotStore 的建表语句全是 CREATE TABLE IF NOT EXISTS，
+      # 对已存在的库重复执行是安全的空操作（db:init 只开库再关库，不删任何东西）。
+      # 对照 db:reset 才是删库重建——定时任务绝不能用那一个。
+      #
+      # 注意 data/signal.db 被 .gitignore 排除，所以每台 runner 都是空库起跑：
+      # 好处是每次抓取都是全量、口径不受历史污染；
+      # 代价是没有"上一份快照"可回退——取数失败的指标在本轮不会产出新数据，
+      # publishAll 会跳过没有 meta 的指标，于是仓库里那份 JSON 保持上一轮的样子。
+      - name: 初始化数据库
+        run: npm run db:init
+
+      # 必须走完整路径而不是根目录的 `npm run ingest:btc`：
+      # 根脚本是 `npm run ingest:btc --workspace @slowmoonship/ingest`，
+      # 参数会落在 `--workspace` 之后而不是 `--` 之后，npm 会把 --live 当成自己的配置项，
+      # 结果是命令"成功"地跑成了 dry-run，页面数据一天都不更新。
+      # 这里显式写出 workspace 与 `--`，--live 才会真正落到 tsx 的 argv 上。
+      #
+      # 这里不加 `|| true`：失败必须让 job 变红，否则数据停更会悄无声息。
+      # 但要注意退出码的含义与直觉不同——单个指标取数失败时 CLI 返回 1
+      # （只有"无可用适配器"的降级才是 stale 且退出 0），也就是说 job 变红通常意味着
+      # 真的有一个源挂了，而不是"整个管线挂了"；数据本身仍受红线 2 保护，
+      # 失败指标不会被覆盖成空数据。只有进程本身崩了（schema 受损、发布目录不可写）
+      # 才是真正的"整条管线挂了"，那种情况本来也提交不出东西。
+      - name: 抓取 BTC 指标（落库并发布）
+        run: npm run ingest:btc --workspace @slowmoonship/ingest -- --live
+
+      # 放在提交之前：若某次改动让发布物的结构偏离了 packages/metrics 里的契约，
+      # 应该在这一步就拦住，而不是先把坏数据提交进仓库再由 CI 发现。
+      # 失败同样让 job 变红，不加 || true。
+      - name: 测试
+        run: npm run test
+
+      - name: 检出 git 作者身份
+        # Actions 不预置 git 身份，缺这两行 commit 会直接失败。
+        # 只在此 job 内生效（--local），不影响 runner 上其他任何仓库配置。
+        run: |
+          git config --local user.name 'github-actions[bot]'
+          git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+
+      # 数据没变就不提交：源不可用、指标本身当日无更新、或结果与上一轮逐字节相同时，
+      # 每天一个空提交只会污染历史，并把"这天什么都没变"和"这天抓到了"混为一谈。
+      # 用 output 把结论传给后续 step，而不是在 step 里 exit——后者会让后续 step 照常执行。
+      - name: 判断数据是否变化
+        id: changed
+        shell: bash
+        run: |
+          if [ -z "$(git status --porcelain -- public/data)" ]; then
+            echo '数据无变化，跳过提交与推送。'
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'public/data 发生变化：'
+          git status --porcelain -- public/data
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
+      # 提交信息带上抓取时刻与 stale 分布：不看 diff 也能从 git log 判断
+      # "这次发布里有多少份数据是沿用上一份的"，把红线 2 的执行情况留在历史里。
+      - name: 提交数据
+        if: steps.changed.outputs.changed == 'true'
+        shell: bash
+        run: |
+          INGESTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TOTAL=$(ls public/data/*.json | wc -l)
+          # `shell: bash` 会带上 -o pipefail：grep 一份都没匹配到时退出码是 1，
+          # 整条管道随之失败，而 `set -e` 会让提交这一步直接挂掉——
+          # 也就是说"今天没有任何指标变 stale"反而提交不了数据。
+          # 这里的 || true 只吞掉 grep 的"没找到"，wc 的计数仍然是准的。
+          STALE=$(grep -l '"stale": true' public/data/*.json 2>/dev/null | wc -l || true)
+          git add public/data
+          git commit -m "chore(data): 更新 BTC 指标快照（${INGESTED_AT}）" -m "共 ${TOTAL} 份，其中 ${STALE} 份标记为 stale（沿用上一份有效快照）"
+        env:
+          # 关掉交互式凭证提示：机器上没配 git 凭证时，宁可立刻失败并把原因写进日志。
+          GIT_TERMINAL_PROMPT: '0'
+
+      # 单独一步是为了让"抓取成功但推送失败"（通常是分支保护或并发冲突）
+      # 在 Actions 界面里是一个独立于抓取的红叉，定位时不用翻日志。
+      - name: 推送数据
+        if: steps.changed.outputs.changed == 'true'
+        run: git push
+        env:
+          GIT_TERMINAL_PROMPT: '0'

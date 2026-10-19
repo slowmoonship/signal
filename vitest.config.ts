@@ -23,6 +23,8 @@ export default defineConfig({
     alias: {
       '@slowmoonship/metrics': resolvePath('./packages/metrics/src/index.ts'),
       '@slowmoonship/ingest': resolvePath('./packages/ingest/src/index.ts'),
+      // Next 里的 '@/' 与 tsconfig/next 的配置保持一致，web 侧的测试才能直接 import 页面代码
+      '@': resolvePath('./apps/web/src'),
     },
   },
   // node:sqlite 是 Node 内置模块，不能被 vite 打包解析

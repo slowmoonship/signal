@@ -129,3 +129,19 @@ API 可能在小版本间变化；若未来升级出问题，需评估迁移路�
 本站构建期静态生成，没有浏览器运行时可挂，源码文本是唯一稳定的断言面。
 若日后引入 Playwright 做视觉回归，本 ADR 以那时的渲染测试为准；两者不冲突。
 守卫自身也做过变异验证（把 `text-ink` 改成 `text-zinc-900` 会立刻失败并指出文件与色阶）。
+
+## ADR-013 依赖审计：记录风险评估，Phase 4 不做 major 升级
+
+**背景** `npm audit` 报 5 条：2 critical（`tinypool` 原型污染 → RCE，经 `vitest` 传递）、
+2 moderate（`@vitest/mocker` 路径穿越，同样经 `vitest`）、1 high（`postcss` 四个问题，经 `next` 传递）。
+`npm audit fix --dry-run` 确认**没有非破坏性修复**：要清掉它们必须升 `vitest` 3 → 5 与 `next` 15 → 16。
+**决策** Phase 4 不做这两个 major 升级，改为逐条评估并写进本 ADR。
+**评估** 两条 critical 全部位于 `node_modules/tinypool`，只在 Vitest 的 worker 池里运行——
+测试进程，不进入构建产物，也不参与任何线上请求；触发条件是攻击者能控制传给 `run()` 的
+worker options，本仓库的 `vitest.config.ts` 全部为字面量，无外部输入。
+`postcss` 的 high 只在构建期处理 CSS 时生效，而 CSS 全部是第一方源码，
+产物里也不含 postcss。**没有一条落在运行时依赖路径上**（站点是纯静态 HTML + CSS）。
+**后果** 接受"审计面板上永远有红字"这个状态，代价是失去了 `audit` 作为门禁的意义——
+所以在 CI 里**不**加 `npm audit --audit-level=high`，那会天天红，且红的原因与用户无关。
+若日后升级 `next` 或 `vitest` 大版本，这 5 条应当作为验收项重新核对，并顺带验证
+`@theme inline` 主题结构、`next/og` 与 `node:sqlite` 三处在新版本下的行为（它们都依赖具体版本的实现细节）。

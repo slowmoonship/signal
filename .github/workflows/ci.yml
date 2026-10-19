@@ -1,0 +1,94 @@
+name: CI
+
+# 本仓库目前没有配置任何 git remote（`git remote -v` 为空），主分支以本地实际存在的
+# `master` 为准。一旦推送到远端且远端主分支叫 `main`，这里需要同步改掉：
+# 触发条件写错的后果是"主分支的破坏性提交永远不跑 CI"，而这种缺失是静默的。
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# 同一分支只保留最新一次运行：新提交已经覆盖旧提交要验证的内容，
+# 旧运行继续跑只会浪费配额，并可能用过期结果盖住最新结论。
+# pull_request 上 github.ref 是 refs/pull/N/merge，因此同一 PR 的多次推送也会互相取消。
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# CI 全程只读：不写仓库、不发评论、不碰 secrets。最小权限是防止
+# 一次被投毒的 PR 把 token 权限放大到能改代码或读仓库机密。
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: 安装依赖
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # action 版本固定到 major tag 而不是 SHA：tag 可读、可 review，
+      # 且 tag 指向的代码 GitHub 官方自己也在审。这里不钉 SHA 是为了
+      # 可维护性，代价是 tag 可被重新指向（供应链风险窗口）。
+      # 若要钉 SHA：把下面三处 `@v4` 换成 `<40位SHA>  # v4.x.y` 的形式，
+      # 并开启 Dependabot 的 github-actions 更新器来维护，别手工记 SHA。
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      # node 22：node:sqlite（DatabaseSync）在 22.5.0 才可用，
+      # 且 Node 20 上根本不存在这个内置模块——用 20 会在 SnapshotStore 构造时直接崩。
+      # 根 package.json 的 engines 已声明 ">=22.5.0"，这里与之一致。
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          # 依赖 ~/.npm 的下载缓存。npm ci 本身仍然是逐文件校验完整性后安装，
+          # 缓存不会让"锁文件与依赖不一致"这类问题蒙混过关。
+          cache: npm
+
+      # 单独一个 job 的目的不是"装依赖"，而是把"锁文件与 package.json 不一致"
+      # 这类错误单独报出来：它会让所有后续步骤以一堆看不懂的解析错误收场。
+      # npm ci 存在时失败；不存在时不要偷偷退化成 npm install（那会改锁文件）。
+      - name: 按锁文件安装
+        run: npm ci
+
+  verify:
+    name: 类型 / lint / 测试
+    needs: install
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # 这里必须再装一次：跨 job 传递 node_modules 只能靠 upload-artifact 打包 tar，
+      # 而 npm workspaces 的 node_modules 里全是符号链接，解包后链接必然断。
+      # 与其在 tar 往返上踩坑，不如接受第二次 npm ci——setup-node 的 npm 缓存
+      # 已经把下载成本降到接近零，剩下的是解包时间。
+      - name: 按锁文件安装
+        run: npm ci
+
+      # 三个检查拆成独立 step 而不是 `&&` 连成一行：
+      # 任一失败即中断（step 间的默认行为），但已通过的检查不会因为排在后面而白跑，
+      # 失败原因也能在 UI 上直接定位到具体是哪一类。
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # 测试覆盖 packages 与 apps/web 两处，包含视觉红线的可执行守卫，
+      # 靠人肉 review 守不住"破防了但运行时没有任何报错"的那类回归。
+      - name: 测试
+        run: npm run test
+
+      # 指标定义校验（README 已把它标为进 CI）。
+      # 与上面三项并列而不是替代它们：typecheck 管类型，这里管定义本身的完整性
+      # （来源、口径、警告文案是否齐备）。
+      - name: 校验指标定义
+        run: npm run metrics:validate

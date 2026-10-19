@@ -5,12 +5,20 @@
 
 ## 状态
 
-**Phase 0–3 完成，Phase 4 进行中。**
+**Phase 0–4 完成。上线（Phase 5）待批准。**
 
 - Phase 0：项目骨架、开发规范、数据适配器接口与数据质量约束。
 - Phase 1：18 个 BTC 指标定义（中英双语文案齐全）、首页与详情页、明暗主题、历史曲线。
 - Phase 2：接入真实免费源，`public/data` 已是 18 份真实快照，站点读的就是真数据。
 - Phase 3：视觉规范落地（语义 token、web 字体、320px 排版、键盘可达性），见 `docs/DESIGN.md`。
+- Phase 4：GitHub Actions 日更与 CI、stale 与新鲜度文案、sitemap / robots / OG / hreflang。
+
+## 环境变量
+
+| 变量 | 作用 | 未配置时 |
+|---|---|---|
+| `SIGNAL_SITE_URL` | 站点根 URL。canonical、sitemap、`robots.txt` 的 sitemap 指针、OG 绝对地址都由它推导 | 不写死占位域名；sitemap 输出空、robots 不带 sitemap 指针 |
+| `SIGNAL_DATA_DIR` | 页面读取的快照目录。`npm run dev:fixtures` 用它切到 `fixtures/btc` | 读 `apps/web/public/data` |
 
 本地预览：`npm run dev`。刷新数据：`npm run ingest:btc --workspace @slowmoonship/ingest -- --live`。
 没有真实数据也能看页面：`npm run dev:fixtures`（合成数据，页面顶部有明确告警条）。
@@ -67,7 +75,7 @@ Coin Metrics 免费层把美元计价的费用类指标（`FeeTotUSD`/`RevUSD`/`
 | `docs/PLAN.md` | MVP 范围、架构、实施计划、数据源实测结果 |
 | `docs/METRIC_AUTHORING.md` | 新增指标的唯一权威流程与必填字段 |
 | `docs/DESIGN.md` | 视觉规范：token、字体、排版层级、移动端与键盘可达性 |
-| `docs/DECISIONS.md` | 架构决策记录（ADR-001 ~ 012） |
+| `docs/DECISIONS.md` | 架构决策记录（ADR-001 ~ 013） |
 
 ## 数据质量红线
 

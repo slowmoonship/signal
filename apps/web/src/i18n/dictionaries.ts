@@ -18,6 +18,7 @@ export type Dictionary = Readonly<{
   sourceTime: string
   ingestedAt: string
   stale: string
+  staleExplanation: string
   noData: string
   noDataHint: string
   invalidFile: string
@@ -63,7 +64,9 @@ const en: Dictionary = {
   updatedAt: 'updated',
   sourceTime: 'Source time',
   ingestedAt: 'Collected',
-  stale: 'Pending update',
+  stale: 'Update failed',
+  staleExplanation:
+    'The most recent collection attempt did not succeed. The values shown are the last valid snapshot, kept unchanged.',
   noData: 'no data',
   noDataHint: 'No snapshot has been collected for this metric yet.',
   invalidFile: 'Published file failed validation',
@@ -116,7 +119,9 @@ const zh: Dictionary = {
   updatedAt: '更新于',
   sourceTime: '来源时间',
   ingestedAt: '采集时间',
-  stale: '待更新',
+  stale: '抓取失败',
+  staleExplanation:
+    '最近一次抓取未成功。下列数值是上一份有效快照，原样保留，未做任何修改。',
   noData: '暂无数据',
   noDataHint: '该指标尚未采集到任何快照。',
   invalidFile: '发布文件未通过校验',

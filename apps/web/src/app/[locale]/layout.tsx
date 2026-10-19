@@ -16,6 +16,7 @@ import { LOCALES } from '@slowmoonship/metrics'
 import { LocaleSwitch } from '@/components/LocaleSwitch'
 import { getDictionary, isLocale } from '@/i18n/dictionaries'
 import { fontVariables } from '@/lib/fonts'
+import { siteUrl } from '@/lib/site-url'
 
 import '../globals.css'
 
@@ -31,9 +32,13 @@ export async function generateMetadata({
   const { locale } = await params
   const t = isLocale(locale) ? getDictionary(locale) : null
   const description = t?.tagline ?? 'Bitcoin market and on-chain metrics'
+  // 域名未定（Phase 5），未配置 SIGNAL_SITE_URL 时不写死一个占位域名：
+  // canonical / OG 的绝对 URL 都从这里推导，写错比留空更难发现。
+  const base = siteUrl()
   return {
     title: `${t?.siteTitle ?? 'Signal'} — ${description}`,
     description,
+    ...(base ? { metadataBase: base } : {}),
     alternates: {
       canonical: `/${locale}`,
       languages: { en: '/en', zh: '/zh' },
@@ -43,6 +48,11 @@ export async function generateMetadata({
       description,
       locale,
       type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${t?.siteTitle ?? 'Signal'} — ${description}`,
+      description,
     },
     // 日更快照：允许被抓取缓存，不允许被实时刷新（ADR-004 无实时性）
     robots: { index: true, follow: true },

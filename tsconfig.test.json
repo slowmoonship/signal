@@ -9,7 +9,11 @@
     "declarationMap": false,
     "types": ["node", "vitest/globals"],
     "paths": {
-      "@slowmoonship/metrics": ["./packages/metrics/src/index.ts"]
+      "@slowmoonship/metrics": ["./packages/metrics/src/index.ts"],
+      // 与 apps/web/tsconfig.json 的 '@/*' 指向同处：web 侧的测试会顺着 import
+      // 把 src/app 下的路由文件一并拉进这次检查，路径映射必须在这里也能解析，
+      // 否则报出来的 TS2307 会让人以为页面本身引不到自己的模块。
+      "@/*": ["./apps/web/src/*"]
     }
   },
   "include": [

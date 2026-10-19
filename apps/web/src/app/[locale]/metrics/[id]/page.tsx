@@ -111,6 +111,14 @@ export default async function MetricPage({ params }: { params: Params }) {
         </p>
       </header>
 
+      {result.ok && result.value.stale ? (
+        /* stale 告警必须紧跟在大数值下面：新鲜度说明在页面更靠后的位置，
+           而读者多半是只看那个大数字就走了。把提示留在原地才拦得住。 */
+        <p className="mt-6 border border-rule-strong px-3 py-2 text-xs text-ink-muted">
+          <span className="font-mono">{t.stale}</span> — {t.staleExplanation}
+        </p>
+      ) : null}
+
       {result.ok && result.value.fixture === true ? (
         <p className="mt-6 border border-rule-strong px-3 py-2 font-mono text-xs text-ink-muted">
           {t.fixtureBanner}

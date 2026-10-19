@@ -67,7 +67,10 @@ export function Freshness({
       {stale ? (
         <div className="mt-2 flex gap-3">
           <dt className="min-w-[6.5rem] text-ink">{t.stale}</dt>
-          <dd>{t.noDataHint}</dd>
+          {/* 这里曾经复用 noDataHint（"尚未采集到任何快照"），是错的：
+              stale 的前提恰恰是**有**一份快照，只是这次抓取没成功。
+              说成"暂无数据"等于让读者以为页面上什么都没有。 */}
+          <dd>{t.staleExplanation}</dd>
         </div>
       ) : null}
     </dl>

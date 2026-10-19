@@ -3,8 +3,9 @@
 > 面向公众的加密资产市场与链上指标目录与监控网站。
 > 阶段一仅 BTC，架构预留 ETH / SOL。
 >
-> 状态：**Phase 0–3 已完成**（骨架 / 规范 / 适配器接口；18 个指标定义 + 静态页面；真实免费源抓取已跑通；视觉规范落地）。
-> Phase 4（自动化）进行中。
+> 状态：**Phase 0–4 已完成**（骨架 / 规范 / 适配器接口；18 个指标定义 + 静态页面；真实免费源抓取已跑通；
+> 视觉规范落地；自动化与 SEO 就绪）。
+> Phase 5（上线）待你批准，本轮任务明确不部署。
 > 本文所有数据源均已于 2026-10-19 从本机实测验证（见 §4）。
 > 已确认决策见 §0 与 `docs/DECISIONS.md`。
 
@@ -354,9 +355,37 @@ DESIGN.md token 落地（zinc 灰阶、无阴影、无胶囊、字重驱动层�
 （无 chromium / playwright），因此明暗两态、320px 排版是**按 CSS 推导 + 构建产物核对**确认的，
 没有截图佐证。若日后引入 Playwright，值得补一轮真正的渲染验收。
 
-### Phase 4 — 自动化（1 天）
+### Phase 4 — 自动化（1 天）✅ 已完成 2026-10-20
 GitHub Actions 日更 workflow（`schedule` + `workflow_dispatch`）；`stale` 状态与新鲜度文案；SEO 元信息、hreflang、OG 图；typecheck/lint 进 CI
 **验收**：手动触发 workflow 完成抓取并提交数据变更
+
+**实际交付**：
+- `.github/workflows/ci.yml` —— Node 22（`node:sqlite` 需 ≥22.5.0，与根 `engines` 一致）、
+  `npm ci` + typecheck / lint / test / `metrics:validate`，`contents: read`，同分支并发自动取消。
+- `.github/workflows/ingest.yml` —— `cron: '17 6 * * *'`（错开整点峰值）+ `workflow_dispatch`，
+  抓取 → 测试 → 仅在 `public/data` 真有变化时提交 → 推送。提交信息带抓取时刻与 stale 份数。
+- stale 文案修正：**`Freshness` 原本复用 `noDataHint`（"尚未采集到任何快照"），这是错的**——
+  stale 的前提恰恰是*有*一份快照，只是这次没抓到。说成"暂无数据"会让读者以为页面上什么都没有。
+  新增 `staleExplanation`，并在大数值下方加告警条（新鲜度说明在页面更靠后，多数人只看数字就走了）。
+- SEO：`sitemap.xml` / `robots.txt` / OG 图 / Twitter card，`metadataBase` 由 `SIGNAL_SITE_URL` 决定。
+
+**踩到的坑**：
+1. **`hreflang` 互指曾全是相对 URL**。Next 会把 `url` 相对 `metadataBase` 展开，
+   却把 `alternates.languages` 原样输出，产物是 `<loc>https://…/en</loc>` 配
+   `<xhtml:link href="/en">`——搜索引擎直接丢弃这条互指。已在 sitemap 里自己拼绝对地址，并加测试守住。
+2. **workflow 提交步骤会在"当天没有 stale 指标"时反而失败**。
+   `shell: bash` 带 `-o pipefail`，`grep -l` 零匹配退出 1，整条管道失败 → 提交不执行。
+   已加 `|| true`，并在本机复现验证过（去掉守卫时退出码确实是 1）。
+3. **CI 与测试 tsconfig 的模块解析模式不同**。`apps/web` 用 `bundler`（`@/x` 无扩展名），
+   根 `tsconfig.test.json` 用 `NodeNext`（强制扩展名），同一份源码两边都过不了。
+   路由文件统一写 `@/lib/site-url.js`，两套配置都能解析。
+
+**依赖审计**：`npm audit` 的 5 条（2 critical / 2 moderate / 1 high）全部经 `vitest` / `next` 传递，
+没有非破坏性修复。逐条评估见 **ADR-013**：无一条落在运行时依赖路径上（站点是纯静态产物），
+因此本阶段不升级 `vitest` 3→5 与 `next` 15→16，也不把 `npm audit` 加进 CI 当门禁。
+
+**未验证**：workflow 从未在真实 GitHub 上跑过（本仓库无 remote）。YAML 已验证可解析，
+但 `actions/*` 版本、runner 环境、缓存与推送权限都需要你推上去之后才知道。
 
 ### Phase 5 — 上线（待批准）
 域名与部署。**本阶段需你明确批准后才启动**（当前任务明确要求不部署）。按 D3，第一版在 GitHub Actions 跑，后续可平滑迁到个人建站。
@@ -405,7 +434,10 @@ typecheck + ESLint 进 CI 且 PR 必须通过；约定式提交（`feat:`/`fix:`
 
 ## 下一步
 
-Phase 0–3 已执行完毕并各自提交：18 份真实快照已发布，站点读的就是真数据；
-视觉规范落地并由测试守住。
-下一阶段为 Phase 4：自动化（GitHub Actions 日更 workflow、新鲜度文案、SEO 元信息、
-typecheck/lint 进 CI）。Phase 5 上线**需你明确批准**，当前任务明确不部署。
+Phase 0–4 已执行完毕并各自提交。**Phase 1–4 的授权范围到此为止。**
+Phase 5（域名与部署）**需你明确批准**，本轮任务明确不部署、不推送远程仓库，因此没有执行。
+
+推上去之前你需要拍板的事（PLAN §8）：
+1. 域名——它决定 `SIGNAL_SITE_URL`，也是 canonical / sitemap / OG 的前提；
+2. GitHub 上主分支叫 `master` 还是 `main`——`.github/workflows/ci.yml` 目前按本地的 `master` 写；
+3. 18 个指标的中英文术语表述是否需要你校对（尤其 `Whale` / `Exchange` / `Miner` 的口径）。
