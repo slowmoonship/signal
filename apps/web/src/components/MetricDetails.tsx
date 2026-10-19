@@ -78,10 +78,13 @@ export function SourceList({
   locale,
   sources,
   isDerived,
+  computedLocally = false,
 }: {
   locale: Locale
   sources: readonly SourceRef[]
   isDerived: boolean
+  /** 数值由 Signal 本地算出，但不属于 difference / percentChange 派生（如 HHI） */
+  computedLocally?: boolean
 }) {
   const t = getDictionary(locale)
   const worst = sources.reduce<LabelConfidence>((acc, s) => {
@@ -109,7 +112,7 @@ export function SourceList({
       </ul>
 
       <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-        {isDerived ? t.derivation : t.methodNotDerived}
+        {isDerived ? t.derivation : computedLocally ? t.computedLocally : t.methodNotDerived}
       </p>
 
       {worst !== 'verified' ? (

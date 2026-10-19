@@ -5,15 +5,14 @@
 
 ## 状态
 
-**Phase 1 完成，Phase 2 进行中。**
+**Phase 0–2 完成，Phase 3 进行中。**
 
 - Phase 0：项目骨架、开发规范、数据适配器接口与数据质量约束。
 - Phase 1：18 个 BTC 指标定义（中英双语文案齐全）、首页与详情页、明暗主题、历史曲线。
-  页面数据当前来自 `fixtures/btc`（合成数据，页面顶部有明确告警条），
-  用于在没有真实数据时验证页面、格式化与空值语义。
-- Phase 2：接入真实免费源，把 `public/data` 变成真实快照。
+- Phase 2：接入真实免费源，`public/data` 已是 18 份真实快照，站点读的就是真数据。
 
-想看现在的站点：`npm run fixtures:btc && npm run dev:fixtures`。
+本地预览：`npm run dev`。刷新数据：`npm run ingest:btc --workspace @slowmoonship/ingest -- --live`。
+没有真实数据也能看页面：`npm run dev:fixtures`（合成数据，页面顶部有明确告警条）。
 
 ## 仓库结构
 
@@ -31,9 +30,11 @@ docs/               规划、指标编写规范、架构决策记录
 ```bash
 npm install
 npm run dev              # 启动站点（http://localhost:3000，自动重定向到 /en 或 /zh）
-npm run dev:fixtures     # 生成 fixture 并用它启动站点（Phase 1 的验证方式）
+npm run dev:fixtures     # 生成合成 fixture 并用它启动站点（页面会显示告警条）
 npm run fixtures:btc     # 只生成 fixture（写入 fixtures/btc，绝不写 public/data）
-npm run ingest:btc       # 抓取 BTC 指标（默认 dry-run；--live 才落库发布）
+npm run ingest:btc       # 抓取 BTC 指标（默认 dry-run）
+# 加 --live 才落库并发布到 public/data：
+npm run ingest:btc --workspace @slowmoonship/ingest -- --live
 npm run sources          # 列出已注册适配器与付费墙指标
 npm run db:init          # 初始化 SQLite
 npm run db:reset         # 删库重建（破坏性）
@@ -51,8 +52,8 @@ npm run test             # Vitest
 全部为**免 key** 数据源，且均已实测可用（详见 `docs/PLAN.md` §4）：
 
 - **Coin Metrics Community API** —— 日频链上与市场指标（主力来源）
-- **mempool.space** —— 算力、难度、矿池、拥堵度、区块高度
-- **Blockstream / DefiLlama** —— Phase 2 接入
+- **mempool.space** —— 推荐费率、矿池份额（算力作为回退源）
+- **Blockstream** —— 链尖区块的难度、交易笔数、权重
 
 Coin Metrics 免费层把美元计价的费用类指标（`FeeTotUSD`/`RevUSD`/`NVTAdj` 等）锁在付费墙后，
 适配器已在本地拦截这些指标，避免发出注定失败的请求。需要它们时按 ADR-002 增加付费适配器。

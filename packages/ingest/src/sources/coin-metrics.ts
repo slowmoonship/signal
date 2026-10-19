@@ -37,6 +37,23 @@ export const DENIED_METRICS: ReadonlySet<string> = new Set([
 
 type MetricSpec = {
   readonly contract: MetricContract
+  /**
+   * 把上游原始值换算到 `contract.unit` 的乘数。
+   *
+   * 实测（2026-10-19）：`HashRate` 返回约 1e9，与 mempool.space 同期的 1e21 H/s
+   * 正好差 1e12 —— 该端点以 TH/s 发布。没有这一步，"1,000,000,000 H/s"
+   * （全网算力 1 GH/s，比 2011 年还低）会被当成事实发布出去。
+   */
+  readonly scale?: number
+  /**
+   * 规范化后的上限。越界即上游改了口径，宁可报错也不发布。
+   *
+   * 只有上限，没有下限：币史早期的全网算力确实只有 1e5 H/s 量级，
+   * 设下限会把 2009 年的正确数据误判成错误数据——那才是真的造假。
+   * 上限能抓住的正是危险方向——上游哪天改成直接给 H/s，
+   * 换算后会变成 1e33，比物理上可能的算力高十个数量级。
+   */
+  readonly maxPlausible?: number
 }
 
 /**
@@ -160,6 +177,9 @@ const SPECS: Readonly<Record<string, MetricSpec>> = {
       window: 'calendar-day-utc',
       labelSemantics: 'n/a',
     },
+    scale: 1e12,
+    // 1e24 H/s 已是物理上不可能的量级，纯粹作为口径变化的哨兵
+    maxPlausible: 1e24,
   },
 }
 
@@ -220,6 +240,8 @@ export class CoinMetricsAdapter implements SourceAdapter {
 
   async fetch(req: AdapterRequest, ctx: FetchContext): Promise<RawSeries> {
     const contract = this.contractFor(req)
+    const scale = SPECS[req.metric]?.scale
+    const maxPlausible = SPECS[req.metric]?.maxPlausible
     const points: Point[] = []
     const warnings: string[] = []
     let pageToken: string | undefined
@@ -244,9 +266,19 @@ export class CoinMetricsAdapter implements SourceAdapter {
 
       for (const row of body.data ?? []) {
         const ts = toUtcSecondsOrThrow(row['time'], req.metric)
-        const value = parseValue(row[req.metric])
+        const raw = parseValue(row[req.metric])
+        const value = raw === null ? null : raw * (scale ?? 1)
         if (value === null) {
           warnings.push(`${new Date(ts * 1000).toISOString().slice(0, 10)} 上游未提供数据`)
+        } else if (maxPlausible !== undefined && value > maxPlausible) {
+          // 单位口径变了。把一个数量级差 1e12 的数字照发，等于发布一条假曲线，
+          // 而它看上去和正常数据毫无区别——只能在这里拦住。
+          throw new AdapterError(
+            PROVIDER,
+            req.metric,
+            `换算后取值 ${value} 超过上限 ${maxPlausible}，` +
+              `上游可能改了单位口径（原始值 ${raw}，乘数 ${scale ?? 1}）`,
+          )
         }
         points.push({ ts: toUtcSecondsBrand(ts), value })
       }

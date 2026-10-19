@@ -7,10 +7,15 @@
  */
 
 import type { AdapterRequest, SourceAdapter } from './types.js'
+import { BlockstreamAdapter } from './blockstream.js'
 import { CoinMetricsAdapter, DENIED_METRICS } from './coin-metrics.js'
 import { MempoolAdapter } from './mempool.js'
 
-export const adapters: readonly SourceAdapter[] = [new CoinMetricsAdapter(), new MempoolAdapter()]
+export const adapters: readonly SourceAdapter[] = [
+  new CoinMetricsAdapter(),
+  new MempoolAdapter(),
+  new BlockstreamAdapter(),
+]
 
 /**
  * 按指标挑选适配器。
@@ -28,6 +33,7 @@ export function isAvailable(req: Pick<AdapterRequest, 'asset' | 'metric'>): bool
 }
 
 export { DENIED_METRICS }
+export { BlockstreamAdapter } from './blockstream.js'
 export { CoinMetricsAdapter } from './coin-metrics.js'
 export { MempoolAdapter } from './mempool.js'
 export * from './types.js'

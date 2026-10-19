@@ -1,0 +1,30 @@
+{
+  "metricId": "difficulty",
+  "asset": "btc",
+  "contract": {
+    "unit": "index",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "point",
+    "labelSemantics": "n/a"
+  },
+  "points": [
+    {
+      "ts": 1792408165,
+      "value": 140577680051919.62
+    }
+  ],
+  "sourceTime": "2026-10-19T11:09:25.000Z",
+  "ingestedAt": "2026-10-19T11:11:16.093Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "blockstream",
+      "metric": "blockstream.Difficulty",
+      "endpoint": "https://blockstream.info/api/block/{hash}",
+      "auth": "none",
+      "labelConfidence": "verified"
+    }
+  ],
+  "warnings": []
+}

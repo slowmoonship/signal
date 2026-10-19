@@ -177,6 +177,10 @@ export const exchangeNetflow = defineMetric({
     },
   ],
   derivation: { kind: 'difference', left: 'FlowInExNtv', right: 'FlowOutExNtv' },
+  // 净流入可以为负（流出大于流入），因此不展示"较 7 天前变化了 %"：
+  // 从 +837 变成 −163 算出来是 −119%，与读者看到的事实正好相反。
+  canBeNegative: true,
+  changeWindowDays: null,
   history: {
     availableFrom: '2010-07-18',
     note: {

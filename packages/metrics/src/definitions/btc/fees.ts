@@ -11,7 +11,10 @@ import { LABEL_SEMANTICS } from '../../labels.js'
 import { cmEndpoint } from './market.js'
 
 const MEMPOOL_FEES = 'https://mempool.space/api/v1/fees/recommended'
-const BLOCKSTREAM_TIP = 'https://blockstream.info/api/block/tip'
+// Blockstream 的接口没有 `/api/block/tip`（那是 mempool 的路径），实测可用的是两步：
+// 先取链尖哈希，再按哈希取区块详情——tx_count / weight / difficulty 都在那一个响应里。
+// 这里只登记第二条：适配器负责第一步，定义只声明"这条数据来自哪个端点"。
+const BLOCKSTREAM_BLOCK = 'https://blockstream.info/api/block/{hash}'
 
 const GENESIS_HISTORY = {
   availableFrom: '2009-02-01',
@@ -175,8 +178,8 @@ export const blockTxCount = defineMetric({
   sources: [
     {
       provider: 'blockstream',
-      metric: 'blockstream.tip',
-      endpoint: BLOCKSTREAM_TIP,
+      metric: 'blockstream.BlockTxCount',
+      endpoint: BLOCKSTREAM_BLOCK,
       auth: 'none',
       labelConfidence: 'verified',
     },
@@ -212,8 +215,8 @@ export const blockWeight = defineMetric({
   sources: [
     {
       provider: 'blockstream',
-      metric: 'blockstream.tip',
-      endpoint: BLOCKSTREAM_TIP,
+      metric: 'blockstream.BlockWeight',
+      endpoint: BLOCKSTREAM_BLOCK,
       auth: 'none',
       labelConfidence: 'verified',
     },

@@ -32,6 +32,7 @@ export type Dictionary = Readonly<{
   mayBeRevised: string
   warnings: string
   methodNotDerived: string
+  computedLocally: string
   derivation: string
   labelConfidence: Readonly<Record<'verified' | 'heuristic' | 'unknown', string>>
   labelConfidenceNote: string
@@ -76,6 +77,8 @@ const en: Dictionary = {
   mayBeRevised: 'The source may restate past values.',
   warnings: 'Notes',
   methodNotDerived: 'Reported directly by the source; Signal performs no arithmetic on it.',
+  computedLocally:
+    'Computed by Signal from the figures in this response — the source publishes the underlying numbers, not this value.',
   derivation: 'Computed by Signal',
   labelConfidence: {
     verified: 'Verified',
@@ -126,6 +129,7 @@ const zh: Dictionary = {
   mayBeRevised: '数据源可能重算历史值。',
   warnings: '备注',
   methodNotDerived: '由数据源直接给出，Signal 不做任何运算。',
+  computedLocally: '由 Signal 依据该响应中的原始数据算出——数据源发布的是构成这个数的各项，而不是这个数本身。',
   derivation: '由 Signal 计算',
   labelConfidence: {
     verified: '已核实',

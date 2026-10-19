@@ -1,0 +1,30 @@
+{
+  "metricId": "pool-concentration",
+  "asset": "btc",
+  "contract": {
+    "unit": "index",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "point",
+    "labelSemantics": "mempool.space pool attribution labels"
+  },
+  "points": [
+    {
+      "ts": 1792408276,
+      "value": 1560.672393627813
+    }
+  ],
+  "sourceTime": "2026-10-19T11:11:16.000Z",
+  "ingestedAt": "2026-10-19T11:11:16.295Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "mempool",
+      "metric": "mempool.PoolConcentration",
+      "endpoint": "https://mempool.space/api/v1/mining/pools/1m",
+      "auth": "none",
+      "labelConfidence": "heuristic"
+    }
+  ],
+  "warnings": []
+}

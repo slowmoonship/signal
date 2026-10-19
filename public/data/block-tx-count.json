@@ -1,0 +1,30 @@
+{
+  "metricId": "block-tx-count",
+  "asset": "btc",
+  "contract": {
+    "unit": "count",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "point",
+    "labelSemantics": "n/a"
+  },
+  "points": [
+    {
+      "ts": 1792408165,
+      "value": 3756
+    }
+  ],
+  "sourceTime": "2026-10-19T11:09:25.000Z",
+  "ingestedAt": "2026-10-19T11:11:14.662Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "blockstream",
+      "metric": "blockstream.BlockTxCount",
+      "endpoint": "https://blockstream.info/api/block/{hash}",
+      "auth": "none",
+      "labelConfidence": "verified"
+    }
+  ],
+  "warnings": []
+}

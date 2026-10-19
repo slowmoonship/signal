@@ -264,6 +264,15 @@ function checkChangeWindow(
   def: MetricDefinition,
   push: (level: IssueLevel, code: string, message: string) => void,
 ): void {
+  // 会取负值的序列不允许展示百分比变化：符号翻转时那个百分比没有意义
+  if (def.canBeNegative === true && def.changeWindowDays !== null && def.changeWindowDays !== undefined) {
+    push(
+      'error',
+      'changeWindow.signedMetric',
+      `${def.id} 会取负值，不能展示"较 N 天前的百分比变化"（符号翻转会让该百分比失去含义）`,
+    )
+  }
+
   const w = def.changeWindowDays
   if (w === undefined || w === null) return
   if (!Number.isInteger(w) || w < 1) {

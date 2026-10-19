@@ -1,0 +1,30 @@
+{
+  "metricId": "recommended-fee-rate",
+  "asset": "btc",
+  "contract": {
+    "unit": "sat_per_vbyte",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "point",
+    "labelSemantics": "n/a"
+  },
+  "points": [
+    {
+      "ts": 1792408273,
+      "value": 1
+    }
+  ],
+  "sourceTime": "2026-10-19T11:11:13.000Z",
+  "ingestedAt": "2026-10-19T11:11:13.895Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "mempool",
+      "metric": "mempool.RecommendedFee",
+      "endpoint": "https://mempool.space/api/v1/fees/recommended",
+      "auth": "none",
+      "labelConfidence": "verified"
+    }
+  ],
+  "warnings": []
+}

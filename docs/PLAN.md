@@ -3,8 +3,8 @@
 > 面向公众的加密资产市场与链上指标目录与监控网站。
 > 阶段一仅 BTC，架构预留 ETH / SOL。
 >
-> 状态：**Phase 0、Phase 1 已完成**（骨架 / 规范 / 适配器接口；18 个指标定义 + 静态页面，数据为 fixture）。
-> Phase 2（真实抓取）进行中。
+> 状态：**Phase 0–2 已完成**（骨架 / 规范 / 适配器接口；18 个指标定义 + 静态页面；真实免费源抓取已跑通）。
+> Phase 3（视觉与主题）进行中。
 > 本文所有数据源均已于 2026-10-19 从本机实测验证（见 §4）。
 > 已确认决策见 §0 与 `docs/DECISIONS.md`。
 
@@ -301,13 +301,32 @@ signal/
    免费源拿不到）。按数据源实际给的数字命名，而不是给它安一个它没有测量的名字。
 3. 详情页图表不用 lightweight-charts，改为服务端渲染 SVG（ADR-009）。
 
-### Phase 2 — 抓取管线（2 天）🚧 进行中
+### Phase 2 — 抓取管线（2 天）✅ 已完成 2026-10-19
 4 个 source adapter（`auth` 字段就位）+ 幂等 upsert + 容错；BTC runner 跑通 §4.4 白名单内 13 个指标；派生计算（净流入、矿池 HHI/Top3）；`export` 产出 JSON
 **验收**：`npm run ingest:btc` 后 18 项全部有真实值与更新时间；删库重跑结果一致
 
-**待办**：Blockstream 适配器（`difficulty` / `block-tx-count` / `block-weight`）；
-mempool `PoolConcentration` 的 HHI 计算；runner 接入 `derivation`（difference / percentChange）
-与多来源 fallback；适配器统一使用 `LABEL_SEMANTICS`。
+**实际交付**：`npm run ingest:btc --workspace @slowmoonship/ingest -- --live` 一次跑通 18/18，
+`public/data` 全部为真实数据（价格 $81,935、流通量 20,100,129 BTC、市值 $1.647T，
+三者互洽：价格 × 流通量 = 市值，误差 0）。页面的 fixture 告警条随之消失。
+
+- **Blockstream 适配器**：`difficulty` / `block-tx-count` / `block-weight` 三个指标来自同一个链尖区块
+  （两次请求：先 `/api/blocks/tip/hash`，再 `/api/block/{hash}`）。
+  注意 `/api/block/tip` 在 blockstream 上**不存在**（那是 mempool 的路径），Phase 0 的定义里写错过。
+- **矿池集中度**：`/api/v1/mining/pools/1m` 只给**出块数**，不是算力；文案已按实际口径改为"出块份额"。
+  HHI 由 Signal 本地算出（`computedLocally`），页面如实标注"由 Signal 计算"而非"数据源直接给出"。
+- **runner 三条取数路径**：直接取（含 fallback）、差值派生、百分比派生。
+  fallback 只在口径检查通过后发生，并把实际来源写进快照；口径不兼容一律整体失败，不静默换源。
+- **失败也发布**：抓取失败时重新发布上一份有效快照并带上 `stale` 与失败原因——
+  否则站点会一直显示一份"看起来是今天"的旧数据。
+
+**过程中发现并修掉的数据缺陷**（都已加测试或值域守卫）
+1. **Coin Metrics `HashRate` 以 TH/s 发布**（实测约 1e9），直接当 H/s 用会让"全网算力"显示成 1.1 TH/s，
+   比真实值差 1e12。已在适配器换算（×10¹²）并加物理上限守卫；
+   同时修掉 `formatHashRate` 单位阶梯漏级的问题（缺 GH 一级，1.1e9 会被标成 TH/s）。
+2. **`block-weight` 的上游指标名写成了 `blockstream.BlockTxCount`**（笔误），会把交易笔数当区块权重发布。
+3. **净流入的百分比变化无意义**：从 +837 变成 −163 算出来是 −119%。
+   新增 `canBeNegative`，这类指标一律不展示"较 N 天前变化"。
+4. 难度、币种数、矿池集中度等"每天只采样一次"的指标，页面原本会显示一个空的"7 日变化"标签。
 
 ### Phase 3 — 视觉与主题（1.5 天）
 DESIGN.md token 落地（zinc 灰阶、无阴影、无胶囊、字重驱动层级、mono 元信息）；明暗主题无闪烁；详情页 lightweight-charts；中文排版微调；移动端与键盘可达性
@@ -364,6 +383,6 @@ typecheck + ESLint 进 CI 且 PR 必须通过；约定式提交（`feat:`/`fix:`
 
 ## 下一步
 
-Phase 0、Phase 1 已执行完毕并各自提交。下一阶段为 Phase 2：接真实免费源，
-把 `public/data` 从空目录变成 18 份真实快照，页面的 fixture 告警条随之消失。
-`docs/DESIGN.md` 在 Phase 3 前编写即可。
+Phase 0–2 已执行完毕并各自提交：18 份真实快照已发布，站点读的就是真数据。
+下一阶段为 Phase 3：视觉与主题（`docs/DESIGN.md` token 落地、明暗主题无闪烁、
+移动端与键盘可达性）。

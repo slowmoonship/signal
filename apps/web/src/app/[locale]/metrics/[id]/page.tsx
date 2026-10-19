@@ -138,6 +138,7 @@ export default async function MetricPage({ params }: { params: Params }) {
           locale={locale}
           sources={result.ok ? result.value.sources : def.sources}
           isDerived={def.derivation !== undefined}
+          computedLocally={def.computedLocally === true}
         />
       </Block>
 

@@ -12,6 +12,8 @@ import { cmEndpoint } from './market.js'
 
 const MEMPOOL_HASHRATE_1Y = 'https://mempool.space/api/v1/mining/hashrate/1y'
 const MEMPOOL_POOLS_1M = 'https://mempool.space/api/v1/mining/pools/1m'
+// 与 fees.ts 同一组 Blockstream 端点：先取链尖哈希，再按哈希取区块详情
+const BLOCKSTREAM_BLOCK = 'https://blockstream.info/api/block/{hash}'
 
 export const hashrate = defineMetric({
   id: 'hashrate',
@@ -23,14 +25,16 @@ export const hashrate = defineMetric({
     zh: '维护这条网络所需的总算力，单位为每秒哈希次数。算力随新增硬件上升，随老旧设备退出挖矿而下降。',
   },
   methodology: {
-    en: 'Daily mean of the source’s hashrate estimate. The estimate is model-based: it infers hashrate from the work implied by block difficulty and the observed block interval, so a stretch of unusually lucky or unlucky blocks shifts it. Not the same measure as mempool.space’s difficulty-adjustment projection, which assumes a fixed hashrate over the coming retarget window.',
-    zh: '取数据源算力估计的日均值。该估计是模型推导的：由出块难度所隐含的工作量与实际出块间隔反推算力，因此一段运气特别好或特别差的出块会让它偏移。它与 mempool.space 的难度调整预估不是同一口径——后者假设未来一个调整周期内算力恒定。',
+    en: 'Daily mean of the source’s hashrate estimate, converted to hashes per second. The source reports TH/s, so Signal multiplies by 10¹² — the value as published is roughly a billion, and only after conversion is it comparable with other hashrate figures. The estimate itself is model-based: it infers hashrate from the work implied by block difficulty and the observed block interval, so a stretch of unusually lucky or unlucky blocks shifts it. Not the same measure as mempool.space’s difficulty-adjustment projection, which assumes a fixed hashrate over the coming retarget window.',
+    zh: '取数据源算力估计的日均值，并换算为每秒哈希次数：该数据源以 TH/s 发布，Signal 乘以 10¹²——原始值大约是十亿这个数量级，只有换算之后才能与其他算力口径比较。该估计本身是模型推导的：由出块难度所隐含的工作量与实际出块间隔反推算力，因此一段运气特别好或特别差的出块会让它偏移。它与 mempool.space 的难度调整预估不是同一口径——后者假设未来一个调整周期内算力恒定。',
   },
   unit: 'hashrate',
   frequency: '1d',
   format: { kind: 'hashrate' },
   contract: {
     unit: 'hashrate',
+    // scale 恒为 1：发布出去的数值已经统一换算成 H/s，换算是适配器的职责
+    // （主源原始单位是 TH/s，回退源是 H/s，两者都会被规范化后再比较口径）。
     scale: 1,
     aggregation: 'mean',
     window: 'calendar-day-utc',
@@ -92,8 +96,8 @@ export const difficulty = defineMetric({
   sources: [
     {
       provider: 'blockstream',
-      metric: 'blockstream.tip',
-      endpoint: 'https://blockstream.info/api/block/tip',
+      metric: 'blockstream.Difficulty',
+      endpoint: BLOCKSTREAM_BLOCK,
       auth: 'none',
       labelConfidence: 'verified',
     },
@@ -116,12 +120,12 @@ export const poolConcentration = defineMetric({
   category: 'mining',
   name: { en: 'Mining Pool Concentration', zh: '矿池集中度' },
   description: {
-    en: 'How concentrated hashrate is across mining pools, as a Herfindahl index over the shares mempool.space reports. Higher means a small number of pools account for more of the network.',
-    zh: '按 mempool.space 报告的份额算出的赫芬达尔指数，衡量算力在矿池间的集中程度。数值越高，说明越少的矿池占据了越多的算力。',
+    en: 'How concentrated block production is across mining pools, as a Herfindahl index over the block shares mempool.space reports for the trailing month. Higher means a small number of pools account for more blocks.',
+    zh: '按 mempool.space 报告的区块份额算出的赫芬达尔指数，衡量出块在矿池间的集中程度。数值越高，说明越少的矿池挖出了越多的块。',
   },
   methodology: {
-    en: 'HHI = Σ (share_i × 100)², where share_i is each pool’s share of hashrate in the trailing 30-day window mempool.space reports. The scale runs from 10000 for a single pool down to 10000/n for n equal pools; on mainnet it usually sits between roughly 1500 and 3000. Which pool mined a block comes from miner-claimed tags in coinbase inputs, so it is that service’s labelling rather than a chain-level fact, and blocks with no usable tag are excluded. One point per day.',
-    zh: 'HHI = Σ (share_i × 100)²，其中 share_i 为 mempool.space 报告的 30 天滚动窗口内各矿池的算力份额。取值从单一矿池独占的 10000，到 n 个矿池均分时的 10000/n；主网实际多在 1500–3000 之间。区块归属矿池取自 coinbase 输入中矿工自报的标签，因此属于该服务的标注方式而非链上事实，没有可用标签的区块被排除在外。每天一个点。',
+    en: 'HHI = Σ (share_i × 100)², where share_i is each pool’s share of the blocks it mined in the trailing month mempool.space reports. This is share of blocks, not share of hashrate — the two diverge whenever pools have different uptime, and the block counts are what the source actually publishes. The scale runs from 10000 for a single pool down to 10000/n for n equal pools; on mainnet it usually sits between roughly 1500 and 3000. Which pool mined a block comes from miner-claimed tags in coinbase inputs, so it is that service’s labelling rather than a chain-level fact, and blocks with no usable tag are excluded. One point per day, sampled from a rolling window that is itself recomputed upstream.',
+    zh: 'HHI = Σ (share_i × 100)²，其中 share_i 为 mempool.space 报告的最近一个月内各矿池的出块份额。这是出块份额而非算力份额——两者在矿池在线率不同时会分叉，而出块数正是该数据源实际发布的口径。取值从单一矿池独占的 10000，到 n 个矿池均分时的 10000/n；主网实际多在 1500–3000 之间。区块归属矿池取自 coinbase 输入中矿工自报的标签，因此属于该服务的标注方式而非链上事实，没有可用标签的区块被排除在外。每天一个点，取自上游自身也会重算的滚动窗口。',
   },
   unit: 'index',
   frequency: '1d',
@@ -133,6 +137,9 @@ export const poolConcentration = defineMetric({
     window: 'point',
     labelSemantics: LABEL_SEMANTICS.poolAttribution,
   },
+  // HHI 由 Signal 在本地算出（上游只给各矿池出块数），
+  // 但它是单次响应内的分布聚合，不是两条序列的差或比，因此不写进 derivation。
+  computedLocally: true,
   sources: [
     {
       provider: 'mempool',

@@ -28,11 +28,20 @@ export const UNIT_LABELS: Readonly<Record<Unit, Readonly<Record<Locale, string>>
   blocks: { en: 'blocks', zh: '个区块' },
 }
 
+/**
+ * 算力单位阶梯。
+ *
+ * 必须按 1000 逐级排满：漏掉 GH 这一级，"1.1e9 H/s" 会被标成 "1.1 TH/s"，
+ * 一个差 1000 倍的单位错误就这么上了页面，而且看上去完全正常。
+ */
 const HASH_RATE_UNITS: readonly { readonly threshold: number; readonly scale: number }[] = [
-  { threshold: 1e18, scale: 1e18 }, // ZH/s
-  { threshold: 1e15, scale: 1e15 }, // EH/s
-  { threshold: 1e12, scale: 1e12 }, // PH/s
-  { threshold: 1e9, scale: 1e9 }, // TH/s
+  { threshold: 1e21, scale: 1e21 }, // ZH/s
+  { threshold: 1e18, scale: 1e18 }, // EH/s
+  { threshold: 1e15, scale: 1e15 }, // PH/s
+  { threshold: 1e12, scale: 1e12 }, // TH/s
+  { threshold: 1e9, scale: 1e9 }, // GH/s
+  { threshold: 1e6, scale: 1e6 }, // MH/s
+  { threshold: 1e3, scale: 1e3 }, // kH/s
 ]
 
 function nf(locale: Locale, options: Intl.NumberFormatOptions): Intl.NumberFormat {
@@ -57,14 +66,20 @@ export function formatHashRate(value: number, locale: Locale): string {
 
 function unitForHashRate(scale: number): string {
   switch (scale) {
-    case 1e18:
+    case 1e21:
       return 'ZH/s'
-    case 1e15:
+    case 1e18:
       return 'EH/s'
-    case 1e12:
+    case 1e15:
       return 'PH/s'
-    case 1e9:
+    case 1e12:
       return 'TH/s'
+    case 1e9:
+      return 'GH/s'
+    case 1e6:
+      return 'MH/s'
+    case 1e3:
+      return 'kH/s'
     default:
       return 'H/s'
   }
@@ -94,8 +109,12 @@ export function formatValue(value: number | null, spec: FormatSpec, locale: Loca
     }
     case 'btc':
       return `${nf(locale, { maximumFractionDigits: 4 }).format(value)} BTC`
-    case 'percent':
-      return `${nf(locale, { maximumFractionDigits: spec.maxDecimals ?? 1 }).format(value)}%`
+    case 'percent': {
+      // 小数位固定：同一个列表里 "-2%" 与 "−2.0%" 并排会让人以为是两个口径。
+      // 位数比实际有效数字多时，多出来的 0 是精度声明，不是噪声。
+      const decimals = spec.maxDecimals ?? 1
+      return `${nf(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value)}%`
+    }
     case 'hashrate':
       return formatHashRate(value, locale)
     case 'satPerVbyte':

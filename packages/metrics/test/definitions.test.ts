@@ -244,10 +244,19 @@ describe('变化列窗口', () => {
     }
   })
 
-  it('只有变化量指标才允许关闭变化列', () => {
+  it('关闭变化列的只有两种理由：本身就是变化量，或会取负值', () => {
     for (const def of btcMetrics) {
       if (def.changeWindowDays !== null) continue
-      expect(def.derivation?.kind, `${def.id} 无理由关闭变化列`).toBe('percentChange')
+      const justified =
+        def.derivation?.kind === 'percentChange' || def.canBeNegative === true
+      expect(justified, `${def.id} 无理由关闭变化列`).toBe(true)
+    }
+  })
+
+  it('会取负值的指标一律关闭变化列（符号翻转时百分比没有含义）', () => {
+    for (const def of btcMetrics) {
+      if (def.canBeNegative !== true) continue
+      expect(def.changeWindowDays, `${def.id} 会取负值却仍在展示变化列`).toBeNull()
     }
   })
 })
