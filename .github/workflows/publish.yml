@@ -69,7 +69,7 @@ jobs:
 
       # 幂等：SnapshotStore 的建表语句全是 CREATE TABLE IF NOT EXISTS，
       # 对已存在的库重复执行是安全的空操作（db:init 只开库再关库，不删任何东西）。
-      - 对照 db:reset 才是删库重建——定时任务绝不能用那一个。
+      # 对照 db:reset 才是删库重建——定时任务绝不能用那一个。
       #
       # 注意 data/signal.db 被 .gitignore 排除，所以每台 runner 都是空库起跑：
       # 抓取只能拿到源当下能给的窗口，**跨运行的历史由 public/data/*.json 承担**
