@@ -12,14 +12,34 @@
     {
       "ts": 1792408276,
       "value": 1560.672393627813
+    },
+    {
+      "ts": 1792562523,
+      "value": 1567.6838651932019
+    },
+    {
+      "ts": 1792582170,
+      "value": 1574.986820832449
+    },
+    {
+      "ts": 1793945606,
+      "value": 1563.0738644248436
+    },
+    {
+      "ts": 1794324056,
+      "value": 1554.3683879759171
+    },
+    {
+      "ts": 1794324995,
+      "value": 1554.3356365849895
     }
   ],
-  "sourceTime": "2026-10-19T11:11:16.000Z",
-  "ingestedAt": "2026-10-19T11:11:16.295Z",
+  "sourceTime": "2026-11-10T15:36:35.000Z",
+  "ingestedAt": "2026-11-10T15:36:35.031Z",
   "stale": false,
   "sources": [
     {
-      "provider": "mempool",
+      "provider": "mempool.space",
       "metric": "mempool.PoolConcentration",
       "endpoint": "https://mempool.space/api/v1/mining/pools/1m",
       "auth": "none",

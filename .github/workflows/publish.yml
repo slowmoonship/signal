@@ -1,0 +1,170 @@
+name: 每日采集与发布
+
+# 一条自包含的工作流：
+#   采集 → 计算 → 数据校验 → 测试 → 静态导出 → 部署 Pages
+#
+# 为什么是**一条**而不是"采集一条、发布一条"：
+# 数据采集、历史留存、构建与部署必须在同一轮里协调完成。
+# 拆成两条，中间就会有一个"数据已经抓到但还没上线"或"上线了但历史没留存"的窗口。
+#
+# 触发方式：
+# - push 到 main：改了代码就重新出一版站点（数据也会重新采集）
+# - workflow_dispatch：手动触发（换源、排查"今天为什么没数据"）
+# - schedule：每天 04:37 UTC = 北京时间 12:37
+#
+# 定时时间为什么取 12:37 而不是 12:00：
+# 整点是全网 GitHub Actions 的峰值时刻，定时任务会在队列里排很久才开始跑。
+# 错开整点后启动时间可预期，抓取窗口也稳定落在同一个时段。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # GitHub 的 schedule 一律按 UTC 解释，这里不写时区后缀。
+    - cron: '37 4 * * *'
+
+# 串行执行且不取消旧的运行：两个发布任务同时往 Pages 推必然互相覆盖，
+# 而中途取消的抓取只会留下一半跑完的结果。宁可排队，也不并发、也不打断。
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+# 三项权限各有用处，一个都不能多给：
+# - contents: write：把当天抓到的快照提交回仓库（历史就靠它留存）
+# - pages: write + id-token: write：Pages 部署所需的写入权与 OIDC 令牌
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  publish:
+    name: 采集 · 校验 · 导出 · 部署
+    runs-on: ubuntu-latest
+    # 20 个指标串行抓取 + 定投回测 + 全量测试 + 静态导出 + 部署；
+    # 45 分钟是留给网络重试与构建的余量，不是留给机器的。
+    timeout-minutes: 45
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          # 全历史：提交与 push 都要在本地完成，基于浅克隆做出来的提交
+          # 在服务端会因父提交缺失而无法正确挂到分支上。
+          fetch-depth: 0
+
+      # node 22：node:sqlite（DatabaseSync）在 22.5.0 才可用，
+      # Node 20 上根本不存在这个内置模块——用 20 会在 SnapshotStore 构造时直接崩。
+      # 根 package.json 的 engines 已声明 ">=22.5.0"，这里与之一致。
+      - name: 安装 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: 按锁文件安装
+        run: npm ci
+
+      # 幂等：SnapshotStore 的建表语句全是 CREATE TABLE IF NOT EXISTS，
+      # 对已存在的库重复执行是安全的空操作（db:init 只开库再关库，不删任何东西）。
+      - 对照 db:reset 才是删库重建——定时任务绝不能用那一个。
+      #
+      # 注意 data/signal.db 被 .gitignore 排除，所以每台 runner 都是空库起跑：
+      # 抓取只能拿到源当下能给的窗口，**跨运行的历史由 public/data/*.json 承担**
+      # （发布时与磁盘上的上一份合并，见 packages/ingest/src/publish/merge.ts）。
+      - name: 初始化数据库
+        run: npm run db:init
+
+      # 单个源失败**不阻断**这一轮：其余指标照常更新，失败的那个指标
+      # 会被标成 stale 并保留上一份数据（CLAUDE.md 红线 2）——
+      # 那是站点该有的样子，比整站停更一天更准确。
+      # 真正拦住"半成品"的是下一步的发布物体检：每个指标都必须有有效数据点。
+      #
+      # 这里显式写出 workspace 与 `--`，--live 才会真正落到 tsx 的 argv 上；
+      # 写成根目录的 `npm run ingest:btc` 会把 --live 当成 npm 自己的配置项，
+      # 结果是命令"成功"地跑成了 dry-run，页面数据一天都不更新。
+      - name: 采集 BTC 指标（落库并发布）
+        id: ingest
+        continue-on-error: true
+        run: npm run ingest:btc --workspace @slowmoonship/ingest -- --live
+
+      - name: 发布物体检（每个指标都有有效数据点）
+        # 少了任何一个指标、或任何一个指标被清空，这一轮就不该上线。
+        run: npm run data:verify
+
+      - name: 指标定义校验
+        run: npm run metrics:validate
+
+      - name: 类型检查
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: 测试
+        run: npm run test
+
+      # 提交与推送都发生在**部署之前**：
+      # 部署失败时数据已经进了仓库，下一轮不必重新抓一遍；
+      # 而部署用的就是当前工作区里的这份数据，两边不会不一致。
+      #
+      # 数据没变就不提交：源不可用、指标本身当日无更新、或结果与上一轮逐字节相同时，
+      # 每天一个空提交只会污染历史，并把"这天什么都没变"和"这天抓到了"混为一谈。
+      - name: 提交数据
+        id: commit
+        shell: bash
+        run: |
+          # Actions 不预置 git 身份，缺这两行 commit 会直接失败。
+          git config --local user.name 'github-actions[bot]'
+          git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+          if [ -z "$(git status --porcelain -- public/data)" ]; then
+            echo '数据无变化，跳过提交与推送。'
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo 'public/data 发生变化：'
+          git status --porcelain -- public/data
+          INGESTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          TOTAL=$(ls public/data/*.json | wc -l)
+          # `shell: bash` 带 -o pipefail：grep 一份都没匹配到时退出码是 1，
+          # 整条管道随之失败，而 `set -e` 会让提交这一步直接挂掉——
+          # 也就是说"今天没有任何指标变 stale"反而提交不了数据。
+          # 这里的 || true 只吞掉 grep 的"没找到"，wc 的计数仍然是准的。
+          STALE=$(grep -l '"stale": true' public/data/*.json 2>/dev/null | wc -l || true)
+          git add public/data
+          git commit -m "chore(data): 更新 BTC 指标快照（${INGESTED_AT}）" \
+            -m "共 ${TOTAL} 份，其中 ${STALE} 份标记为 stale（沿用上一份有效快照）"
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
+      - name: 推送数据
+        if: steps.commit.outputs.changed == 'true'
+        run: git push
+        env:
+          # 关掉交互式凭证提示：机器上没配 git 凭证时，宁可立刻失败并把原因写进日志。
+          GIT_TERMINAL_PROMPT: '0'
+        # 用默认的 GITHUB_TOKEN 推送，**不会**再次触发本工作流
+        # （GitHub 的既定行为：由 GITHUB_TOKEN 产生的推送不触发新的 workflow run）。
+        # 这一点是这条链路能闭环的关键——否则"推送数据"会触发新一轮采集，
+        # 新一轮又推送数据，无限循环。
+
+      - name: 静态导出
+        env:
+          # 站点根 URL。canonical / sitemap / robots 里的绝对地址都由它推导，
+          # 没有它就会退化成 http://localhost:3000（构建日志里那两条警告的来源）。
+          SIGNAL_SITE_URL: https://slowmoonship.github.io
+        run: npm run build
+
+      - name: 配置 Pages
+        uses: actions/configure-pages@v5
+
+      - name: 上传 Pages 产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Next 静态导出的产物目录。里面是纯静态文件：HTML + _next 资源 + data/*.json。
+          path: apps/web/out
+
+      - name: 部署到 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

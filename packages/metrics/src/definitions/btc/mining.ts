@@ -42,7 +42,7 @@ export const hashrate = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'HashRate',
       endpoint: cmEndpoint('HashRate'),
       auth: 'none',
@@ -51,7 +51,7 @@ export const hashrate = defineMetric({
     {
       // 口径与主源一致（单位、数量级、日均聚合、UTC 自然日窗口），
       // 因此可以作为回退源；`assertContractCompatible` 会在切换前拦下任何不一致。
-      provider: 'mempool',
+      provider: 'mempool.space',
       metric: 'mempool.HashRate',
       endpoint: MEMPOOL_HASHRATE_1Y,
       auth: 'none',
@@ -95,7 +95,7 @@ export const difficulty = defineMetric({
   },
   sources: [
     {
-      provider: 'blockstream',
+      provider: 'Blockstream',
       metric: 'blockstream.Difficulty',
       endpoint: BLOCKSTREAM_BLOCK,
       auth: 'none',
@@ -142,7 +142,7 @@ export const poolConcentration = defineMetric({
   computedLocally: true,
   sources: [
     {
-      provider: 'mempool',
+      provider: 'mempool.space',
       metric: 'mempool.PoolConcentration',
       endpoint: MEMPOOL_POOLS_1M,
       auth: 'none',
@@ -186,7 +186,7 @@ export const minerRevenueUsd = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'IssTotUSD',
       endpoint: cmEndpoint('IssTotUSD'),
       auth: 'none',

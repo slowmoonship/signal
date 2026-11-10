@@ -2,6 +2,8 @@
 node_modules/
 dist/
 .next/
+# Next 静态导出产物（apps/web/out）：由构建生成，不入库
+out/
 *.tsbuildinfo
 
 # 数据层：SQLite 事实源不入库，导出的 JSON 入库（见 docs/PLAN.md §3.3）
@@ -9,12 +11,19 @@ dist/
 **/data/*.db-wal
 **/data/*.db-shm
 
+# apps/web/public/data 是构建期从仓库根 public/data 同步过来的**副本**
+# （见 apps/web/scripts/sync-public-data.mjs）。只同步不入库：
+# 同一份数据存两处，迟早会分叉，而分叉的那份正好是站点用的那份。
+/apps/web/public/data/
+
 # fixture 由 `npm run fixtures:btc` 确定性生成，不入库：
 # 生成器是事实，产物只是缓存，入库只会让每次重生成都变成一次无意义 diff。
 # public/data/*.json（真实发布数据）相反，必须入库——它就是站点内容。
-fixtures/
-# 生成器源码在 packages/ingest/src/fixtures/，不受影响：上一行锚定仓库根，
-# 不会向下匹配 packages/ 下的同名目录。
+# 前导 `/` 不能省：gitignore 里不带斜杠的模式会匹配任意层级，
+# 写成 `fixtures/` 会连 packages/ingest/src/fixtures/ 一起吃掉——
+# 而那里的 generate.ts 是 fixture 的**事实**，产物才只是缓存。
+/fixtures/
+# 生成器源码因此仍会入库，新克隆的仓库照样能 `npm run fixtures:btc`。
 
 # 编辑器与系统
 .DS_Store

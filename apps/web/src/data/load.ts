@@ -12,7 +12,14 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 
-import { registry, type Asset, type PublishedMetric } from '@slowmoonship/metrics'
+import {
+  registry,
+  type Asset,
+  type DcaDistribution,
+  type DcaWorstCase,
+  type ObservationCoverage,
+  type PublishedMetric,
+} from '@slowmoonship/metrics'
 
 /** 指标 id 直接拼进文件路径，必须先过白名单，否则 `../` 可以读到仓库外 */
 const SAFE_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -115,6 +122,70 @@ export function parsePublishedMetric(raw: unknown, expectedId: string): LoadResu
 
   const arr = (key: string): unknown[] => (Array.isArray(raw[key]) ? (raw[key] as unknown[]) : [])
 
+  // coverage 是"有多少观测被排除"的唯一凭据。字段存在但内容非法时必须判坏文件，
+  // 不能悄悄扔掉——那等于让页面在一个没有被披露的删失上给出极值。
+  const rawCoverage = raw['coverage']
+  let coverage: ObservationCoverage | undefined
+  if (rawCoverage !== undefined && rawCoverage !== null) {
+    if (!isRecord(rawCoverage)) return { ok: false, reason: 'invalid', detail: 'coverage 不是对象' }
+    const included = num(rawCoverage['included'])
+    const censored = num(rawCoverage['censored'])
+    const invalidated = num(rawCoverage['invalidated'])
+    if (included === null || censored === null || !Number.isInteger(included) || !Number.isInteger(censored)) {
+      return {
+        ok: false,
+        reason: 'invalid',
+        detail: `coverage 的 included/censored 必须是非负整数，实为 ${JSON.stringify(rawCoverage)}`,
+      }
+    }
+    // invalidated 是后加的字段：旧发布文件里没有它，按 0 读是安全的
+    // （"没有因缺口作废的起点"与"这个口径还不存在"在旧数据上无法区分）。
+    coverage = { included, censored, invalidated: invalidated ?? 0 }
+  }
+
+  // worstCase 是"最坏那一段"的锚点：起点日、首次达标日、等待天数、最深浮亏。
+  // 首页走势图上的高亮区间直接取自它，前端不另算。
+  const rawWorst = raw['worstCase']
+  let worstCase: DcaWorstCase | undefined
+  if (rawWorst !== undefined && rawWorst !== null) {
+    if (!isRecord(rawWorst)) return { ok: false, reason: 'invalid', detail: 'worstCase 不是对象' }
+    const startTs = num(rawWorst['startTs'])
+    const passageTs = num(rawWorst['passageTs'])
+    const days = num(rawWorst['days'])
+    const maxDrawdownPercent = num(rawWorst['maxDrawdownPercent'])
+    if (startTs === null || passageTs === null || days === null || maxDrawdownPercent === null) {
+      return {
+        ok: false,
+        reason: 'invalid',
+        detail: `worstCase 的字段必须是数字，实为 ${JSON.stringify(rawWorst)}`,
+      }
+    }
+    worstCase = { startTs, passageTs, days, maxDrawdownPercent }
+  }
+
+  // distribution 是等待天数的分位数摘要，详情页用它回答"典型的一天要等多久"。
+  const rawDistribution = raw['distribution']
+  let distribution: DcaDistribution | undefined
+  if (rawDistribution !== undefined && rawDistribution !== null) {
+    if (!isRecord(rawDistribution)) {
+      return { ok: false, reason: 'invalid', detail: 'distribution 不是对象' }
+    }
+    const count = num(rawDistribution['count'])
+    const min = num(rawDistribution['min'])
+    const p50 = num(rawDistribution['p50'])
+    const p90 = num(rawDistribution['p90'])
+    const p99 = num(rawDistribution['p99'])
+    const max = num(rawDistribution['max'])
+    if (count === null || min === null || p50 === null || p90 === null || p99 === null || max === null) {
+      return {
+        ok: false,
+        reason: 'invalid',
+        detail: `distribution 的字段必须是数字，实为 ${JSON.stringify(rawDistribution)}`,
+      }
+    }
+    distribution = { count, min, p50, p90, p99, max }
+  }
+
   return {
     ok: true,
     value: {
@@ -127,6 +198,9 @@ export function parsePublishedMetric(raw: unknown, expectedId: string): LoadResu
       stale: raw['stale'],
       sources: arr('sources') as PublishedMetric['sources'],
       warnings: arr('warnings').filter((w): w is string => typeof w === 'string'),
+      ...(coverage ? { coverage } : {}),
+      ...(worstCase ? { worstCase } : {}),
+      ...(distribution ? { distribution } : {}),
       ...(raw['fixture'] === true ? { fixture: true as const } : {}),
     },
   }

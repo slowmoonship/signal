@@ -12,6 +12,7 @@ import {
   btcMetrics,
   findDefinitionalLanguage,
   LABEL_SEMANTICS,
+  METRIC_CATEGORIES,
   registry,
   UNIT_LABELS,
   type MetricDefinition,
@@ -20,8 +21,8 @@ import {
 const byId = new Map(btcMetrics.map((d) => [d.id, d]))
 
 describe('注册表', () => {
-  it('BTC 指标共 18 个（PLAN §2.2）', () => {
-    expect(registry.byAsset('btc')).toHaveLength(18)
+  it('BTC 指标共 20 个', () => {
+    expect(registry.byAsset('btc')).toHaveLength(20)
   })
 
   it('id 唯一且全部为小写连字符', () => {
@@ -35,11 +36,36 @@ describe('注册表', () => {
     expect(errors).toEqual([])
   })
 
-  it('分类分布为 market 4 / onchain 5 / fees 5 / mining 4', () => {
+  it('分类分布为 market 3 / onchain 3 / exchange 2 / fees 5 / mining 4 / valuation 3', () => {
     const counts = Object.fromEntries(
       registry.grouped('btc').map((g) => [g.category, g.metrics.length]),
     )
-    expect(counts).toEqual({ market: 4, onchain: 5, fees: 5, mining: 4 })
+    expect(counts).toEqual({
+      market: 3,
+      onchain: 3,
+      exchange: 2,
+      fees: 5,
+      mining: 4,
+      valuation: 3,
+    })
+  })
+
+  it('分组顺序由 METRIC_CATEGORIES 决定，不受定义文件排列影响', () => {
+    // 否则新加一个分类，首页分组顺序会变成"谁的文件被 import 得晚"
+    expect(registry.grouped('btc').map((g) => g.category)).toEqual([...METRIC_CATEGORIES])
+  })
+
+  it('交易所相关的两条指标独立成组，不再混在链上活动里', () => {
+    // 交易所标注口径与链上活动口径不同：一个是聚类地址，一个是全网计数。
+    // 放在一起会让读者以为它们来自同一类观测。
+    const grouped = registry.grouped('btc')
+    const exchange = grouped.find((g) => g.category === 'exchange')
+    expect(exchange?.metrics.map((m) => m.id).sort()).toEqual([
+      'exchange-balance',
+      'exchange-netflow',
+    ])
+    const onchain = grouped.find((g) => g.category === 'onchain')
+    expect(onchain?.metrics.every((m) => !m.id.startsWith('exchange-'))).toBe(true)
   })
 
   it('未注册 ETH / SOL 指标', () => {
@@ -157,7 +183,8 @@ describe('派生指标', () => {
       const parents = def.deriveFrom ?? []
       const upstream = def.sources.map((s) => s.metric)
       const covered =
-        (parents.length > 0 && def.derivation.kind === 'percentChange') ||
+        (parents.length > 0 &&
+          (def.derivation.kind === 'percentChange' || def.derivation.kind === 'dcaMaxWait')) ||
         (upstream.length > 1 && def.derivation.kind === 'difference')
       expect(covered, `${def.id} 的 derivation 没有对应依赖声明`).toBe(true)
     }

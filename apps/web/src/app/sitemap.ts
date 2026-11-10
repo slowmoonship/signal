@@ -6,13 +6,18 @@
  *
  * `lastModified` 取磁盘上那份快照的 `sourceTime`（抓取失败时会保留旧值，
  * 所以它可能早于今天的构建时间——那正是这份文件该表达的事实）。
+ *
+ * **只列规范地址**（ADR-021）：站点只有中文一种语言，不再有 hreflang 互指；
+ * `/zh` 与 `/zh/metrics/<id>` 是历史别名，它们各自的 canonical 指向这里列出的
+ * 那些地址——把别名也列进 sitemap，等于告诉搜索引擎同一页有两个正式地址。
  */
 
 import type { MetadataRoute } from 'next'
 
-import { LOCALES, registry } from '@slowmoonship/metrics'
+import { registry } from '@slowmoonship/metrics'
 
 import { loadAsset } from '@/data/load.js'
+import { BASE_PATH } from '@/lib/base-path.js'
 import { siteUrl } from '@/lib/site-url.js'
 
 export const dynamic = 'force-static'
@@ -26,41 +31,27 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // 空文件一眼看得出还没配域名，配错的文件会被当成已部署的证据。
   if (!base) return []
 
-  /**
-   * hreflang 互指也必须是绝对 URL。
-   *
-   * Next 只把 `url` 字段相对 metadataBase 展开，`alternates.languages` 里的值
-   * 原样输出——实测产物是 `<loc>https://…/en</loc>` 配 `<xhtml:link href="/en">`，
-   * 搜索引擎会直接丢弃这条互指，语言关联等于没写。所以这里自己拼绝对地址。
-   */
   const abs = (path: string): string => new URL(path, base).toString()
 
   const out: MetadataRoute.Sitemap = []
 
-  for (const locale of LOCALES) {
-    out.push({
-      url: abs(`/${locale}`),
-      changeFrequency: 'daily',
-      // 优先级是给搜索引擎的相对提示，不是承诺。这里首页最高、
-      // 详情页一律相同——它们对读者没有先后之分。
-      priority: locale === 'en' ? 1 : 0.9,
-      alternates: { languages: { en: abs('/en'), zh: abs('/zh') } },
-    })
+  out.push({
+    url: abs(`${BASE_PATH}/`),
+    changeFrequency: 'daily',
+    // 优先级是给搜索引擎的相对提示，不是承诺。这里首页最高、
+    // 详情页一律相同——它们对读者没有先后之分。
+    priority: 1,
+  })
 
-    for (const def of registry.byAsset('btc')) {
-      const snapshot = data.get(def.id)
-      const sourceTime =
-        snapshot?.ok === true ? Date.parse(snapshot.value.sourceTime) : Number.NaN
-      const enPath = `/en/metrics/${def.id}`
-      const zhPath = `/zh/metrics/${def.id}`
-      out.push({
-        url: abs(`/${locale}/metrics/${def.id}`),
-        lastModified: Number.isNaN(sourceTime) ? undefined : new Date(sourceTime),
-        changeFrequency: 'daily',
-        priority: 0.7,
-        alternates: { languages: { en: abs(enPath), zh: abs(zhPath) } },
-      })
-    }
+  for (const def of registry.byAsset('btc')) {
+    const snapshot = data.get(def.id)
+    const sourceTime = snapshot?.ok === true ? Date.parse(snapshot.value.sourceTime) : Number.NaN
+    out.push({
+      url: abs(`${BASE_PATH}/metrics/${def.id}/`),
+      lastModified: Number.isNaN(sourceTime) ? undefined : new Date(sourceTime),
+      changeFrequency: 'daily',
+      priority: 0.7,
+    })
   }
 
   return out

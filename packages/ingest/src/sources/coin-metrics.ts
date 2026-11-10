@@ -21,7 +21,27 @@ import { AdapterError, type AdapterRequest, type FetchContext, type RawSeries, t
 import { fetchJson } from './http.js'
 
 const BASE = 'https://community-api.coinmetrics.io/v4'
-const PROVIDER = 'coin-metrics'
+
+/**
+ * Coin Metrics 社区数据的许可。
+ *
+ * 上游文档原文："This data is available for free for non-commercial use under a
+ * Creative Commons license"，链接指向 CC BY-NC 4.0。
+ * 因此本站引用它时必须：署名 Coin Metrics、标明许可、链接许可全文，
+ * 并且**只能用于非商业用途**。
+ *
+ * 写进数据而不是写进文档：本站把这份数据重新发布成 JSON，
+ * 署名必须跟着数据走（见 SourceRef.license 的注释）。
+ */
+const COMMUNITY_LICENSE = {
+  name: 'CC BY-NC 4.0',
+  url: 'https://creativecommons.org/licenses/by-nc/4.0/',
+  restriction: {
+    en: 'Free for non-commercial use only.',
+    zh: '仅限非商业使用。',
+  },
+} as const
+const PROVIDER = 'Coin Metrics'
 
 /** 实测：这些指标在免 key 层返回 403，不可用于 MVP */
 export const DENIED_METRICS: ReadonlySet<string> = new Set([
@@ -85,6 +105,22 @@ const SPECS: Readonly<Record<string, MetricSpec>> = {
       scale: 1,
       aggregation: 'last',
       window: 'point',
+      labelSemantics: 'n/a',
+    },
+  },
+  /**
+   * 市值 ÷ 已实现市值。
+   *
+   * 实测（2026-10-21）：免 key 层返回 200，而同族的 `CapMVRVFF`、`CapRealUSD`
+   * 都是 403。也就是说**只拿得到当前市值口径，拿不到已实现市值本身**——
+   * 这一点必须写进指标文案，否则读者会以为这里能反推已实现价格。
+   */
+  CapMVRVCur: {
+    contract: {
+      unit: 'index',
+      scale: 1,
+      aggregation: 'last',
+      window: 'calendar-day-utc',
       labelSemantics: 'n/a',
     },
   },
@@ -235,6 +271,7 @@ export class CoinMetricsAdapter implements SourceAdapter {
       auth: this.auth,
       // 交易所类指标依赖上游聚类标注 → heuristic；其余为客观统计 → verified
       labelConfidence: /ExNtv|ExUSD/.test(req.metric) ? 'heuristic' : 'verified',
+      license: COMMUNITY_LICENSE,
     }
   }
 

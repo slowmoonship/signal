@@ -13,7 +13,7 @@
 import {
   formatAxisTick,
   formatValue,
-  type Locale,
+  type SiteLocale,
   type MetricDefinition,
   type SeriesPoint,
 } from '@slowmoonship/metrics'
@@ -27,12 +27,12 @@ const PAD = { top: 12, right: 56, bottom: 24, left: 8 }
 
 type Props = {
   readonly def: MetricDefinition
-  readonly locale: Locale
+  readonly locale: SiteLocale
   readonly points: readonly SeriesPoint[]
 }
 
 export function MetricChart({ def, locale, points }: Props) {
-  const t = getDictionary(locale)
+  const t = getDictionary()
   const known = points.filter((p) => p.value !== null)
 
   if (known.length === 0) {
@@ -66,7 +66,13 @@ export function MetricChart({ def, locale, points }: Props) {
   // 也不该画成一条贴边的直线假装有波动：给它一个人造量程并在轴上体现。
   const flat = rawMax === rawMin
   const pad = flat ? Math.max(1, Math.abs(rawMax) * 0.1) : (rawMax - rawMin) * 0.08
-  const min = rawMin - pad
+  // 底部只在数据本身有负值时才留白。
+  //
+  // 价格从 0.086 涨到 134,000 时，8% 的下边距就是 −10,720 美元——
+  // 轴上于是出现一个 "-11K" 的刻度，等于宣称比特币有过负的价格。
+  // 非负序列的下界就取它自己的最小值：既不撒谎，也不把曲线压扁
+  // （像"出块数"这种 132–144 的窄区间序列，把下界钉到 0 就没得看了）。
+  const min = rawMin >= 0 ? rawMin : rawMin - pad
   const max = rawMax + pad
 
   const x = (ts: number): number => PAD.left + ((ts - firstTs) / span) * (VIEW_W - PAD.left - PAD.right)

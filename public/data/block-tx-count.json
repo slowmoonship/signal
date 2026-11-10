@@ -12,14 +12,30 @@
     {
       "ts": 1792408165,
       "value": 3756
+    },
+    {
+      "ts": 1792562373,
+      "value": 5621
+    },
+    {
+      "ts": 1792582140,
+      "value": 338
+    },
+    {
+      "ts": 1793945540,
+      "value": 2717
+    },
+    {
+      "ts": 1794323435,
+      "value": 4264
     }
   ],
-  "sourceTime": "2026-10-19T11:09:25.000Z",
-  "ingestedAt": "2026-10-19T11:11:14.662Z",
+  "sourceTime": "2026-11-10T15:10:35.000Z",
+  "ingestedAt": "2026-11-10T15:36:33.546Z",
   "stale": false,
   "sources": [
     {
-      "provider": "blockstream",
+      "provider": "Blockstream",
       "metric": "blockstream.BlockTxCount",
       "endpoint": "https://blockstream.info/api/block/{hash}",
       "auth": "none",

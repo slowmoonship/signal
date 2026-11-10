@@ -12,14 +12,34 @@
     {
       "ts": 1792408273,
       "value": 1
+    },
+    {
+      "ts": 1792562521,
+      "value": 1
+    },
+    {
+      "ts": 1792582167,
+      "value": 1
+    },
+    {
+      "ts": 1793945603,
+      "value": 1
+    },
+    {
+      "ts": 1794324052,
+      "value": 1
+    },
+    {
+      "ts": 1794324991,
+      "value": 1
     }
   ],
-  "sourceTime": "2026-10-19T11:11:13.000Z",
-  "ingestedAt": "2026-10-19T11:11:13.895Z",
+  "sourceTime": "2026-11-10T15:36:31.000Z",
+  "ingestedAt": "2026-11-10T15:36:31.753Z",
   "stale": false,
   "sources": [
     {
-      "provider": "mempool",
+      "provider": "mempool.space",
       "metric": "mempool.RecommendedFee",
       "endpoint": "https://mempool.space/api/v1/fees/recommended",
       "auth": "none",

@@ -23756,18 +23756,114 @@
     {
       "ts": 1792281600,
       "value": 1646907492049.8083
+    },
+    {
+      "ts": 1792368000,
+      "value": 1646605544346.6646
+    },
+    {
+      "ts": 1792454400,
+      "value": 1666361189274.2231
+    },
+    {
+      "ts": 1792540800,
+      "value": 1692073450804.501
+    },
+    {
+      "ts": 1792627200,
+      "value": 1633428150584.534
+    },
+    {
+      "ts": 1792713600,
+      "value": 1626781529395.3215
+    },
+    {
+      "ts": 1792800000,
+      "value": 1622297877709.603
+    },
+    {
+      "ts": 1792886400,
+      "value": 1609060731593.7112
+    },
+    {
+      "ts": 1792972800,
+      "value": 1607312569753.247
+    },
+    {
+      "ts": 1793059200,
+      "value": 1624452978878.5874
+    },
+    {
+      "ts": 1793145600,
+      "value": 1633273193140.8477
+    },
+    {
+      "ts": 1793232000,
+      "value": 1572107025923.601
+    },
+    {
+      "ts": 1793318400,
+      "value": 1550350818606.8018
+    },
+    {
+      "ts": 1793404800,
+      "value": 1556245741438.7285
+    },
+    {
+      "ts": 1793491200,
+      "value": 1571041147723.8213
+    },
+    {
+      "ts": 1793577600,
+      "value": 1541829732990.3206
+    },
+    {
+      "ts": 1793664000,
+      "value": 1561467928110.767
+    },
+    {
+      "ts": 1793750400,
+      "value": 1618445506870.0176
+    },
+    {
+      "ts": 1793836800,
+      "value": 1524281584722.369
+    },
+    {
+      "ts": 1793923200,
+      "value": 1524784319187.8877
+    },
+    {
+      "ts": 1794009600,
+      "value": 1522762518625.4592
+    },
+    {
+      "ts": 1794096000,
+      "value": 1507572044636.951
+    },
+    {
+      "ts": 1794182400,
+      "value": 1511487638441.352
     }
   ],
-  "sourceTime": "2026-10-18T00:00:00.000Z",
-  "ingestedAt": "2026-10-19T11:11:08.285Z",
+  "sourceTime": "2026-11-09T00:00:00.000Z",
+  "ingestedAt": "2026-11-10T15:36:35.826Z",
   "stale": false,
   "sources": [
     {
-      "provider": "coin-metrics",
+      "provider": "Coin Metrics",
       "metric": "CapMrktCurUSD",
       "endpoint": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=CapMrktCurUSD&frequency=1d",
       "auth": "none",
-      "labelConfidence": "verified"
+      "labelConfidence": "verified",
+      "license": {
+        "name": "CC BY-NC 4.0",
+        "url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "restriction": {
+          "en": "Free for non-commercial use only.",
+          "zh": "仅限非商业使用。"
+        }
+      }
     }
   ],
   "warnings": []

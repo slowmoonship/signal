@@ -16,7 +16,7 @@ import {
   latestChange,
   latestKnown,
   MISSING,
-  type Locale,
+  type SiteLocale,
   type MetricDefinition,
   type SeriesPoint,
 } from '@slowmoonship/metrics'
@@ -25,7 +25,7 @@ import { getDictionary } from '@/i18n/dictionaries'
 
 export type MetricRowProps = {
   readonly def: MetricDefinition
-  readonly locale: Locale
+  readonly locale: SiteLocale
   readonly points: readonly SeriesPoint[] | null
   readonly href: string
   readonly changeWindowDays: number | null
@@ -44,7 +44,7 @@ export function MetricRow({
   const value = latest ? formatValue(latest.value, def.format, locale) : null
   // 窗口为 null 表示这个指标本身就是变化量（见 MetricDefinition.changeWindowDays）
   const change = points && changeWindowDays !== null ? latestChange(points, changeWindowDays) : null
-  const t = getDictionary(locale)
+  const t = getDictionary()
 
   return (
     <Link

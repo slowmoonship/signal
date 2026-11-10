@@ -1,11 +1,13 @@
 /**
- * 指标详情页：解释 · 计算逻辑 · 来源 · 历史曲线 · 新鲜度。
+ * 指标详情页视图：解释 · 计算逻辑 · 来源 · 历史曲线 · 新鲜度。
  *
  * 所有内容都来自 `packages/metrics` 的定义对象加磁盘上的快照，
  * 页面层不新增任何关于指标的知识（CLAUDE.md §架构边界）。
+ *
+ * 这是一个**视图**而不是路由：`/metrics/<id>` 是规范地址，
+ * `/zh/metrics/<id>` 是同一页面的历史别名（ADR-021），两者渲染同一份内容。
  */
 
-import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -16,51 +18,33 @@ import {
   latestKnown,
   MISSING,
   registry,
+  SITE_LOCALE,
 } from '@slowmoonship/metrics'
 
 import { MetricChart } from '@/components/MetricChart'
-import { Block, Freshness, HistoryNote, SourceList, Warnings } from '@/components/MetricDetails'
+import {
+  Block,
+  Coverage,
+  Distribution,
+  Freshness,
+  HistoryNote,
+  SourceList,
+  Warnings,
+} from '@/components/MetricDetails'
 import { loadMetric } from '@/data/load'
-import { getDictionary, isLocale, otherLocale } from '@/i18n/dictionaries'
+import { getDictionary } from '@/i18n/dictionaries'
 import { formatUtcDateTime } from '@/lib/format-time'
 
 /** 变化列的默认窗口；定义可用 changeWindowDays 覆盖，或置 null 关闭 */
 const CHANGE_WINDOW_DAYS = 7
 
-type Params = Promise<{ locale: string; id: string }>
-
-export function generateStaticParams(): { locale: string; id: string }[] {
-  const out: { locale: string; id: string }[] = []
-  for (const locale of ['en', 'zh']) {
-    for (const def of registry.byAsset('btc')) out.push({ locale, id: def.id })
-  }
-  return out
-}
-
-export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { locale, id } = await params
-  if (!isLocale(locale) || !registry.has(id)) return {}
-  const def = registry.get(id)
-  const t = getDictionary(locale)
-  return {
-    title: `${def.name[locale]} · ${t.siteTitle}`,
-    description: def.description[locale],
-    alternates: {
-      canonical: `/${locale}/metrics/${id}`,
-      languages: { en: `/en/metrics/${id}`, zh: `/zh/metrics/${id}` },
-    },
-    openGraph: { title: `${def.name[locale]} · ${t.siteTitle}`, description: def.description[locale] },
-  }
-}
-
-export default async function MetricPage({ params }: { params: Params }) {
-  const { locale, id } = await params
-  if (!isLocale(locale) || !registry.has(id)) notFound()
+export function MetricView({ id }: { readonly id: string }) {
+  const locale = SITE_LOCALE
+  if (!registry.has(id)) notFound()
 
   const def = registry.get(id)
-  const t = getDictionary(locale)
+  const t = getDictionary()
   const result = loadMetric(def.id)
-  const nextLocale = otherLocale(locale)
   const nowMs = Date.now()
 
   const points = result.ok ? result.value.points : null
@@ -70,11 +54,10 @@ export default async function MetricPage({ params }: { params: Params }) {
   const value = latest ? formatValue(latest.value, def.format, locale) : null
 
   return (
-    <article>
-      <Link
-        href={`/${locale}`}
-        className="text-xs text-ink-muted hover:text-ink hover:underline"
-      >
+    // 详情页收窄到可读行宽：根容器为了首页的双栏放大到了 max-w-6xl，
+    // 而 method 这类长段落铺满 1152px 会让每行超过 100 个字符，反而更难读。
+    <article className="max-w-prose">
+      <Link href="/" className="text-xs text-ink-muted hover:text-ink hover:underline">
         ← {t.backToIndex}
       </Link>
 
@@ -83,9 +66,6 @@ export default async function MetricPage({ params }: { params: Params }) {
           {t.categories[def.category]}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{def.name[locale]}</h1>
-        <p className="mt-1 text-sm text-ink-subtle">
-          {locale === 'zh' ? def.name.en : def.name.zh}
-        </p>
 
         <p className="mt-6 font-mono text-2xl tabular-nums break-words sm:text-3xl">
           {value ?? MISSING}
@@ -103,12 +83,6 @@ export default async function MetricPage({ params }: { params: Params }) {
             {formatUtcDateTime(new Date(latest.ts * 1000).toISOString())} UTC
           </p>
         ) : null}
-
-        <p className="mt-4 font-mono text-xs text-ink-muted">
-          <Link href={`/${nextLocale}/metrics/${def.id}`} hrefLang={nextLocale} className="hover:underline">
-            {locale === 'en' ? '中文' : 'English'}
-          </Link>
-        </p>
       </header>
 
       {result.ok && result.value.stale ? (
@@ -133,6 +107,10 @@ export default async function MetricPage({ params }: { params: Params }) {
 
       {points ? <MetricChart def={def} locale={locale} points={points} /> : null}
 
+      <Coverage coverage={result.ok ? result.value.coverage : undefined} />
+
+      <Distribution distribution={result.ok ? result.value.distribution : undefined} />
+
       <Block title={t.whatItMeasures}>
         <p>{def.description[locale]}</p>
       </Block>
@@ -143,7 +121,6 @@ export default async function MetricPage({ params }: { params: Params }) {
 
       <Block title={t.dataSource}>
         <SourceList
-          locale={locale}
           sources={result.ok ? result.value.sources : def.sources}
           isDerived={def.derivation !== undefined}
           computedLocally={def.computedLocally === true}
@@ -157,7 +134,6 @@ export default async function MetricPage({ params }: { params: Params }) {
       {result.ok ? (
         <Block title={`${t.updatedAt} / ${t.sourceTime}`}>
           <Freshness
-            locale={locale}
             sourceTime={result.value.sourceTime}
             ingestedAt={result.value.ingestedAt}
             stale={result.value.stale}
@@ -168,7 +144,7 @@ export default async function MetricPage({ params }: { params: Params }) {
 
       {result.ok && result.value.warnings.length > 0 ? (
         <div className="mt-8">
-          <Warnings locale={locale} warnings={result.value.warnings} />
+          <Warnings warnings={result.value.warnings} />
         </div>
       ) : null}
     </article>

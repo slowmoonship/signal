@@ -11,8 +11,6 @@
  * 对一个以"每天一个快照"为准的数据站来说这是硬伤。
  */
 
-import type { Locale } from '@slowmoonship/metrics'
-
 const pad = (n: number): string => (n < 10 ? `0${n}` : String(n))
 
 /** 无时区后缀的字符串按 UTC 处理；带偏移的按偏移换算到 UTC */
@@ -57,16 +55,14 @@ export function formatUtcDay(ts: number): string {
  * 页面是构建期静态生成的（ADR-004），因此这个"多久"是构建那一刻算出来的，
  * 不会自己走动——这与"不轮询、不实时"是一致的。
  *
- * 这是文件里唯一保留 locale 的函数：相对时间是纯语言问题，
- * "2 小时前"和"2 hours ago"没有可互换的机器格式。
+ * 相对时间固定用中文：站点界面只有中文（ADR-021），
+ * 而"2 小时前"和"2 hours ago"本来就没有可互换的机器格式。
  */
-export function formatAge(iso: string, nowMs: number, locale: Locale): string {
+export function formatAge(iso: string, nowMs: number): string {
   const ms = parseUtc(iso)
   if (ms === null) return ''
   const hours = Math.max(0, (nowMs - ms) / 3_600_000)
-  const rtf = new Intl.RelativeTimeFormat(locale === 'zh' ? 'zh-CN' : 'en-GB', {
-    numeric: 'auto',
-  })
+  const rtf = new Intl.RelativeTimeFormat('zh-CN', { numeric: 'auto' })
   if (hours < 1) return rtf.format(-Math.round(hours * 60), 'minute')
   if (hours < 48) return rtf.format(-Math.round(hours), 'hour')
   return rtf.format(-Math.round(hours / 24), 'day')

@@ -6,6 +6,8 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/.next/**',
+    // Next 静态导出的产物（apps/web/out）：构建出来的文件，不是源码
+    '**/out/**',
       '**/dist/**',
       '**/*.tsbuildinfo',
       'data/**',
@@ -29,6 +31,8 @@ export default tseslint.config(
             'apps/web/test/*.ts',
             'apps/web/*.config.ts',
             'apps/web/*.config.mjs',
+            // 构建与预览脚本（纯 node 脚本，不参与类型检查）
+            'apps/web/scripts/*.mjs',
           ],
           // 默认工程的匹配数上限只有 8，超过就直接解析失败。
           // 测试文件一多就会撞上（这些文件本来就都不在任何 build 产物里，
@@ -70,6 +74,22 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+    },
+  },
+  {
+    // 构建与预览脚本：纯 Node 脚本（.mjs），不参与类型检查，但要认 Node 全局
+    files: ['apps/web/scripts/*.mjs'],
+    languageOptions: {
+      globals: { process: 'readonly', console: 'readonly', URL: 'readonly' },
+    },
+    // 类型感知的规则对纯 JS 脚本没有意义（默认工程里没有类型，
+    // 一切都是 any）：关掉它们，而不是把脚本改成 TS 再多一套构建。
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
     },
   },

@@ -26,7 +26,7 @@ import {
 import { fetchJson } from './http.js'
 
 const BASE = 'https://mempool.space'
-const PROVIDER = 'mempool'
+const PROVIDER = 'mempool.space'
 
 /** 未声明时的默认标注可信度：客观统计类指标（不涉及任何实体标注）才是 verified */
 const DEFAULT_LABEL_CONFIDENCE: LabelConfidence = 'verified'

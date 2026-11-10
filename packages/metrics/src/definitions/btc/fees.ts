@@ -66,7 +66,7 @@ export const feesTotal = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'FeeTotNtv',
       endpoint: cmEndpoint('FeeTotNtv'),
       auth: 'none',
@@ -103,7 +103,7 @@ export const minerRevenue = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'IssTotNtv',
       endpoint: cmEndpoint('IssTotNtv'),
       auth: 'none',
@@ -140,7 +140,7 @@ export const recommendedFeeRate = defineMetric({
   },
   sources: [
     {
-      provider: 'mempool',
+      provider: 'mempool.space',
       metric: 'mempool.RecommendedFee',
       endpoint: MEMPOOL_FEES,
       auth: 'none',
@@ -177,7 +177,7 @@ export const blockTxCount = defineMetric({
   },
   sources: [
     {
-      provider: 'blockstream',
+      provider: 'Blockstream',
       metric: 'blockstream.BlockTxCount',
       endpoint: BLOCKSTREAM_BLOCK,
       auth: 'none',
@@ -214,7 +214,7 @@ export const blockWeight = defineMetric({
   },
   sources: [
     {
-      provider: 'blockstream',
+      provider: 'Blockstream',
       metric: 'blockstream.BlockWeight',
       endpoint: BLOCKSTREAM_BLOCK,
       auth: 'none',

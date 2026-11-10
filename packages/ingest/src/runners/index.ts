@@ -10,6 +10,8 @@
  * 2. 差值派生：交易所净流入这类"两条上游相减"，两条都取到才算得出。
  * 3. 百分比派生：7 日价格变化这类"对某条已注册序列做窗口对比"，
  *    取基准序列后本地计算。
+ * 4. 定投回测：枚举价格序列上的每一个起点，取首次达标的等待天数。
+ *    与前三者不同，它会**排除一部分观测**，因此额外产出 coverage。
  *
  * fallback 只在**口径检查通过**之后才允许发生，且最终用到的来源会写进快照。
  * 口径不兼容一律直接失败——静默换源等于把两种含义不同的数字混成一条曲线。
@@ -18,6 +20,7 @@
 import {
   assertContractCompatible,
   ContractMismatchError,
+  maxDcaWaitSeries,
   percentChangeSeries,
   registry,
   subtractSeries,
@@ -38,6 +41,7 @@ import { isAvailable, resolveAdapter } from '../sources/index.js'
 import type { FetchContext, Logger, RawSeries, SourceAdapter } from '../sources/types.js'
 import type { SnapshotStore } from '../store/db.js'
 import { publishJson, assertPublishable } from '../publish/atomic.js'
+import { mergePublishedPoints, readPublished } from '../publish/merge.js'
 
 export const consoleLogger: Logger = {
   debug: (m) => console.log(`  · ${m}`),
@@ -279,6 +283,67 @@ function weakestLabel(a: LabelConfidence, b: LabelConfidence): LabelConfidence {
 }
 
 /**
+ * 定投回测：对每一条已注册的价格序列枚举起点。
+ *
+ * 必须全量取：增量只拿到最后一个点，而这里需要完整的历史来枚举起点，
+ * 也需要完整的历史来回答"过去十年里最坏的是哪一段"。
+ */
+async function fetchDcaMaxWait(
+  def: MetricDefinition,
+  d: Extract<NonNullable<MetricDefinition['derivation']>, { kind: 'dcaMaxWait' }>,
+  opts: IngestOptions,
+): Promise<Resolved> {
+  const baseDef = registry.get(d.base)
+  const metric = baseDef.sources[0]?.metric
+  if (!metric) {
+    throw new Error(`派生基准 "${d.base}" 的来源未指明上游指标名`)
+  }
+
+  const { raw, source } = await fetchOne(def, metric, opts, null, baseDef.contract)
+  const { series, coverage, worstCase, distribution } = maxDcaWaitSeries(
+    raw.points,
+    d.thresholdPercent,
+    d.windowDays,
+  )
+  if (series.length === 0) {
+    throw new Error(
+      `基准序列 "${d.base}" 的历史不足以回测 ${d.windowDays} 天窗口（需要至少 ${d.windowDays} 天日频价格）`,
+    )
+  }
+
+  // 三类起点分开说：参与了计算的、算了但没达标的（右删失）、
+  // 因为路径上有缺口而根本算不了的（作废）。把后两者并成一个数，
+  // 读者就分不清"没回本"和"算不了"，而这两件事对结论的影响完全不同。
+  const censoredNote =
+    coverage.censored > 0
+      ? `最近一个 as-of 日有 ${coverage.included} 个起点参与计算，${coverage.censored} 个起点在窗口内未达 +${d.thresholdPercent}%，已作为右删失排除`
+      : `最近一个 as-of 日的 ${coverage.included} 个起点全部达标`
+  const invalidatedNote =
+    coverage.invalidated > 0
+      ? `另有 ${coverage.invalidated} 个起点因窗口内缺少某一天价格而无法定价，已作废`
+      : ''
+
+  return {
+    raw: {
+      points: toStoredPoints(series),
+      contract: def.contract,
+      sourceTime: raw.sourceTime,
+      labelConfidence: raw.labelConfidence,
+      warnings: [
+        ...raw.warnings,
+        `由 "${d.base}" 序列本地回测（${d.windowDays} 天窗口，+${d.thresholdPercent}% 阈值）`,
+        censoredNote,
+        ...(invalidatedNote ? [invalidatedNote] : []),
+      ],
+      coverage,
+      ...(worstCase ? { worstCase } : {}),
+      ...(distribution ? { distribution } : {}),
+    },
+    sources: [source],
+  }
+}
+
+/**
  * 抓取单个指标。
  *
  * 顺序上的关键：契约检查在**写入之前**。口径不符时直接放弃，
@@ -301,7 +366,9 @@ export async function ingestMetric(
         ? await fetchDifference(def, derived, opts)
         : derived?.kind === 'percentChange'
           ? await fetchPercentChange(def, derived, opts)
-          : await fetchDirect(def, opts)
+          : derived?.kind === 'dcaMaxWait'
+            ? await fetchDcaMaxWait(def, derived, opts)
+            : await fetchDirect(def, opts)
 
     const raw = resolved.raw
     const nullPoints = raw.points.filter((p) => p.value === null).length
@@ -315,6 +382,9 @@ export async function ingestMetric(
       stale: false,
       resolvedSources: resolved.sources,
       warnings: raw.warnings,
+      ...(raw.coverage ? { coverage: raw.coverage } : {}),
+      ...(raw.worstCase ? { worstCase: raw.worstCase } : {}),
+      ...(raw.distribution ? { distribution: raw.distribution } : {}),
     }
 
     if (opts.dryRun) {
@@ -418,16 +488,53 @@ function parseJson<T>(raw: string, metricId: string, field: string): T {
  * 但 `stale` 与失败原因必须跟着更新。否则站点会一直显示一份
  * "看起来是今天的数据" 的旧快照，而实际上今天根本没抓到——
  * 这正是数据质量红线 2 想避免的那类误导。
+ *
+ * **数据点不是"库里的"，而是"库里 + 已发布的上一份"合并出来的。**
+ * GitHub Actions 每次都是空库起跑，库里只有本轮抓到的那几个点；
+ * 只拿库里那份去覆盖发布文件，会把源只提供近期数据的指标
+ * （blockstream / mempool.space 那几个）的历史越写越短，
+ * 甚至在抓取失败时把指标清空。合并规则见 `publish/merge.ts`。
  */
 function publishAll(opts: IngestOptions, outcomes: readonly MetricOutcome[]): number {
   const dir = opts.publishDir ?? 'public/data'
+  const logger = opts.logger ?? consoleLogger
   let count = 0
   for (const outcome of outcomes) {
-    const points = opts.store.readPoints(outcome.metricId)
+    const fresh = opts.store.readPoints(outcome.metricId)
     const meta = opts.store.readMeta(outcome.metricId)
-    // 没有历史快照就没东西可发布：宁可页面上"暂无数据"，也不写一份空壳文件
-    if (!meta) continue
+    const previous = readPublished(dir, outcome.metricId, (m) => logger.warn(m))
 
+    // 本轮没抓到任何东西（源挂了，或没有可用来源），而磁盘上有上一份：
+    // **保持上一份的数据不动**，只把它标成 stale 并写明失败原因。
+    // 这是红线 2 的执行点：失败不覆盖有效快照，但读者必须看得出它没更新。
+    // 空库起跑时库里没有 meta 可标 stale，所以这一步不能省。
+    if (!meta) {
+      if (!previous) continue
+      const reason = outcome.reason ?? '本轮未取得新数据'
+      const file: PublishedMetric = {
+        ...previous,
+        stale: true,
+        warnings: [...previous.warnings, reason],
+      }
+      publishJson(dir, `${outcome.metricId}.json`, file)
+      count += 1
+      continue
+    }
+
+    const points = mergePublishedPoints(previous?.points ?? null, fresh)
+
+    // 合并后必须仍有有效数据点。真的一个都没有（既没有旧文件、
+    // 本轮又没抓到）时拒绝写这份文件——宁可不更新，也不能把指标清空。
+    if (!points.some((p) => p.value !== null)) {
+      logger.warn(
+        `${outcome.metricId}: 合并后没有任何有效数据点，跳过发布（保留磁盘上的上一份）`,
+      )
+      continue
+    }
+
+    const coverage = opts.store.readCoverage(outcome.metricId)
+    const worstCase = opts.store.readWorstCase(outcome.metricId)
+    const distribution = opts.store.readDistribution(outcome.metricId)
     const file: PublishedMetric = {
       metricId: outcome.metricId,
       asset: meta.asset as Asset,
@@ -438,6 +545,9 @@ function publishAll(opts: IngestOptions, outcomes: readonly MetricOutcome[]): nu
       stale: meta.stale,
       sources: parseJson<SourceRef[]>(meta.sourcesJson, outcome.metricId, 'sources'),
       warnings: parseJson<string[]>(meta.warningsJson, outcome.metricId, 'warnings'),
+      ...(coverage ? { coverage } : {}),
+      ...(worstCase ? { worstCase } : {}),
+      ...(distribution ? { distribution } : {}),
     }
     // 发布物必须是真实抓取结果。fixture 只能写进 fixtures/，
     // 一旦有人把合成数据混进发布目录，这里直接拒绝。

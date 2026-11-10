@@ -26000,18 +26000,114 @@
     {
       "ts": 1792281600,
       "value": 1.99185576
+    },
+    {
+      "ts": 1792368000,
+      "value": 2.5124562
+    },
+    {
+      "ts": 1792454400,
+      "value": 2.65052053
+    },
+    {
+      "ts": 1792540800,
+      "value": 2.60753382
+    },
+    {
+      "ts": 1792627200,
+      "value": 2.6784155
+    },
+    {
+      "ts": 1792713600,
+      "value": 2.4032665
+    },
+    {
+      "ts": 1792800000,
+      "value": 1.99736592
+    },
+    {
+      "ts": 1792886400,
+      "value": 1.91250605
+    },
+    {
+      "ts": 1792972800,
+      "value": 2.43953518
+    },
+    {
+      "ts": 1793059200,
+      "value": 2.30056604
+    },
+    {
+      "ts": 1793145600,
+      "value": 2.46197038
+    },
+    {
+      "ts": 1793232000,
+      "value": 2.73224738
+    },
+    {
+      "ts": 1793318400,
+      "value": 3.78730882
+    },
+    {
+      "ts": 1793404800,
+      "value": 2.1027343
+    },
+    {
+      "ts": 1793491200,
+      "value": 2.14526697
+    },
+    {
+      "ts": 1793577600,
+      "value": 2.78559795
+    },
+    {
+      "ts": 1793664000,
+      "value": 2.55202135
+    },
+    {
+      "ts": 1793750400,
+      "value": 2.33601471
+    },
+    {
+      "ts": 1793836800,
+      "value": 3.93978616
+    },
+    {
+      "ts": 1793923200,
+      "value": 3.43371069
+    },
+    {
+      "ts": 1794009600,
+      "value": 2.52761873
+    },
+    {
+      "ts": 1794096000,
+      "value": 3.33513486
+    },
+    {
+      "ts": 1794182400,
+      "value": 2.6825373
     }
   ],
-  "sourceTime": "2026-10-18T00:00:00.000Z",
-  "ingestedAt": "2026-10-19T11:11:12.702Z",
+  "sourceTime": "2026-11-09T00:00:00.000Z",
+  "ingestedAt": "2026-11-10T15:36:30.692Z",
   "stale": false,
   "sources": [
     {
-      "provider": "coin-metrics",
+      "provider": "Coin Metrics",
       "metric": "FeeTotNtv",
       "endpoint": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=FeeTotNtv&frequency=1d",
       "auth": "none",
-      "labelConfidence": "verified"
+      "labelConfidence": "verified",
+      "license": {
+        "name": "CC BY-NC 4.0",
+        "url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "restriction": {
+          "en": "Free for non-commercial use only.",
+          "zh": "仅限非商业使用。"
+        }
+      }
     }
   ],
   "warnings": []

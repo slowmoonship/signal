@@ -95,7 +95,7 @@ describe('矿池集中度 HHI', () => {
       labelSemantics: LABEL_SEMANTICS.poolAttribution,
     })
     expect(adapter.sourceRef(r)).toEqual({
-      provider: 'mempool',
+      provider: 'mempool.space',
       metric: 'mempool.PoolConcentration',
       endpoint: 'https://mempool.space/api/v1/mining/pools/1m',
       auth: 'none',

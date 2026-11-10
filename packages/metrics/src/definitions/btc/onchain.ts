@@ -44,7 +44,7 @@ export const activeAddresses = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'AdrActCnt',
       endpoint: cmEndpoint('AdrActCnt'),
       auth: 'none',
@@ -88,7 +88,7 @@ export const txCount = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'TxCnt',
       endpoint: cmEndpoint('TxCnt'),
       auth: 'none',
@@ -125,7 +125,7 @@ export const blockCount = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'BlkCnt',
       endpoint: cmEndpoint('BlkCnt'),
       auth: 'none',
@@ -140,7 +140,7 @@ export const blockCount = defineMetric({
 export const exchangeNetflow = defineMetric({
   id: 'exchange-netflow',
   asset: 'btc',
-  category: 'onchain',
+  category: 'exchange',
   name: { en: 'Exchange Netflow', zh: '交易所净流入' },
   description: {
     en: 'BTC moving into addresses the source labels as exchanges, minus BTC moving out, per day. Positive means net movement onto exchanges under that labelling.',
@@ -162,14 +162,14 @@ export const exchangeNetflow = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'FlowInExNtv',
       endpoint: cmEndpoint('FlowInExNtv'),
       auth: 'none',
       labelConfidence: 'heuristic',
     },
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'FlowOutExNtv',
       endpoint: cmEndpoint('FlowOutExNtv'),
       auth: 'none',
@@ -196,7 +196,7 @@ export const exchangeNetflow = defineMetric({
 export const exchangeBalance = defineMetric({
   id: 'exchange-balance',
   asset: 'btc',
-  category: 'onchain',
+  category: 'exchange',
   name: { en: 'Exchange Balance', zh: '交易所持币量' },
   description: {
     en: 'BTC held by the addresses the source labels as exchanges, as of each day. A common way to watch how much of the float sits in exchange custody.',
@@ -218,7 +218,7 @@ export const exchangeBalance = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'SplyExNtv',
       endpoint: cmEndpoint('SplyExNtv'),
       auth: 'none',

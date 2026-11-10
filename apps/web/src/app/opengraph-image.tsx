@@ -4,16 +4,25 @@
  * 刻意只有拉丁字母与数字：`next/og` 内置的字体不含中文字形，
  * 中文会渲染成豆腐块。为了让中文也好看就得把一套 CJK 字体塞进构建产物
  * （约 4 MB），而分享图上真正要传达的只有三件事：这是什么、什么资产、多大更新频率。
- * 这三件事用拉丁字母说清楚就够了。
+ * 这三件事用拉丁字母说清楚就够了。图上的 alt 文本是中文，
+ * 它是给读屏软件与爬虫看的文字，不受图片字体的限制。
  *
  * 视觉沿用 DESIGN.md 的红线：纯灰阶、无阴影无渐变、层级靠字重与间距。
+ *
+ * 放在 app 根上，因此 `/`、`/zh` 与所有详情页共用这一张图。
  */
 
 import { ImageResponse } from 'next/og'
 
-import { LOCALES, registry } from '@slowmoonship/metrics'
+import { registry } from '@slowmoonship/metrics'
 
-export const alt = 'Signal — Bitcoin market and on-chain metrics, daily snapshots'
+/**
+ * 静态导出要求这个路由是静态的：`output: 'export'` 下没有运行时，
+ * 图片必须在构建期生成成一张 PNG。
+ */
+export const dynamic = 'force-static'
+
+export const alt = 'Signal —— 比特币市场与链上指标目录，每日一个快照'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -70,18 +79,10 @@ export default function OpengraphImage() {
           <span style={{ margin: '0 16px' }}>·</span>
           <span>{count} metrics</span>
           <span style={{ margin: '0 16px' }}>·</span>
-          <span>EN / 中文</span>
-          <span style={{ margin: '0 16px' }}>·</span>
           <span>UTC</span>
         </div>
       </div>
     ),
     size,
   )
-}
-
-// 这个组件按 locale 生成两份静态图（LOCALES 两个值），
-// 不显式导出 generateStaticParams 时 Next 会把该段作为动态段处理。
-export function generateStaticParams(): { locale: string }[] {
-  return LOCALES.map((locale) => ({ locale }))
 }

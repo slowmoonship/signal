@@ -8,8 +8,11 @@
 import type {
   Asset,
   AuthMode,
+  DcaDistribution,
+  DcaWorstCase,
   LabelConfidence,
   MetricContract,
+  ObservationCoverage,
   Point,
   SourceRef,
   UtcSeconds,
@@ -59,6 +62,19 @@ export type RawSeries = {
   readonly labelConfidence: LabelConfidence
   /** 非致命的异常，如部分区间缺失 */
   readonly warnings: readonly string[]
+  /**
+   * 观测覆盖率。仅"枚举观测再取极值"的推导会带（如定投回测）。
+   * 省略 = 没有任何观测被排除。
+   */
+  readonly coverage?: ObservationCoverage
+  /**
+   * 派生指标的可核对锚点（当前只有定投等待期）。
+   *
+   * 页面上的高亮区间直接取自这里——前端另算一遍必然与后端分叉。
+   */
+  readonly worstCase?: DcaWorstCase
+  /** 等待天数的统计分布（当前只有定投等待期） */
+  readonly distribution?: DcaDistribution
 }
 
 export interface SourceAdapter {

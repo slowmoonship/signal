@@ -26,6 +26,7 @@ export const UNIT_LABELS: Readonly<Record<Unit, Readonly<Record<Locale, string>>
   sat_per_vbyte: { en: 'sat/vB', zh: 'sat/vB' },
   index: { en: '', zh: '' },
   blocks: { en: 'blocks', zh: '个区块' },
+  days: { en: 'days', zh: '天' },
 }
 
 /**
@@ -119,6 +120,19 @@ export function formatValue(value: number | null, spec: FormatSpec, locale: Loca
       return formatHashRate(value, locale)
     case 'satPerVbyte':
       return `${nf(locale, { maximumFractionDigits: 0 }).format(value)} sat/vB`
+    case 'days': {
+      // "1 天" 而不是 "1 天（1 天）"：超过一年用月更贴近读者对等待时间的体感，
+      // 但**主数字仍然是天**——换算只是括号里的补充，不替换原值。
+      const days = Math.round(value)
+      const exact = nf(locale, { maximumFractionDigits: 0 }).format(days)
+      if (days < 365) return locale === 'zh' ? `${exact} 天` : `${exact} days`
+      const years = days / 365.25
+      const approx =
+        locale === 'zh'
+          ? `约 ${nf(locale, { maximumFractionDigits: 1 }).format(years)} 年`
+          : `≈ ${nf(locale, { maximumFractionDigits: 1 }).format(years)} yr`
+      return locale === 'zh' ? `${exact} 天（${approx}）` : `${exact} days (${approx})`
+    }
   }
 }
 

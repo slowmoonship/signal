@@ -121,7 +121,7 @@ describe('Blockstream 三个指标的正常路径', () => {
 
   it('sourceRef 记录区块端点模板与免 key 口径', () => {
     expect(adapter.sourceRef(req('blockstream.BlockWeight'))).toEqual({
-      provider: 'blockstream',
+      provider: 'Blockstream',
       metric: 'blockstream.BlockWeight',
       endpoint: 'https://blockstream.info/api/block/{hash}',
       auth: 'none',

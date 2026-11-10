@@ -1,24 +1,33 @@
 /**
  * UI 文案字典（ADR-008：自建 i18n，不引入 next-intl）。
  *
- * 只有两种语言，自建足够。指标自己的文案在 `packages/metrics` 的定义里，
- * 本文件只放**页面框架**的词条——两者不得互相重复。
+ * **V0.1 起只有中文**（ADR-021）：站点不提供英文界面，页头没有语言切换，
+ * `/en` 也不再生成——因此这个文件里只有一份字典，
+ * 也不再需要 `isLocale` / `otherLocale` 这类查表函数。
+ *
+ * 指标自己的文案仍在 `packages/metrics` 的定义里（那里保留 en/zh 双语，
+ * 便于将来恢复），本文件只放**页面框架**的词条——两者不得互相重复。
  *
  * 组件里禁止写死文案：一律 `t()` 或直接取指标定义里的 `{ en, zh }`。
  */
 
-import { LOCALES, type Locale } from '@slowmoonship/metrics'
+import { type HomeGroupKey, type MetricCategory } from '@slowmoonship/metrics'
 
 export type Dictionary = Readonly<{
   siteTitle: string
   tagline: string
   index: string
-  categories: Readonly<Record<'market' | 'onchain' | 'fees' | 'mining', string>>
+  categories: Readonly<Record<MetricCategory, string>>
+  /** 首页表格的展示分组名。与注册表分类不是一回事。 */
+  homeGroups: Readonly<Record<HomeGroupKey, string>>
   updatedAt: string
   sourceTime: string
   ingestedAt: string
   stale: string
   staleExplanation: string
+  /** 快照过期横幅（首页）。日更站点的数据不是实时的，过期时必须自己说出来。 */
+  snapshotOutdated: string
+  snapshotOutdatedNote: string
   noData: string
   noDataHint: string
   invalidFile: string
@@ -37,6 +46,8 @@ export type Dictionary = Readonly<{
   derivation: string
   labelConfidence: Readonly<Record<'verified' | 'heuristic' | 'unknown', string>>
   labelConfidenceNote: string
+  /** 数据许可的标签（详情页"数据来源"块） */
+  licenseLabel: string
   labelHeuristicNote: string
   chartNoData: string
   chartSinglePoint: string
@@ -44,67 +55,57 @@ export type Dictionary = Readonly<{
   chartLatest: string
   fixtureBanner: string
   unitNote: string
-  footerNote: string
+  /** 页脚品牌署名 */
+  footerBrand: string
   skipToContent: string
   notFoundTitle: string
   notFoundBody: string
   backToIndex: string
+  /** 首页左栏 */
+  heroTitle: string
+  heroSubtitle: string
+  heroExplanation: string
+  heroStatReached: string
+  heroStatUnreached: string
+  heroStatMedian: string
+  heroStatP90: string
+  heroDays: string
+  marketRead: string
+  marketReadUnknown: string
+  /** 十年价格走势 */
+  sparklineNoData: string
+  sparklineNoHighlight: string
+  sparklineHighlight: string
+  sparklineAria: string
+  /** 首页表格表头 */
+  colCategory: string
+  colMetric: string
+  colValue: string
+  colChange: string
+  colStatus: string
+  colBasis: string
+  statusPending: string
+  statusInvalid: string
+  dataNoValue: string
+  statusShortHistory: string
+  /** 观测覆盖率披露 */
+  coverage: string
+  coverageIncluded: string
+  coverageCensored: string
+  coverageInvalidated: string
+  /** 等待天数分布 */
+  distribution: string
+  distributionCount: string
+  distributionMin: string
+  distributionP50: string
+  distributionP90: string
+  distributionP99: string
+  distributionMax: string
+  /** 天数的单位 */
+  daysUnit: string
+  /** 未计入的成本 */
+  excludedCosts: string
 }>
-
-const en: Dictionary = {
-  siteTitle: 'Signal',
-  tagline: 'Market and on-chain metrics for Bitcoin',
-  index: 'Index',
-  categories: {
-    market: 'Market',
-    onchain: 'On-chain activity',
-    fees: 'Fees and blocks',
-    mining: 'Hashrate and mining',
-  },
-  updatedAt: 'updated',
-  sourceTime: 'Source time',
-  ingestedAt: 'Collected',
-  stale: 'Update failed',
-  staleExplanation:
-    'The most recent collection attempt did not succeed. The values shown are the last valid snapshot, kept unchanged.',
-  noData: 'no data',
-  noDataHint: 'No snapshot has been collected for this metric yet.',
-  invalidFile: 'Published file failed validation',
-  change7d: '7d',
-  changeWindow: 'change over 7 days',
-  whatItMeasures: 'What this measures',
-  howItIsCalculated: 'How it is calculated',
-  dataSource: 'Data source',
-  history: 'History',
-  historyFrom: 'Available from',
-  historyUnknownStart: 'Start date unknown',
-  mayBeRevised: 'The source may restate past values.',
-  warnings: 'Notes',
-  methodNotDerived: 'Reported directly by the source; Signal performs no arithmetic on it.',
-  computedLocally:
-    'Computed by Signal from the figures in this response — the source publishes the underlying numbers, not this value.',
-  derivation: 'Computed by Signal',
-  labelConfidence: {
-    verified: 'Verified',
-    heuristic: 'Heuristic label',
-    unknown: 'Unknown',
-  },
-  labelConfidenceNote: 'Label confidence',
-  labelHeuristicNote:
-    'Entity labels are the data source’s own attribution, not a fact recorded on chain.',
-  chartNoData: 'No values in the loaded snapshot.',
-  chartSinglePoint:
-    'This metric is sampled once a day, so the loaded snapshot holds a single value. History grows one point per day.',
-  chartWindow: 'shown range',
-  chartLatest: 'latest',
-  fixtureBanner: 'Fixture data — synthetic, generated locally for development. Not real market data.',
-  unitNote: 'Values are daily and UTC. Missing days are left blank; they are never filled with zero.',
-  footerNote: 'Daily snapshots. No live data, no polling.',
-  skipToContent: 'Skip to content',
-  notFoundTitle: 'Not found',
-  notFoundBody: 'No such metric.',
-  backToIndex: 'Back to index',
-}
 
 const zh: Dictionary = {
   siteTitle: 'Signal',
@@ -113,13 +114,25 @@ const zh: Dictionary = {
   categories: {
     market: '市场',
     onchain: '链上活动',
+    exchange: '交易所',
     fees: '费用与区块',
-    mining: '算力与挖矿',
+    mining: '矿工与安全',
+    valuation: '估值与周期',
+  },
+  homeGroups: {
+    marketOverview: '价格与市场',
+    valuationAnchors: '估值',
+    exchangeFlows: '交易所与持仓',
+    onchainActivity: '链上活动',
+    feesBlocks: '费用与区块',
+    miningSecurity: '矿工与安全',
   },
   updatedAt: '更新于',
   sourceTime: '来源时间',
   ingestedAt: '采集时间',
   stale: '抓取失败',
+  snapshotOutdated: '数据快照已过期',
+  snapshotOutdatedNote: '本站是每日抓取后生成的静态快照，不提供实时数据。',
   staleExplanation:
     '最近一次抓取未成功。下列数值是上一份有效快照，原样保留，未做任何修改。',
   noData: '暂无数据',
@@ -144,6 +157,7 @@ const zh: Dictionary = {
     unknown: '不清楚',
   },
   labelConfidenceNote: '标注可信度',
+  licenseLabel: '许可：',
   labelHeuristicNote: '实体标签是数据源自己的归类方式，不是链上可查的事实。',
   chartNoData: '这份快照里没有可用数值。',
   chartSinglePoint:
@@ -152,30 +166,62 @@ const zh: Dictionary = {
   chartLatest: '最新',
   fixtureBanner: 'Fixture 数据 —— 本地合成的开发用数据，不是真实市场数据。',
   unitNote: '数值为日频、UTC。缺失的日期留空，不会用零填充。',
-  footerNote: '每日一个快照。无实时数据，不轮询。',
+  footerBrand: 'slowmoonship-慢月船',
   skipToContent: '跳到正文',
   notFoundTitle: '未找到',
   notFoundBody: '没有这个指标。',
   backToIndex: '返回目录',
+
+  heroTitle: '定投赚 5%，最长等多久？',
+  heroSubtitle: '历史已达标样本中的最长等待',
+  heroExplanation: '每天定额买入、累计收益首次达到 +5% 所需天数，取已达标起点中的最大值；过去十年的每一个起始日都按同一套规则回测，仍有起点至今未达标，单独计数。',
+  heroStatReached: '已达标起点',
+  heroStatUnreached: '尚未达标',
+  heroStatMedian: '中位等待',
+  heroStatP90: 'P90 等待',
+  heroDays: '天',
+  marketRead: '市场状态',
+  marketReadUnknown: '部分输入缺失或已过期。',
+
+  sparklineNoData: '价格历史不足，无法绘制走势图。',
+  sparklineNoHighlight: '当前快照里没有可用的最长等待区间。',
+  sparklineHighlight: '回测中等待最久的一段',
+  sparklineAria: 'BTC 十年价格走势，高亮为回测中等待最久的一段',
+
+  colCategory: '分类',
+  colMetric: '指标',
+  colValue: '当前值',
+  colChange: '7 日',
+  colStatus: '当前状态',
+  colBasis: '判定依据',
+  statusPending: '待更新',
+  statusInvalid: '文件异常',
+  dataNoValue: '暂无数据',
+  statusShortHistory: '历史不足',
+
+  coverage: '观测覆盖',
+  coverageIncluded: '个起点达标',
+  coverageCensored: '个起点在窗口内未达标',
+  coverageInvalidated: '个起点因缺价作废',
+
+  distribution: '等待天数分布',
+  distributionCount: '个已达标起点',
+  distributionMin: '最短',
+  distributionP50: '中位',
+  distributionP90: 'P90',
+  distributionP99: 'P99',
+  distributionMax: '最长',
+  daysUnit: '天',
+  excludedCosts: '未计入手续费、滑点与税。',
 }
 
-export const dictionaries: Readonly<Record<Locale, Dictionary>> = { en, zh }
-
-export function isLocale(value: string): value is Locale {
-  return (LOCALES as readonly string[]).includes(value)
-}
-
-export function getDictionary(locale: Locale): Dictionary {
-  return dictionaries[locale]
-}
-
-/** 另一种语言（用于切换按钮）。只有两种语言时无需查表。 */
-export function otherLocale(locale: Locale): Locale {
-  return locale === 'en' ? 'zh' : 'en'
-}
-
-const LOCALE_LABEL: Readonly<Record<Locale, string>> = { en: 'English', zh: '中文' }
-
-export function localeLabel(locale: Locale): string {
-  return LOCALE_LABEL[locale]
+/**
+ * 站点界面只有中文（ADR-021）。
+ *
+ * 取字典不需要传语言：全站只有一份文案，传一个 locale 进来只会让人以为
+ * 还能切语言。语言参数仍然保留在组件 props 里——它决定取指标定义的哪一份文案
+ * （`.zh`），那是数据层的接口，与界面语言是两回事。
+ */
+export function getDictionary(): Dictionary {
+  return zh
 }

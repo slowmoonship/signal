@@ -49,12 +49,11 @@ describe('sitemap', () => {
     expect(sitemap()).toEqual([])
   })
 
-  it('配置域名后覆盖全部指标 × 两种语言，且每条 URL 都是绝对的', () => {
+  it('配置域名后覆盖首页与全部指标，且每条 URL 都是绝对的', () => {
     process.env[ENV_KEY] = 'https://signal.example'
     const entries = sitemap()
-    const expected = registry.byAsset('btc').length * 2
-    // 18 个指标 × 2 语言 + 2 个首页
-    expect(entries).toHaveLength(expected + 2)
+    // 18 个指标 + 1 个首页（V0.1 只有中文，不再有第二个语言版本）
+    expect(entries).toHaveLength(registry.byAsset('btc').length + 1)
 
     for (const entry of entries) {
       expect(entry.url.startsWith('https://signal.example/')).toBe(true)
@@ -62,34 +61,23 @@ describe('sitemap', () => {
     }
   })
 
-  it('hreflang 互指也是绝对 URL——Next 不会替你展开 alternates.languages', () => {
+  it('没有 hreflang 互指——只有一种语言，互指没有对象', () => {
     process.env[ENV_KEY] = 'https://signal.example'
-    // 只断言 loc 是绝对地址会漏掉这个坑：Next 会把 url 相对 metadataBase 展开，
-    // 却把 alternates.languages 原样输出，于是产物里出现
-    // <loc>https://…/en</loc> 配 <xhtml:link href="/en">，互指直接失效。
     for (const entry of sitemap()) {
-      const languages = entry.alternates?.languages as Record<string, string> | undefined
-      expect(languages).toBeDefined()
-      for (const href of Object.values(languages ?? {})) {
-        expect(href.startsWith('https://signal.example/')).toBe(true)
-      }
+      expect(entry.alternates).toBeUndefined()
     }
   })
 
-  it('首页与详情页的互指指向正确的一对语言路径', () => {
+  it('只列规范地址：没有 /en，也没有 /zh 别名', () => {
     process.env[ENV_KEY] = 'https://signal.example'
-    const entries = sitemap()
-    const home = entries.find((e) => e.url.endsWith('/en'))
-    expect(home?.alternates?.languages).toMatchObject({
-      en: 'https://signal.example/en',
-      zh: 'https://signal.example/zh',
-    })
-
-    const price = entries.find((e) => e.url.endsWith('/en/metrics/price'))
-    expect(price?.alternates?.languages).toMatchObject({
-      en: 'https://signal.example/en/metrics/price',
-      zh: 'https://signal.example/zh/metrics/price',
-    })
+    for (const entry of sitemap()) {
+      expect(entry.url).not.toContain('/en')
+      // /zh 是历史别名，它自己的 canonical 指向规范地址；进了 sitemap 就是两份正式地址
+      expect(entry.url).not.toContain('/zh')
+    }
+    const urls = sitemap().map((e) => e.url)
+    expect(urls).toContain('https://signal.example/signal/')
+    expect(urls).toContain('https://signal.example/signal/metrics/price/')
   })
 })
 
@@ -103,6 +91,7 @@ describe('robots', () => {
   it('未配置域名时不写 sitemap 指针，避免指向一个不存在的地址', () => {
     expect(robots().sitemap).toBeUndefined()
     process.env[ENV_KEY] = 'https://signal.example'
-    expect(robots().sitemap).toBe('https://signal.example/sitemap.xml')
+    // 站点挂在项目子路径下：sitemap 指针也要带 /signal
+    expect(robots().sitemap).toBe('https://signal.example/signal/sitemap.xml')
   })
 })

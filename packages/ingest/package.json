@@ -14,7 +14,8 @@
     "db:init": "tsx src/cli.ts db:init",
     "db:reset": "tsx src/cli.ts db:reset",
     "sources": "tsx src/cli.ts sources",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "verify:published": "tsx src/cli.ts verify:published"
   },
   "dependencies": {
     "@slowmoonship/metrics": "*"

@@ -22636,18 +22636,114 @@
     {
       "ts": 1792281600,
       "value": 2679759.33637282
+    },
+    {
+      "ts": 1792368000,
+      "value": 2680974.72985587
+    },
+    {
+      "ts": 1792454400,
+      "value": 2681407.76792655
+    },
+    {
+      "ts": 1792540800,
+      "value": 2675115.19213873
+    },
+    {
+      "ts": 1792627200,
+      "value": 2676873.30449436
+    },
+    {
+      "ts": 1792713600,
+      "value": 2686043.41861084
+    },
+    {
+      "ts": 1792800000,
+      "value": 2686248.06311309
+    },
+    {
+      "ts": 1792886400,
+      "value": 2687316.6438515
+    },
+    {
+      "ts": 1792972800,
+      "value": 2693898.46181238
+    },
+    {
+      "ts": 1793059200,
+      "value": 2678007.25573681
+    },
+    {
+      "ts": 1793145600,
+      "value": 2683288.40753401
+    },
+    {
+      "ts": 1793232000,
+      "value": 2660347.54665271
+    },
+    {
+      "ts": 1793318400,
+      "value": 2666040.08201836
+    },
+    {
+      "ts": 1793404800,
+      "value": 2665091.86877031
+    },
+    {
+      "ts": 1793491200,
+      "value": 2651888.22787121
+    },
+    {
+      "ts": 1793577600,
+      "value": 2648959.80388008
+    },
+    {
+      "ts": 1793664000,
+      "value": 2667085.95670123
+    },
+    {
+      "ts": 1793750400,
+      "value": 2708410.49988464
+    },
+    {
+      "ts": 1793836800,
+      "value": 2709957.44170809
+    },
+    {
+      "ts": 1793923200,
+      "value": 2705336.3417097
+    },
+    {
+      "ts": 1794009600,
+      "value": 2700890.51959697
+    },
+    {
+      "ts": 1794096000,
+      "value": 2705762.04156157
+    },
+    {
+      "ts": 1794182400,
+      "value": 2701576.81299482
     }
   ],
-  "sourceTime": "2026-10-18T00:00:00.000Z",
-  "ingestedAt": "2026-10-19T11:11:12.199Z",
+  "sourceTime": "2026-11-09T00:00:00.000Z",
+  "ingestedAt": "2026-11-10T15:36:30.277Z",
   "stale": false,
   "sources": [
     {
-      "provider": "coin-metrics",
+      "provider": "Coin Metrics",
       "metric": "SplyExNtv",
       "endpoint": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=SplyExNtv&frequency=1d",
       "auth": "none",
-      "labelConfidence": "heuristic"
+      "labelConfidence": "heuristic",
+      "license": {
+        "name": "CC BY-NC 4.0",
+        "url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "restriction": {
+          "en": "Free for non-commercial use only.",
+          "zh": "仅限非商业使用。"
+        }
+      }
     }
   ],
   "warnings": []

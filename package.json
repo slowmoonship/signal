@@ -24,7 +24,9 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "preview": "npm run preview --workspace @slowmoonship/web",
+    "data:verify": "npm run verify:published --workspace @slowmoonship/ingest"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

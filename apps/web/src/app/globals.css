@@ -4,7 +4,7 @@
  * 视觉规范 —— 完整版见 docs/DESIGN.md。
  *
  * 三条不可让步的约束（CLAUDE.md §视觉红线）：
- * 1. 只用灰阶。涨跌不染色：靠 + / − 符号表达，
+ * 1. 除分类底色外只用灰阶。涨跌不染色：靠 + / − 符号表达，
  *    而且"涨"对不同指标含义相反（矿工收入涨是好，费率涨不是），染色等于替读者下判断。
  * 2. 不用阴影、胶囊圆角、彩色按钮、渐变。层级靠字重与间距。
  * 3. 元信息（时间、来源、数值单位）用等宽字体。
@@ -33,12 +33,91 @@
   color-scheme: light dark;
 
   --surface: #ffffff;
-  --surface-sunken: #fafafa; /* 悬停行，比纯白略低一档，不引入第二个色相 */
+  --surface-sunken: #fafafa; /* 凹陷面：比纯白略低一档，不引入第二个色相 */
   --ink: #18181b;
   --ink-muted: #52525b; /* 正文次级：说明文字、来源名 */
   --ink-subtle: #a1a1aa; /* 时间戳等最弱元信息 */
   --rule: #e4e4e7; /* 分隔线 */
   --rule-strong: #d4d4d8; /* 图表坐标轴、告警框这类需要"够看得见"的线 */
+
+  /*
+   * 分类底色。全站唯一的彩色，且只用于首页表格的分组填充。
+   *
+   * 选色约束：HSL 饱和度一律 ≤ 40%，明度 96–97%。
+   * 这个区间在白底上几乎读成灰，只有并排看分组时才显出色相差异——
+   * 正好是"分组"这个职责需要的强度，再高一点就开始像状态色了。
+   * 语义上它们**不表达任何评价**：灰色不代表中性，暖色不代表危险。
+   */
+  --cat-market: hsl(214 34% 96.5%);
+  --cat-onchain: hsl(160 32% 96%);
+  --cat-exchange: hsl(28 36% 96.5%);
+  --cat-fees: hsl(268 30% 96.5%);
+  --cat-mining: hsl(190 34% 95.5%);
+  --cat-valuation: hsl(48 38% 96.5%);
+
+  /*
+   * 高亮绿。走势图上的彩色强调（CLAUDE.md §高亮绿）。
+   *
+   * 它只标一件事：首页十年价格走势图上，"最长定投等待期"的那一段。
+   * 那一段是回测算出来的事实（起点日到首次达标日），不是"该买还是该卖"的判断——
+   * 所以这里用绿色而不是涨跌色，也不许出现"绿色 = 适合定投"这类说法。
+   *
+   * 饱和度比分类底色高得多：它要在一整条灰阶曲线上被一眼看见，
+   * 而分类底色的职责恰恰是"几乎读成灰"。
+   *
+   * 注意：它**不是**全站唯一的绿色。市场状态卡片另有一个
+   * `--market-improving`（见下），两者语义不同，因此用独立 token。
+   */
+  --highlight: hsl(150 62% 32%);
+
+  /*
+   * 市场状态卡片底色（CLAUDE.md §市场状态卡片）。
+   *
+   * 三档：条件明确改善 / 明确恶化 / 中性（分化、冲突、判不了）。
+   * 底色只是**辅助**：一句话解释必须留着，颜色替读者省掉的是读那句话之前的那一眼。
+   *
+   * 与 --highlight 分成两个 token 是刻意的：
+   * - `--highlight` 标的是一段**区间**（回测里等待最久的一段），
+   * - `--market-improving` 标的是**当前这一轮条件在变好**。
+   * 两者含义完全不同，共用一个绿色就等于让读者把"这段最难受"
+   * 读成"现在适合买"。
+   *
+   * 饱和度上限比分类底色、状态色略宽（≤50%）：那两处的颜色是**背景**，
+   * 职责是"别被读成态度"；而这里的颜色**本身就是结论**——
+   * 读者要的是一眼看出方向，底色太淡就等于没做。
+   * 明度仍然压得很浅（≥92%），仍然是极浅的底，不是色块。
+   * 文字色不受此约束——文字仍是 --ink，不改。
+   */
+  --market-improving: hsl(150 48% 92.5%);
+  --market-deteriorating: hsl(4 50% 94%);
+  /* 中性 = 卡片原来的背景。写成 token 只是为了让"三档"在代码里形状一致。 */
+  --market-neutral: var(--surface);
+
+  /*
+   * 状态色。首页"当前状态"列的三个色档（CLAUDE.md §视觉红线 §状态色）。
+   *
+   * 每档**两支**：一支做胶囊底色（很浅），一支做文字（同色相更深）。
+   * 底色和文字必须成套定义——只给底色的话，深色主题下浅色胶囊会盖住字。
+   *
+   * 刻意避开绿色：绿色留给走势图上的高亮区间（--highlight）。
+   * 两个都用的话，"绿色 = 好"会立刻长回来，而这里两者含义完全不同。
+   * 冷暖用的是红/蓝而不是红/绿，原因同上。
+   *
+   * 语义是"相对自身历史的位置"，不是涨跌、不是好坏：
+   * `hot` = 这个数比过去 80% 的日子高。它**不等于**"该买"。
+   *
+   * 底色饱和度压到 38%（与分类底色同一个上限）：红蓝只要在明度上分得开，
+   * 不需要靠饱和度喊。底色越"响"，读者就越容易把它读成告警而不是位置提示。
+   * 文字色不受这条约束——它要负责的是对比度，不是安静。
+   */
+  --status-hot: hsl(4 38% 95.5%);
+  --status-hot-ink: hsl(4 66% 34%);
+  --status-flat: hsl(240 5% 95%);
+  --status-flat-ink: hsl(240 6% 38%);
+  --status-cold: hsl(214 38% 95.5%);
+  --status-cold-ink: hsl(214 66% 36%);
+  --status-void: hsl(240 6% 96.5%);
+  --status-void-ink: hsl(240 5% 46%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -50,6 +129,43 @@
     --ink-subtle: #71717a;
     --rule: #27272a;
     --rule-strong: #3f3f46;
+
+    /*
+     * 暗色下的分类底色。
+     * 明度压到 13–15%：暗色主题里底色稍亮一点就会盖过文字，
+     * 而这里要的是"能分辨分组"，不是"能吸引注意"。
+     * 饱和度同样 ≤ 40%，且比浅色态略降——深底上色相更容易显脏。
+     */
+    --cat-market: hsl(214 30% 14%);
+    --cat-onchain: hsl(160 28% 13.5%);
+    --cat-exchange: hsl(28 32% 14%);
+    --cat-fees: hsl(268 26% 14%);
+    --cat-mining: hsl(190 30% 13%);
+    --cat-valuation: hsl(48 34% 13.5%);
+
+    /* 暗色下的高亮绿：明度提到 55%，否则深底上那条线几乎读不出来。 */
+    --highlight: hsl(150 58% 55%);
+
+    /*
+     * 暗色下的市场状态卡片底色：压到 14–16% 明度。
+     * 深底上底色稍亮一点就会盖过文字，而这里要的是"一眼看出方向"，
+     * 不是"抢走注意力"。
+     */
+    --market-improving: hsl(150 45% 16%);
+    --market-deteriorating: hsl(4 50% 17%);
+
+    /*
+     * 暗色下的状态色：胶囊底压到 16–18% 明度（深底上要比浅色态更沉，
+     * 否则会变成一个个亮块）；文字提到 68–72%，保证深底上的对比度。
+     */
+    --status-hot: hsl(4 40% 17%);
+    --status-hot-ink: hsl(4 72% 72%);
+    --status-flat: hsl(240 5% 19%);
+    --status-flat-ink: hsl(240 8% 70%);
+    --status-cold: hsl(214 40% 17%);
+    --status-cold-ink: hsl(214 72% 74%);
+    --status-void: hsl(240 5% 18%);
+    --status-void-ink: hsl(240 6% 58%);
   }
 }
 
@@ -61,6 +177,34 @@
   --color-ink-subtle: var(--ink-subtle);
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
+
+  /* 分类底色同样走 inline：它们定义在 :root 与媒体查询里，
+     不走 inline 的话工具类会被编译成构建期的固定色值，暗色主题就不生效了。 */
+  --color-cat-market: var(--cat-market);
+  --color-cat-onchain: var(--cat-onchain);
+  --color-cat-exchange: var(--cat-exchange);
+  --color-cat-fees: var(--cat-fees);
+  --color-cat-mining: var(--cat-mining);
+  --color-cat-valuation: var(--cat-valuation);
+
+  /* 高亮绿同理：组件只认 `stroke-highlight` / `text-highlight`，
+     不知道背后是哪个明度的绿（CLAUDE.md §高亮绿）。 */
+  --color-highlight: var(--highlight);
+
+  /* 市场状态卡片底色同理：组件只认 `bg-market-improving` 这类类名。 */
+  --color-market-improving: var(--market-improving);
+  --color-market-deteriorating: var(--market-deteriorating);
+  --color-market-neutral: var(--market-neutral);
+
+  /* 状态色同理：组件只认 `bg-status-hot` / `text-status-hot-ink` 这类类名。 */
+  --color-status-hot: var(--status-hot);
+  --color-status-hot-ink: var(--status-hot-ink);
+  --color-status-flat: var(--status-flat);
+  --color-status-flat-ink: var(--status-flat-ink);
+  --color-status-cold: var(--status-cold);
+  --color-status-cold-ink: var(--status-cold-ink);
+  --color-status-void: var(--status-void);
+  --color-status-void-ink: var(--status-void-ink);
 }
 
 @theme {

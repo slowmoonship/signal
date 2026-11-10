@@ -1,7 +1,9 @@
 # Signal
 
 面向公众的加密资产市场与链上指标目录。阶段一只做 BTC，架构预留 ETH / SOL。
-中英双语，日更抓取，明暗主题，视觉参考 leerob.com。
+**界面为中文单语言**（底层文案保留 en/zh 双语），日更抓取，明暗主题，视觉参考 leerob.com。
+
+线上站点：<https://slowmoonship.github.io/signal/>（GitHub Pages 静态站，每日自动更新）。
 
 ## 状态
 
@@ -11,7 +13,9 @@
 - Phase 1：18 个 BTC 指标定义（中英双语文案齐全）、首页与详情页、明暗主题、历史曲线。
 - Phase 2：接入真实免费源，`public/data` 已是 18 份真实快照，站点读的就是真数据。
 - Phase 3：视觉规范落地（语义 token、web 字体、320px 排版、键盘可达性），见 `docs/DESIGN.md`。
-- Phase 4：GitHub Actions 日更与 CI、stale 与新鲜度文案、sitemap / robots / OG / hreflang。
+- Phase 4：GitHub Actions 日更与 CI、stale 与新鲜度文案、sitemap / robots / OG。
+- V0.1：界面收敛为中文单语言（`/` 直接是首页，`/zh` 保留为历史别名）、
+  市场状态卡片加语义底色、页脚改为品牌署名。
 
 ## 环境变量
 
@@ -20,7 +24,9 @@
 | `SIGNAL_SITE_URL` | 站点根 URL。canonical、sitemap、`robots.txt` 的 sitemap 指针、OG 绝对地址都由它推导 | 不写死占位域名；sitemap 输出空、robots 不带 sitemap 指针 |
 | `SIGNAL_DATA_DIR` | 页面读取的快照目录。`npm run dev:fixtures` 用它切到 `fixtures/btc` | 读 `apps/web/public/data` |
 
-本地预览：`npm run dev`。刷新数据：`npm run ingest:btc --workspace @slowmoonship/ingest -- --live`。
+本地预览：`npm run preview`（用纯静态文件服务器服务 `apps/web/out`，模拟 Pages 的行为，
+默认 <http://127.0.0.1:4310/signal/>）。开发模式：`npm run dev`（同样在 `/signal` 下）。
+刷新数据：`npm run ingest:btc --workspace @slowmoonship/ingest -- --live`。
 没有真实数据也能看页面：`npm run dev:fixtures`（合成数据，页面顶部有明确告警条）。
 
 ## 仓库结构
@@ -38,7 +44,9 @@ docs/               规划、指标编写规范、架构决策记录
 
 ```bash
 npm install
-npm run dev              # 启动站点（http://localhost:3000，自动重定向到 /en 或 /zh）
+npm run dev              # 开发服务器（http://localhost:3000/signal/）
+npm run build           # 静态导出到 apps/web/out（GitHub Pages 的部署产物）
+npm run preview         # 用静态文件服务器预览 out/（默认 127.0.0.1:4310/signal/）
 npm run dev:fixtures     # 生成合成 fixture 并用它启动站点（页面会显示告警条）
 npm run fixtures:btc     # 只生成 fixture（写入 fixtures/btc，绝不写 public/data）
 npm run ingest:btc       # 抓取 BTC 指标（默认 dry-run）
@@ -48,6 +56,7 @@ npm run sources          # 列出已注册适配器与付费墙指标
 npm run db:init          # 初始化 SQLite
 npm run db:reset         # 删库重建（破坏性）
 npm run metrics:validate # 校验指标定义（进 CI）
+npm run data:verify     # 校验发布物：每个指标都有有效数据点（部署前跑）
 
 npm run typecheck        # tsc，覆盖 packages / 测试 / web
 npm run lint             # ESLint flat config，类型感知规则
@@ -75,7 +84,7 @@ Coin Metrics 免费层把美元计价的费用类指标（`FeeTotUSD`/`RevUSD`/`
 | `docs/PLAN.md` | MVP 范围、架构、实施计划、数据源实测结果 |
 | `docs/METRIC_AUTHORING.md` | 新增指标的唯一权威流程与必填字段 |
 | `docs/DESIGN.md` | 视觉规范：token、字体、排版层级、移动端与键盘可达性 |
-| `docs/DECISIONS.md` | 架构决策记录（ADR-001 ~ 013） |
+| `docs/DECISIONS.md` | 架构决策记录（ADR-001 ~ 026） |
 
 ## 数据质量红线
 
@@ -89,4 +98,18 @@ Coin Metrics 免费层把美元计价的费用类指标（`FeeTotUSD`/`RevUSD`/`
 6. 交易所 / 巨鲸 / 矿池等实体标签属启发式标注，未经验证不得给出精确定义
 7. 付费适配器未配置 key 时降级，不得成为免 key 路径的隐式依赖
 
+8. 判定类逻辑在数据缺失、历史不足、过期或无法计算时返回 `unknown`，不降级成"中性"
+
 视觉红线（只用灰阶、无阴影 / 胶囊 / 渐变 / 彩色）同样有可执行守卫，见 `docs/DESIGN.md` §6。
+
+## 数据许可
+
+| 来源 | 许可 | 本站如何使用 |
+|---|---|---|
+| Coin Metrics 社区 API | CC BY-NC 4.0 | 非商业使用；详情页与发布的 JSON 里都带署名与许可链接 |
+| mempool.space | 未公开声明许可条款 | 公开接口，遵守其速率限制 |
+| blockstream.info | 公开账本数据（Esplora 为 MIT） | 公开接口 |
+
+各来源的署名与许可说明随数据一起发布（见 `SourceRef.license`）。
+本站免费且不含付费内容，属非商业使用；**若将来商业化，
+Coin Metrics 社区数据必须换成付费档**。

@@ -22636,25 +22636,129 @@
     {
       "ts": 1792281600,
       "value": -162.93018495999968
+    },
+    {
+      "ts": 1792368000,
+      "value": 959.318777489998
+    },
+    {
+      "ts": 1792454400,
+      "value": 282.2102261800028
+    },
+    {
+      "ts": 1792540800,
+      "value": -7115.125788690002
+    },
+    {
+      "ts": 1792627200,
+      "value": -2599.766863069999
+    },
+    {
+      "ts": 1792713600,
+      "value": 6370.9110997200005
+    },
+    {
+      "ts": 1792800000,
+      "value": 204.6445022500002
+    },
+    {
+      "ts": 1792886400,
+      "value": 1022.1094728600001
+    },
+    {
+      "ts": 1792972800,
+      "value": 3515.1872551199995
+    },
+    {
+      "ts": 1793059200,
+      "value": -17262.74652715
+    },
+    {
+      "ts": 1793145600,
+      "value": 3837.1452988399997
+    },
+    {
+      "ts": 1793232000,
+      "value": -23580.993153049996
+    },
+    {
+      "ts": 1793318400,
+      "value": 5594.366837219997
+    },
+    {
+      "ts": 1793404800,
+      "value": -3749.84681019
+    },
+    {
+      "ts": 1793491200,
+      "value": -16659.99998921
+    },
+    {
+      "ts": 1793577600,
+      "value": -3039.273694420004
+    },
+    {
+      "ts": 1793664000,
+      "value": 5999.4417225
+    },
+    {
+      "ts": 1793750400,
+      "value": -2401.9101277100017
+    },
+    {
+      "ts": 1793836800,
+      "value": 1332.2174198699977
+    },
+    {
+      "ts": 1793923200,
+      "value": -4851.162874590002
+    },
+    {
+      "ts": 1794009600,
+      "value": -4541.21966169
+    },
+    {
+      "ts": 1794096000,
+      "value": -4620.8731760400005
+    },
+    {
+      "ts": 1794182400,
+      "value": -4591.345411619997
     }
   ],
-  "sourceTime": "2026-10-18T00:00:00.000Z",
-  "ingestedAt": "2026-10-19T11:11:11.728Z",
+  "sourceTime": "2026-11-09T00:00:00.000Z",
+  "ingestedAt": "2026-11-10T15:36:29.814Z",
   "stale": false,
   "sources": [
     {
-      "provider": "coin-metrics",
+      "provider": "Coin Metrics",
       "metric": "FlowInExNtv",
       "endpoint": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=FlowInExNtv&frequency=1d",
       "auth": "none",
-      "labelConfidence": "heuristic"
+      "labelConfidence": "heuristic",
+      "license": {
+        "name": "CC BY-NC 4.0",
+        "url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "restriction": {
+          "en": "Free for non-commercial use only.",
+          "zh": "仅限非商业使用。"
+        }
+      }
     },
     {
-      "provider": "coin-metrics",
+      "provider": "Coin Metrics",
       "metric": "FlowOutExNtv",
       "endpoint": "https://community-api.coinmetrics.io/v4/timeseries/asset-metrics?assets=btc&metrics=FlowOutExNtv&frequency=1d",
       "auth": "none",
-      "labelConfidence": "heuristic"
+      "labelConfidence": "heuristic",
+      "license": {
+        "name": "CC BY-NC 4.0",
+        "url": "https://creativecommons.org/licenses/by-nc/4.0/",
+        "restriction": {
+          "en": "Free for non-commercial use only.",
+          "zh": "仅限非商业使用。"
+        }
+      }
     }
   ],
   "warnings": []

@@ -32,7 +32,7 @@ import {
 import { fetchJson } from './http.js'
 
 const BASE = 'https://blockstream.info'
-const PROVIDER = 'blockstream'
+const PROVIDER = 'Blockstream'
 const TIP_HASH_URL = `${BASE}/api/blocks/tip/hash`
 const BLOCK_URL = `${BASE}/api/block/{hash}`
 

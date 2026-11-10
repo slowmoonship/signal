@@ -37,7 +37,7 @@ export const price = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'PriceUSD',
       endpoint: cmEndpoint('PriceUSD'),
       auth: 'none',
@@ -49,50 +49,6 @@ export const price = defineMetric({
     note: {
       en: 'Free-tier history starts 2010-07-18, the first day the source carries a BTC reference price.',
       zh: '免费层历史自 2010-07-18 起，那是数据源最早有 BTC 参考价的日期。',
-    },
-    mayBeRevised: false,
-  },
-  missingPolicy: 'null',
-  betterWhen: null,
-})
-
-export const marketCap = defineMetric({
-  id: 'market-cap',
-  asset: 'btc',
-  category: 'market',
-  name: { en: 'Market Cap', zh: '市值' },
-  description: {
-    en: 'The circulating BTC supply valued at the price of the same day.',
-    zh: '按当日价格计算的流通中 BTC 总量市值。',
-  },
-  methodology: {
-    en: 'Published by Coin Metrics as circulating supply × price at the last observation of the UTC day. Shown here unmodified: Signal does not recompute it from its own supply and price series, so it may differ in the last digits from Supply × Price.',
-    zh: '由 Coin Metrics 给出，为流通量 × 该 UTC 自然日最后观测价格。此处原样展示：Signal 不用自己的供应量与价格序列重算，因此末位数字可能与"流通量 × 价格"略有出入。',
-  },
-  unit: 'usd',
-  frequency: '1d',
-  format: { kind: 'usd' },
-  contract: {
-    unit: 'usd',
-    scale: 1,
-    aggregation: 'last',
-    window: 'calendar-day-utc',
-    labelSemantics: LABEL_SEMANTICS.none,
-  },
-  sources: [
-    {
-      provider: 'coin-metrics',
-      metric: 'CapMrktCurUSD',
-      endpoint: cmEndpoint('CapMrktCurUSD'),
-      auth: 'none',
-      labelConfidence: 'verified',
-    },
-  ],
-  history: {
-    availableFrom: '2010-07-18',
-    note: {
-      en: 'Free-tier history starts 2010-07-18, the first day the source carries a BTC price.',
-      zh: '免费层历史自 2010-07-18 起，与价格指标同一起点。',
     },
     mayBeRevised: false,
   },
@@ -125,7 +81,7 @@ export const supply = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'SplyCur',
       endpoint: cmEndpoint('SplyCur'),
       auth: 'none',
@@ -169,7 +125,7 @@ export const priceChange7d = defineMetric({
   },
   sources: [
     {
-      provider: 'coin-metrics',
+      provider: 'Coin Metrics',
       metric: 'PriceUSD',
       endpoint: cmEndpoint('PriceUSD'),
       auth: 'none',

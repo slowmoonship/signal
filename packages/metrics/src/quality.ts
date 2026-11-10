@@ -346,6 +346,55 @@ function checkDerivation(
         `derivation.base "${d.base}" 不在 deriveFrom [${def.deriveFrom.join(', ')}] 中`,
       )
     }
+    return
+  }
+
+  if (d.kind === 'dcaMaxWait') {
+    if (!Number.isInteger(d.windowDays) || d.windowDays < 2) {
+      push(
+        'error',
+        'derivation.windowDays',
+        `dcaMaxWait 的 windowDays 必须是 ≥ 2 的正整数天数，实为 ${String(d.windowDays)}`,
+      )
+    }
+    // 阈值 ≤ −100% 时任何价格组合都够不到，指标将永远没有值。
+    // 与其让页面上长年挂着"—"，不如在定义阶段就把写错的阈值拦下来。
+    if (!Number.isFinite(d.thresholdPercent) || d.thresholdPercent <= -100) {
+      push(
+        'error',
+        'derivation.thresholdPercent',
+        `thresholdPercent 必须是大于 −100 的有限数，实为 ${String(d.thresholdPercent)}`,
+      )
+    }
+    if (def.deriveFrom === undefined) {
+      push(
+        'error',
+        'derivation.missingDeriveFrom',
+        'dcaMaxWait 必须声明 deriveFrom（被回测的那条价格序列）',
+      )
+      return
+    }
+    if (!def.deriveFrom.includes(d.base)) {
+      push(
+        'error',
+        'derivation.baseNotParent',
+        `derivation.base "${d.base}" 不在 deriveFrom [${def.deriveFrom.join(', ')}] 中`,
+      )
+    }
+    // 回测按日频价格逐日推进，窗口不是整数天就会在日历上错位，
+    // 而错位在结果里只表现为"等待天数莫名差一天"，极难发现。
+    // 回测按日历日逐日推进，基准序列不是日频就没有"第 k 天"可言。
+    // 这里刻意经 unknown 中转再比较：METRIC_FREQUENCIES 今天只有 '1d'，
+    // 直接比较会被 TypeScript 收窄成 never，整条断言变成永远走不到的死代码——
+    // 而它恰恰是"加入第二种频率"那一刻最该拦住人的那条。
+    const frequency: unknown = def.frequency
+    if (frequency !== '1d') {
+      push(
+        'error',
+        'derivation.dcaFrequency',
+        `dcaMaxWait 要求基准序列为日频（1d），${def.id} 声明的是 ${String(frequency)}`,
+      )
+    }
   }
 }
 
