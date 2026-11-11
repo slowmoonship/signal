@@ -357,7 +357,7 @@ describe.skipIf(!available)('真实浏览器：排版', () => {
 })
 
 describe.skipIf(!available)('真实浏览器：市场状态与页脚', () => {
-  it('市场状态卡片带着三档之一的中性/改善/恶化底色', async () => {
+  it('市场状态卡片带着三档之一的牛市/熊市/震荡底色', async () => {
     // 颜色必须由规则结果决定，而不是文案里有没有"上涨"两个字。
     // 这里只断言"三档之一"，具体落在哪一档由当时的快照决定。
     const browser = await launch()
@@ -369,7 +369,7 @@ describe.skipIf(!available)('真实浏览器：市场状态与页脚', () => {
         )
         return section ? String(section.className) : ''
       })()`)) as string
-      expect(cls).toMatch(/bg-market-(improving|deteriorating|neutral)/)
+      expect(cls).toMatch(/bg-market-(bull|bear|range)/)
     } finally {
       await browser.close()
     }

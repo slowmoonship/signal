@@ -4,6 +4,7 @@
  * 分工：
  * - `features.ts` 负责"每个维度现在处于什么位置"
  * - `scenarios.ts` 负责"什么条件下对应哪句话"
+ * - `regime.ts` 负责"现在是牛市、熊市还是震荡"（**方向分类**，与本文件分开）
  * - 本文件负责"条件命中哪一条、命中多条时怎么选、句子怎么填数"
  *
  * 三条不可让步的规则：
@@ -14,6 +15,10 @@
  *    判为"信号矛盾"，而不是挑一个装作没看见另一个。
  * 3. **只给一个数。**首页只显示这一句话；规则 id、参与指标、数据时间、
  *    排除原因都保留在返回值里，供详情页与审计使用，但不上首页。
+ *
+ * ⚠️ 本文件**不再**产出方向。方向由 `regime.ts` 独立判定（牛市 / 熊市 / 震荡）：
+ * 一条规则的"方向族"讲的是**这条信号的方向**，不等于市场处在什么周期位置。
+ * 卡片底色只跟 `regime` 走（ADR-027）。
  */
 
 import { registry } from '../definitions/index.js'
@@ -32,14 +37,13 @@ import {
   BAND_PHRASE,
   SCENARIO_BY_ID,
   SCENARIOS,
-  toneOf,
   type Condition,
   type MarketScenario,
-  type MarketTone,
 } from './scenarios.js'
 
 export * from './features.js'
 export * from './scenarios.js'
+export * from './regime.js'
 
 /**
  * 判定结果的状态。
@@ -53,13 +57,11 @@ export type MarketRead = Readonly<{
   /** 命中的规则 id。`unknown` 时是 `unknown.insufficient-evidence` */
   scenarioId: string
   /**
-   * 展示语义：命中规则说明市场条件在改善、恶化，还是说不清。
+   * 一句话结论（双语）。
    *
-   * 页面只拿它选底色，不拿它做别的判断；`unknown` 一律是 `neutral`——
-   * "判不了"不是一种市场状态（CLAUDE.md §数据质量红线 8）。
+   * 这一句是**解释**：它在讲"为什么会这样"，而不是"现在是牛市还是熊市"。
+   * 方向分类由 `regime.ts` 独立给出，卡片底色只跟方向走（ADR-027）。
    */
-  tone: MarketTone
-  /** 一句话结论（双语） */
   sentence: Localized
   /** 参与判定的特征：含底层指标 id 与数据时间 */
   participants: readonly FeatureObservation[]
@@ -75,8 +77,12 @@ export type MarketRead = Readonly<{
  * 缺了它们就没有任何一句市场判断站得住：
  * 没有价格就没有方向，没有链上活动就无法说"这轮上涨有没有人参与"。
  * 交易所流向不在这里——它缺席时只是相关规则不命中，不影响其余判断。
+ *
+ * `price.trend` 是价格方向的**唯一定义**（多窗口），
+ * 三态分类与场景规则共用它；`price.7d` 仍然存在，但它只服务
+ * "7 日价格变化"这个指标自己的状态列与短期窗口专属的规则。
  */
-export const CORE_FEATURES: readonly FeatureId[] = ['price.7d', 'onchain.addresses30']
+export const CORE_FEATURES: readonly FeatureId[] = ['price.trend', 'onchain.addresses30']
 
 /**
  * 冲突判定窗口（优先级差）。
@@ -160,8 +166,9 @@ export function readMarketScenario(features: FeatureTable): MarketRead {
       return {
         status: 'known',
         scenarioId: conflict.id,
-        // 冲突就是冲突：两个方向相反的信号同时在场，判不出改善还是恶化。
-        tone: 'neutral',
+        // 冲突就是冲突：两个方向相反的信号同时在场，讲不出一个方向。
+        // 方向分类交给 regime 层——它会把"分化"归入震荡，但**不会**因此
+        // 声称价格一定横盘（那句话会是一个事实错误）。
         sentence: conflict.sentence,
         participants: participantsOf([bestBull, bestBear], features),
         exclusions,
@@ -176,7 +183,6 @@ export function readMarketScenario(features: FeatureTable): MarketRead {
       return {
         status: 'known',
         scenarioId: winner.id,
-        tone: toneOf(winner),
         sentence: winner.sentence,
         participants: participantsOf([winner], features),
         exclusions,
@@ -191,7 +197,6 @@ export function readMarketScenario(features: FeatureTable): MarketRead {
     return {
       status: 'known',
       scenarioId: fallback.id,
-      tone: 'neutral',
       sentence: fallback.sentence,
       participants: participantsOf([fallback], features),
       exclusions,
@@ -208,8 +213,7 @@ function unknownRead(exclusions: readonly FeatureFailure[]): MarketRead {
   return {
     status: 'unknown',
     scenarioId: scenario.id,
-    // 判不了就保持中性："没有数据"不是一种市场状态（CLAUDE.md §数据质量红线 8）
-    tone: 'neutral',
+    // 判不了就说判不了："没有数据"不是一种市场状态（CLAUDE.md §数据质量红线 8）
     sentence: scenario.sentence,
     participants: [],
     exclusions: [...exclusions],

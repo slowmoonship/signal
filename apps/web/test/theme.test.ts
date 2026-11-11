@@ -345,22 +345,22 @@ describe('高亮绿', () => {
     // 允许多一个彩色强调，就等于没有约束：读者会开始解读颜色。
     // 但绿色现在有两个**互不相干**的职责，因此必须是两个 token：
     // - `--highlight`：走势图上"最长定投等待期"那一段（标一段区间）
-    // - `--market-improving`：市场状态卡片"条件明确改善"的底色（标一个结论）
+    // - `--market-bull`：市场状态卡片"牛市"的底色（标一个结论）
     // 共用一个绿色，读者就会把"这段最难受"读成"现在适合买"。
-    const greenTokens = [...css.matchAll(/(--market-improving|--highlight[a-z-]*):/g)].map(
+    const greenTokens = [...css.matchAll(/(--market-bull|--highlight[a-z-]*):/g)].map(
       (m) => m[0] as string,
     )
-    expect([...new Set(greenTokens)].sort()).toEqual(['--highlight:', '--market-improving:'])
+    expect([...new Set(greenTokens)].sort()).toEqual(['--highlight:', '--market-bull:'])
   })
 
   it('市场状态的绿在绿色区间，状态色依然避开绿色', () => {
-    // --market-improving 本来就该是绿的（它就是"改善"）；
+    // --market-bull 本来就该是绿的（它就是"牛市"）；
     // --status-* 一律不许进绿色区间——那是"相对自身历史的位置"，
     // 两者混用，"绿色 = 好"立刻长回来。
-    const marketGreen = /--market-improving:\s*hsl\(\s*([\d.]+)/.exec(css)
-    expect(marketGreen, '找不到 --market-improving 的色值').not.toBeNull()
+    const marketGreen = /--market-bull:\s*hsl\(\s*([\d.]+)/.exec(css)
+    expect(marketGreen, '找不到 --market-bull 的色值').not.toBeNull()
     const hue = Number(marketGreen?.[1])
-    expect(hue >= 90 && hue <= 150, `--market-improving 的色相 ${hue} 不在绿色区间`).toBe(true)
+    expect(hue >= 90 && hue <= 150, `--market-bull 的色相 ${hue} 不在绿色区间`).toBe(true)
 
     for (const m of css.matchAll(/--status-[a-z-]+:\s*hsl\(\s*([\d.]+)\s+([\d.]+)%/g)) {
       const statusHue = Number(m[1])
@@ -406,19 +406,19 @@ describe('高亮绿', () => {
 
 describe('市场状态卡片底色', () => {
   const css = readFileSync(join(WEB_SRC, 'app/globals.css'), 'utf8')
-  const TONES = ['improving', 'deteriorating', 'neutral'] as const
+  const TONES = ['bull', 'bear', 'range'] as const
 
   it('色值只写在 globals.css，明暗两态各一份', () => {
     // 与分类底色、状态色同款约束：内联色值会让暗色主题在这一处静默失效
     const rootBlocks = [...css.matchAll(/:root\s*\{([^}]*)\}/g)].map((m) => m[1] ?? '')
     expect(rootBlocks.length).toBeGreaterThanOrEqual(2)
-    for (const tone of ['improving', 'deteriorating']) {
+    for (const tone of ['bull', 'bear']) {
       const token = `--market-${tone}`
       expect(rootBlocks[0], `${token} 缺少浅色值`).toMatch(new RegExp(`${token}:\\s*hsl\\(`))
       expect(rootBlocks[1], `${token} 缺少暗色值`).toMatch(new RegExp(`${token}:\\s*hsl\\(`))
     }
-    // 中性档就是卡片原来的背景，跟着 --surface 走，因此不随主题另设一份
-    expect(css).toMatch(/--market-neutral:\s*var\(--surface\)/)
+    // 震荡档就是卡片原来的背景，跟着 --surface 走，因此不随主题另设一份
+    expect(css).toMatch(/--market-range:\s*var\(--surface\)/)
   })
 
   it('底色低饱和（HSL ≤ 50%）且只做背景填充，不改文字颜色', () => {

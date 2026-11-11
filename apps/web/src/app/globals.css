@@ -73,12 +73,18 @@
   /*
    * 市场状态卡片底色（CLAUDE.md §市场状态卡片）。
    *
-   * 三档：条件明确改善 / 明确恶化 / 中性（分化、冲突、判不了）。
-   * 底色只是**辅助**：一句话解释必须留着，颜色替读者省掉的是读那句话之前的那一眼。
+   * 三档：**牛市 / 熊市 / 震荡**。这是**市场方向分类**，不是"条件在变好还是变差"——
+   * 后者是老实现（ADR-022）的口径，会让"价格仍在近一年高位"这种**位置**
+   * 陈述也被说成"改善"。方向由 `packages/metrics` 的三态规则独立算出，
+   * 底色只跟那个结构化结果走，绝不跟文案走（ADR-027）。
+   *
+   * 震荡 = 中性背景，包含两种成因：多周期价格没有明确方向，
+   * 以及价格与链上信号方向相反（分化）。两者都**不能**由颜色区分，
+   * 因为它们的区别不在方向上——所以卡片用文字说明是哪种，不靠颜色暗示。
    *
    * 与 --highlight 分成两个 token 是刻意的：
    * - `--highlight` 标的是一段**区间**（回测里等待最久的一段），
-   * - `--market-improving` 标的是**当前这一轮条件在变好**。
+   * - `--market-bull` 标的是**当前市场处在牛市**。
    * 两者含义完全不同，共用一个绿色就等于让读者把"这段最难受"
    * 读成"现在适合买"。
    *
@@ -88,10 +94,10 @@
    * 明度仍然压得很浅（≥92%），仍然是极浅的底，不是色块。
    * 文字色不受此约束——文字仍是 --ink，不改。
    */
-  --market-improving: hsl(150 48% 92.5%);
-  --market-deteriorating: hsl(4 50% 94%);
-  /* 中性 = 卡片原来的背景。写成 token 只是为了让"三档"在代码里形状一致。 */
-  --market-neutral: var(--surface);
+  --market-bull: hsl(150 48% 92.5%);
+  --market-bear: hsl(4 50% 94%);
+  /* 震荡 = 卡片原来的背景。写成 token 只是为了让"三档"在代码里形状一致。 */
+  --market-range: var(--surface);
 
   /*
    * 状态色。首页"当前状态"列的三个色档（CLAUDE.md §视觉红线 §状态色）。
@@ -151,8 +157,8 @@
      * 深底上底色稍亮一点就会盖过文字，而这里要的是"一眼看出方向"，
      * 不是"抢走注意力"。
      */
-    --market-improving: hsl(150 45% 16%);
-    --market-deteriorating: hsl(4 50% 17%);
+    --market-bull: hsl(150 45% 16%);
+    --market-bear: hsl(4 50% 17%);
 
     /*
      * 暗色下的状态色：胶囊底压到 16–18% 明度（深底上要比浅色态更沉，
@@ -191,10 +197,10 @@
      不知道背后是哪个明度的绿（CLAUDE.md §高亮绿）。 */
   --color-highlight: var(--highlight);
 
-  /* 市场状态卡片底色同理：组件只认 `bg-market-improving` 这类类名。 */
-  --color-market-improving: var(--market-improving);
-  --color-market-deteriorating: var(--market-deteriorating);
-  --color-market-neutral: var(--market-neutral);
+  /* 市场状态卡片底色同理：组件只认 `bg-market-bull` 这类类名。 */
+  --color-market-bull: var(--market-bull);
+  --color-market-bear: var(--market-bear);
+  --color-market-range: var(--market-range);
 
   /* 状态色同理：组件只认 `bg-status-hot` / `text-status-hot-ink` 这类类名。 */
   --color-status-hot: var(--status-hot);

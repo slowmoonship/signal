@@ -28,6 +28,7 @@ export type FeatureId =
   | 'price.7d'
   | 'price.30d'
   | 'price.90d'
+  | 'price.trend'
   | 'price.level365'
   | 'price.drawdown90'
   | 'price.vol30'
@@ -174,6 +175,8 @@ function lastKnown(points: readonly SeriesPoint[]): SeriesPoint | null {
  * - `levelPercentile` 水平序列当前值在自身历史中的分位（如价格处于近一年什么位置）
  * - `drawdown`        当前值相对近 N 日最高点的回撤（负数）
  * - `realizedVol`     N 日对数收益的年化波动率（%），再取分位
+ * - `trend`           多窗口**方向**（见 `TREND_*` 阈值）。档位即方向：
+ *                      high = 上行、low = 下行、mid = 没有明确方向
  */
 export type FeatureKind =
   | 'ownValue'
@@ -182,6 +185,7 @@ export type FeatureKind =
   | 'levelPercentile'
   | 'drawdown'
   | 'realizedVol'
+  | 'trend'
 
 export type FeatureSpec = Readonly<{
   id: FeatureId
@@ -193,6 +197,8 @@ export type FeatureSpec = Readonly<{
   historyDays: number
   /** 有符号量的"接近零"阈值（仅 signedSum 使用） */
   flatThreshold?: number
+  /** 摆动窗口（天）。仅 `trend` 使用 */
+  swingDays?: number
 }>
 
 /**
@@ -205,6 +211,10 @@ export const FEATURE_SPECS: readonly FeatureSpec[] = [
   { id: 'price.7d', metricId: 'price-change-7d', kind: 'ownValue', windowDays: 7, historyDays: 365 },
   { id: 'price.30d', metricId: 'price', kind: 'percentChange', windowDays: 30, historyDays: 365 },
   { id: 'price.90d', metricId: 'price', kind: 'percentChange', windowDays: 90, historyDays: 365 },
+  // 多窗口方向。它是市场层**唯一**的"价格在涨还是在跌"的定义：
+  // 三态分类（regime.ts）与 67 条场景规则共用它，
+  // 两边因此不可能对同一天说出"牛市"和"价格横盘"这种互相打架的话。
+  { id: 'price.trend', metricId: 'price', kind: 'trend', windowDays: 90, historyDays: 90, swingDays: 30 },
   { id: 'price.level365', metricId: 'price', kind: 'levelPercentile', windowDays: 1, historyDays: 365 },
   { id: 'price.drawdown90', metricId: 'price', kind: 'drawdown', windowDays: 90, historyDays: 365 },
   { id: 'price.vol30', metricId: 'price', kind: 'realizedVol', windowDays: 30, historyDays: 365 },
@@ -238,19 +248,34 @@ function asc(points: readonly SeriesPoint[]): readonly SeriesPoint[] {
   return [...points].sort((a, b) => a.ts - b.ts)
 }
 
-/** 时间戳 → 值。 */
-function byTs(points: readonly SeriesPoint[]): Map<number, number | null> {
-  return new Map(points.map((p) => [p.ts, p.value]))
+/**
+ * UTC 自然日索引：floor(ts / 86400) → 该日的值。
+ *
+ * 对齐以**自然日**为键而不是精确时间戳：点采样类指标（难度、区块权重、
+ * 矿池集中度……）的时间戳是区块时间或采集时刻，一天一个不规则时刻，
+ * 精确时间戳查表永远查不到 N 天前的那一点，特征会整批判成"算不出"。
+ * 日频指标（00:00:00 采样）两种口径逐点相同。
+ * 同一天多个采样时有值优先、同值取最晚（与发布侧的收敛规则一致）。
+ */
+function byUtcDay(points: readonly SeriesPoint[]): Map<number, number | null> {
+  const out = new Map<number, number | null>()
+  for (const p of asc(points)) {
+    const day = Math.floor(p.ts / DAY_SECONDS)
+    // 首见写入；有值覆盖 null 或换成更晚的采样
+    const prev = out.get(day)
+    if (prev === undefined || p.value !== null) out.set(day, p.value)
+  }
+  return out
 }
 
 /**
  * 相对 N 个日历日前的百分比变化。
  *
- * 按日历天对齐（t − N×86400 秒）而不是"往前数 N 个点"：
+ * 按 UTC 自然日对齐（t 所在的自然日往前 N 个自然日）而不是"往前数 N 个点"：
  * 上游漏一天时，"第 7 个点"会悄悄变成 8 天前，读者还会以为是 7 日变化。
  */
 function changeAt(points: readonly SeriesPoint[], ts: number, windowDays: number): number | null {
-  return changeWith(byTs(points), ts, windowDays)
+  return changeWith(byUtcDay(points), ts, windowDays)
 }
 
 /**
@@ -260,15 +285,16 @@ function changeAt(points: readonly SeriesPoint[], ts: number, windowDays: number
  * ——于是单个特征要重建 5939 张表，21 个 `percentChange` 特征加起来 40 秒，
  * 静态生成撞上 Next.js 的 60 秒单页上限，冷构建直接失败。
  * 这里把索引提到外面建一次，查询变 O(1)，整体从 O(n²) 降到 O(n)。
- * **计算结果与原来逐位一致**：查的是同一张表、同一个键。
+ * **计算结果与原来逐位一致**：查的是同一张表、同一个键（UTC 自然日）。
  */
 function changeWith(
   map: Map<number, number | null>,
   ts: number,
   windowDays: number,
 ): number | null {
-  const cur = map.get(ts)
-  const base = map.get(ts - windowDays * DAY_SECONDS)
+  const day = Math.floor(ts / DAY_SECONDS)
+  const cur = map.get(day)
+  const base = map.get(day - windowDays)
   if (cur === undefined || cur === null || cur === 0) return null
   if (base === undefined || base === null || base === 0) return null
   return (cur / base - 1) * 100
@@ -277,7 +303,7 @@ function changeWith(
 /** 逐点的 N 日百分比变化序列（用于构造历史分布）。 */
 function changeSeries(points: readonly SeriesPoint[], windowDays: number): SeriesPoint[] {
   const sorted = asc(points)
-  const map = byTs(sorted)
+  const map = byUtcDay(sorted)
   return sorted.map((p) => {
     const v = changeWith(map, p.ts, windowDays)
     return { ts: p.ts, value: v }
@@ -451,6 +477,46 @@ function realizedVol(points: readonly SeriesPoint[], windowDays: number): number
 }
 
 /**
+ * 多窗口方向的两个阈值。
+ *
+ * **锚（90 日）**要达到 ±15% 才算"有趋势"：把 BTC 真实历史的 90 日变化分布跑一遍，
+ * 中位数只有 13.5%、10% 分位是 −31.5%，±15% 已经把"区间内的正常波动"排除在外，
+ * 又不至于让日常波动天天翻档。
+ *
+ * **摆动（30 日）**反向超过 ±10% 就不算趋势，而是回撤或反弹：
+ * 30 日变化的中位数只有 3.2%，10% 已经是一个material级别的摆动；
+ * 比它小的不该推翻 90 日的趋势，比它大的说明市场正在换挡。
+ */
+export const TREND_THRESHOLD_PERCENT = 15
+export const TREND_SWING_VETO_PERCENT = 10
+
+/** 方向。 */
+export type TrendDirection = 'up' | 'down' | 'flat'
+
+/**
+ * 多窗口方向。
+ *
+ * 锚与摆动必须**同时**满足才算趋势：
+ * 只有锚没有摆动，说明最近一个月在反向走；只有摆动没有锚，说明
+ * 那只是一个月的反弹。两者都不成立，就既不是趋势也不是反转，是震荡。
+ */
+export function trendDirection(anchorPercent: number, swingPercent: number): TrendDirection {
+  if (
+    anchorPercent >= TREND_THRESHOLD_PERCENT &&
+    swingPercent >= -TREND_SWING_VETO_PERCENT
+  ) {
+    return 'up'
+  }
+  if (
+    anchorPercent <= -TREND_THRESHOLD_PERCENT &&
+    swingPercent <= TREND_SWING_VETO_PERCENT
+  ) {
+    return 'down'
+  }
+  return 'flat'
+}
+
+/**
  * 计算一个特征。
  *
  * 任何一步拿不到可信的数，都返回 `ok: false` 并说清原因，
@@ -562,6 +628,26 @@ export function computeFeature(spec: FeatureSpec, input: FeatureInput): FeatureR
       const pct = percentileOf(history, observed)
       return ok(spec, observed, pct, null, null, last.ts)
     }
+    case 'trend': {
+      // 方向特征：观测量取锚窗口（90 日）的百分比变化，
+      // 档位直接就是方向本身（high = 上行 / low = 下行 / mid = 无明确方向）。
+      // 它**不是**分位，所以 percentile 为 null——它回答的是"往哪走"，
+      // 不是"这个数比过去多少比例的日子高"。
+      const swingDays = spec.swingDays ?? 30
+      const anchor = changeAt(points, last.ts, spec.windowDays)
+      const swing = changeAt(points, last.ts, swingDays)
+      if (anchor === null || swing === null) {
+        return fail(
+          spec,
+          'uncomputable',
+          `指标 ${spec.metricId} 算不出 ${spec.windowDays}/${swingDays} 日的方向`,
+        )
+      }
+      const direction = trendDirection(anchor, swing)
+      const band: FeatureBand =
+        direction === 'up' ? 'high' : direction === 'down' ? 'low' : 'mid'
+      return ok(spec, anchor, null, null, null, last.ts, band)
+    }
   }
 }
 
@@ -572,6 +658,8 @@ function ok(
   sign: FeatureSign | null,
   prevSign: FeatureSign | null,
   asOf: number,
+  /** 显式档位。分位类特征由分位决定；方向类特征（`trend`）由方向决定 */
+  band?: FeatureBand,
 ): FeatureResult {
   return {
     ok: true,
@@ -581,7 +669,7 @@ function ok(
       windowDays: spec.windowDays,
       observed,
       percentile,
-      band: percentile === null ? 'mid' : bandOf(percentile),
+      band: band ?? (percentile === null ? 'mid' : bandOf(percentile)),
       sign,
       prevSign,
       asOf,

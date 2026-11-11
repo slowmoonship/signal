@@ -17,6 +17,7 @@
 
 import {
   buildFeatureTable,
+  classifyRegime,
   deriveAllStatuses,
   HERO_METRIC_ID,
   HOME_GROUPS,
@@ -65,10 +66,16 @@ export function HomeView() {
   const nowMs = Date.now()
   const outdated = newest !== null && nowMs - Date.parse(newest) > 3 * 24 * 3_600_000
 
-  // 市场解释与状态列：特征标准化 → 场景匹配 / 分位分档 → 一句话或一个词。
+  // 市场解释与状态列：特征标准化 → 场景匹配 / 分位分档 / 三态分类 → 一句话或一个词。
   // 全部住在 packages/metrics，页面层只取结论（CLAUDE.md §架构边界）。
+  //
+  // 三条结论各司其职，不互相顶替：
+  // - `regime`：**方向分类**（牛市 / 熊市 / 震荡），卡片底色只跟它走；
+  // - `read`：**解释性文案**（场景规则给出的那一句）；
+  // - `statuses`：**指标当前状态**（分位档 / 方向）。
   const { features } = buildFeatureTable(publishedOf(data))
   const read = readMarketScenario(features)
+  const regime = classifyRegime(features)
   const statuses = deriveAllStatuses(STATUS_SPECS, features)
 
   return (
@@ -114,7 +121,7 @@ export function HomeView() {
             />
           ) : null}
 
-          <MarketRead locale={locale} read={read} features={features} />
+          <MarketRead locale={locale} read={read} regime={regime} features={features} />
 
           <p className="mt-4 font-mono text-xs text-ink-subtle tabular-nums">
             {newest

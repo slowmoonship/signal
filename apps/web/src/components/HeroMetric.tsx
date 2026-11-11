@@ -22,18 +22,23 @@ import {
   latestKnown,
   marketSentence,
   MISSING,
+  REGIME_CONFIDENCE_LABEL,
+  REGIME_DATA_FAULT,
+  REGIME_LABEL,
   type DcaDistribution,
   type DcaWorstCase,
   type FeatureTable,
+  type MarketRegime,
   type SiteLocale,
   type MarketRead as MarketReadResult,
-  type MarketTone,
   type MetricDefinition,
   type PublishedMetric,
+  type RegimeRead,
   type SeriesPoint,
 } from '@slowmoonship/metrics'
 
 import { getDictionary } from '@/i18n/dictionaries'
+import { formatUtcDateTime } from '@/lib/format-time'
 
 import { PriceSparkline } from './PriceSparkline'
 
@@ -148,31 +153,70 @@ function StatStrip({
  * 否则规则表和页面会各写一份，然后慢慢分叉。
  * 这里只负责把结论取出来显示。
  *
- * 规则 id、参与指标、数据时间与排除原因都保留在返回值里供审计，
- * 但**不上首页**——首页只留这一句话（CLAUDE.md §首页）。
+ * 卡片上分三件事，**互不顶替**（CLAUDE.md §市场状态卡片）：
  *
- * **底色只跟着结论走，不跟着文案走。** 页面读的是 `read.tone`
- * （由命中的规则的结构化结果算出），不是去匹配句子里有没有"上涨"两个字——
+ * 1. **方向分类**（牛市 / 熊市 / 震荡）：`regime.regime`，也是底色的唯一依据。
+ * 2. **解释性文案**：`read.sentence`——场景规则给出的那一句，讲"为什么是现在这样"。
+ * 3. **数据质量与置信度**：`regime.confidence` 与 `regime.dataIssues`。
+ *
+ * 三者分开是刻意的：老实现把"条件在变好还是变差"（tone）当成了市场方向，
+ * 于是"价格在近一年高位"这种**位置**陈述也被染成了绿底。方向是方向，
+ * 解释是解释，数据质量又是另一回事（ADR-027）。
+ *
+ * **底色只跟着方向走，不跟着文案走。** 页面读的是 `regime.regime`
+ * （由三态规则的结构化结果算出），不是去匹配句子里有没有"上涨"两个字——
  * 同一个词在不同规则里含义相反，照着文案染色必然染错。
+ *
+ * **判不了就说判不了。** 价格数据缺失或严重过期时显示"数据故障"，
+ * 绝不显示一个"震荡"——三态是正常数据条件下的分类，不是数据错误的替身。
  */
 export function MarketRead({
   locale,
   read,
+  regime,
   features,
 }: {
   readonly locale: SiteLocale
   readonly read: MarketReadResult
+  readonly regime: RegimeRead
   readonly features: FeatureTable
 }) {
   const t = getDictionary()
+  const faulted = regime.status === 'unknown'
 
   return (
-    <section className={`mt-4 rounded-lg border border-rule p-5 ${TONE_CLASS[read.tone]}`}>
-      <p className="text-sm font-medium text-ink-muted">{t.marketRead}</p>
-      {/* text-base 而不是 text-xl：这行字是结论不是标题，
-          抢过上面那个 5xl 大数字就本末倒置了。 */}
-      <p className="mt-1.5 text-base leading-snug text-ink">{marketSentence(read, features, locale)}</p>
-      {read.status === 'unknown' ? (
+    <section className={`mt-4 rounded-lg border border-rule p-5 ${REGIME_CLASS[regime.regime ?? 'range']}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-sm font-medium text-ink-muted">{t.marketRead}</p>
+        {/* 状态词用等宽字体：它是这一张卡片的结论，
+            和上面的数字一样属于"要能一眼定位"的东西。 */}
+        <p className="font-mono text-sm font-medium text-ink">
+          {faulted ? t.marketReadFault : REGIME_LABEL[regime.regime ?? 'range'][locale]}
+        </p>
+      </div>
+
+      {/* 方向判定的依据：直接可核对（90 日变了多少、链上活跃度处在什么位置）。 */}
+      <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">{regime.basis[locale]}</p>
+
+      {/* 解释性文案：场景规则给出的那一句。text-base 而不是 text-xl：
+          这行字是结论不是标题，抢过上面那个 5xl 大数字就本末倒置了。 */}
+      <p className="mt-2 text-base leading-snug text-ink">{marketSentence(read, features, locale)}</p>
+
+      {faulted ? (
+        <p className="mt-1.5 font-mono text-xs text-ink-subtle">{REGIME_DATA_FAULT[locale]}</p>
+      ) : (
+        <p className="mt-2 font-mono text-xs text-ink-subtle">
+          {REGIME_CONFIDENCE_LABEL[regime.confidence ?? 'low'][locale]}
+          {regime.dataIssues.length > 0
+            ? ` · ${t.marketReadOnchainMissing}`
+            : null}
+          {regime.asOf > 0
+            ? ` · ${t.updatedAt} ${formatUtcDateTime(new Date(regime.asOf * 1000).toISOString())} UTC`
+            : null}
+        </p>
+      )}
+
+      {read.status === 'unknown' && !faulted ? (
         <p className="mt-1.5 font-mono text-xs text-ink-subtle">{t.marketReadUnknown}</p>
       ) : null}
     </section>
@@ -180,14 +224,17 @@ export function MarketRead({
 }
 
 /**
- * 展示语义 → 卡片底色。
+ * 方向三态 → 卡片底色。
  *
  * 三个 token 住在 `globals.css`（CLAUDE.md §视觉红线）：组件只认类名，
- * 不知道背后是哪个明度的绿或红。`neutral` 就是卡片原来的背景，
+ * 不知道背后是哪个明度的绿或红。`range` 就是卡片原来的背景，
  * 它被写成一个 token 只是为了让"三档"在代码里是同一个形状。
+ *
+ * 注意这里**没有**第四档：判不了的时候页面走 `range` 底色，
+ * 但底色上写的是"数据故障"而不是"震荡"——颜色不承载"判不了"这个意思。
  */
-const TONE_CLASS: Readonly<Record<MarketTone, string>> = {
-  improving: 'bg-market-improving',
-  deteriorating: 'bg-market-deteriorating',
-  neutral: 'bg-market-neutral',
+const REGIME_CLASS: Readonly<Record<MarketRegime, string>> = {
+  bull: 'bg-market-bull',
+  bear: 'bg-market-bear',
+  range: 'bg-market-range',
 }

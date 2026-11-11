@@ -194,12 +194,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bull',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'band', feature: 'onchain.addresses30', band: 'high' },
     ],
     sentence: {
-      en: 'Price rose alongside stronger on-chain activity: 7-day change {price.7d}, active addresses 30-day change {onchain.addresses30.band}.',
-      zh: '价格上涨的同时链上活跃度走强：7 日变化 {price.7d}，活跃地址 30 日变化{onchain.addresses30.band}。',
+      en: 'Price rose alongside stronger on-chain activity: 90-day change {price.trend}, active addresses 30-day change {onchain.addresses30.band}.',
+      zh: '价格上涨的同时链上活跃度走强：90 日变化 {price.trend}，活跃地址 30 日变化{onchain.addresses30.band}。',
     },
   },
   {
@@ -209,12 +209,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'mixed',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'band', feature: 'onchain.addresses30', band: 'low' },
     ],
     sentence: {
-      en: 'Price rose while on-chain activity stayed weak: 7-day change {price.7d}, active addresses 30-day change {onchain.addresses30.band}.',
-      zh: '价格上涨但链上活跃度没有跟上：7 日变化 {price.7d}，活跃地址 30 日变化{onchain.addresses30.band}。',
+      en: 'Price rose while on-chain activity stayed weak: 90-day change {price.trend}, active addresses 30-day change {onchain.addresses30.band}.',
+      zh: '价格上涨但链上活跃度没有跟上：90 日变化 {price.trend}，活跃地址 30 日变化{onchain.addresses30.band}。',
     },
   },
   {
@@ -224,12 +224,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'mixed',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'low' },
+      { kind: 'band', feature: 'price.trend', band: 'low' },
       { kind: 'band', feature: 'onchain.addresses30', band: 'high' },
     ],
     sentence: {
-      en: 'Price fell while on-chain activity strengthened: 7-day change {price.7d}, active addresses 30-day change {onchain.addresses30.band}.',
-      zh: '价格下跌但链上活跃度走强：7 日变化 {price.7d}，活跃地址 30 日变化{onchain.addresses30.band}。',
+      en: 'Price fell while on-chain activity strengthened: 90-day change {price.trend}, active addresses 30-day change {onchain.addresses30.band}.',
+      zh: '价格下跌但链上活跃度走强：90 日变化 {price.trend}，活跃地址 30 日变化{onchain.addresses30.band}。',
     },
   },
   {
@@ -239,12 +239,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bear',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'band', feature: 'onchain.addresses30', band: 'low' },
     ],
     sentence: {
-      en: 'Price is flat while on-chain activity is depressed: 7-day change {price.7d}, active addresses 30-day change {onchain.addresses30.band}.',
-      zh: '价格横盘而链上活跃度低迷：7 日变化 {price.7d}，活跃地址 30 日变化{onchain.addresses30.band}。',
+      en: 'Price is flat while on-chain activity is depressed: 90-day change {price.trend}, active addresses 30-day change {onchain.addresses30.band}.',
+      zh: '价格横盘而链上活跃度低迷：90 日变化 {price.trend}，活跃地址 30 日变化{onchain.addresses30.band}。',
     },
   },
   {
@@ -254,12 +254,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'band', feature: 'onchain.addresses30', band: 'mid' },
     ],
     sentence: {
-      en: 'Price rose, but on-chain activity stayed in its usual range: 7-day change {price.7d}.',
-      zh: '价格上涨，但链上活跃度仍在常态区间：7 日变化 {price.7d}。',
+      en: 'Price rose, but on-chain activity stayed in its usual range: 90-day change {price.trend}.',
+      zh: '价格上涨，但链上活跃度仍在常态区间：90 日变化 {price.trend}。',
     },
   },
   {
@@ -269,12 +269,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'low' },
+      { kind: 'band', feature: 'price.trend', band: 'low' },
       { kind: 'band', feature: 'onchain.addresses30', band: 'mid' },
     ],
     sentence: {
-      en: 'Price fell, but on-chain activity stayed in its usual range: 7-day change {price.7d}.',
-      zh: '价格下跌，但链上活跃度仍在常态区间：7 日变化 {price.7d}。',
+      en: 'Price fell, but on-chain activity stayed in its usual range: 90-day change {price.trend}.',
+      zh: '价格下跌，但链上活跃度仍在常态区间：90 日变化 {price.trend}。',
     },
   },
 
@@ -286,12 +286,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bull',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'sign', feature: 'exchange.flow7', sign: 'outflow' },
     ],
     sentence: {
-      en: 'Price rose while coins left exchanges: 7-day change {price.7d}, 7-day exchange net flow {exchange.flow7}.',
-      zh: '价格上涨的同时代币流出交易所：7 日变化 {price.7d}，近 7 日交易所净流入 {exchange.flow7}。',
+      en: 'Price rose while coins left exchanges: 90-day change {price.trend}, 7-day exchange net flow {exchange.flow7}.',
+      zh: '价格上涨的同时代币流出交易所：90 日变化 {price.trend}，近 7 日交易所净流入 {exchange.flow7}。',
     },
   },
   {
@@ -301,12 +301,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'mixed',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'sign', feature: 'exchange.flow7', sign: 'inflow' },
     ],
     sentence: {
-      en: 'Price rose even as coins moved onto exchanges: 7-day change {price.7d}, 7-day exchange net flow {exchange.flow7}.',
-      zh: '价格上涨的同时代币流入交易所：7 日变化 {price.7d}，近 7 日交易所净流入 {exchange.flow7}。',
+      en: 'Price rose even as coins moved onto exchanges: 90-day change {price.trend}, 7-day exchange net flow {exchange.flow7}.',
+      zh: '价格上涨的同时代币流入交易所：90 日变化 {price.trend}，近 7 日交易所净流入 {exchange.flow7}。',
     },
   },
   {
@@ -316,12 +316,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bear',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'low' },
+      { kind: 'band', feature: 'price.trend', band: 'low' },
       { kind: 'sign', feature: 'exchange.flow7', sign: 'inflow' },
     ],
     sentence: {
-      en: 'Price fell while coins moved onto exchanges: 7-day change {price.7d}, 7-day exchange net flow {exchange.flow7}.',
-      zh: '价格下跌的同时代币流入交易所：7 日变化 {price.7d}，近 7 日交易所净流入 {exchange.flow7}。',
+      en: 'Price fell while coins moved onto exchanges: 90-day change {price.trend}, 7-day exchange net flow {exchange.flow7}.',
+      zh: '价格下跌的同时代币流入交易所：90 日变化 {price.trend}，近 7 日交易所净流入 {exchange.flow7}。',
     },
   },
   {
@@ -331,12 +331,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'mixed',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'low' },
+      { kind: 'band', feature: 'price.trend', band: 'low' },
       { kind: 'sign', feature: 'exchange.flow7', sign: 'outflow' },
     ],
     sentence: {
-      en: 'Price fell even as coins left exchanges: 7-day change {price.7d}, 7-day exchange net flow {exchange.flow7}.',
-      zh: '价格下跌的同时代币仍在流出交易所：7 日变化 {price.7d}，近 7 日交易所净流入 {exchange.flow7}。',
+      en: 'Price fell even as coins left exchanges: 90-day change {price.trend}, 7-day exchange net flow {exchange.flow7}.',
+      zh: '价格下跌的同时代币仍在流出交易所：90 日变化 {price.trend}，近 7 日交易所净流入 {exchange.flow7}。',
     },
   },
   {
@@ -346,12 +346,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'sign', feature: 'exchange.flow7', sign: 'inflow' },
     ],
     sentence: {
-      en: 'Price is flat while coins move onto exchanges: 7-day change {price.7d}, 7-day exchange net flow {exchange.flow7}.',
-      zh: '价格横盘而代币持续流入交易所：7 日变化 {price.7d}，近 7 日交易所净流入 {exchange.flow7}。',
+      en: 'Price is flat while coins move onto exchanges: 90-day change {price.trend}, 7-day exchange net flow {exchange.flow7}.',
+      zh: '价格横盘而代币持续流入交易所：90 日变化 {price.trend}，近 7 日交易所净流入 {exchange.flow7}。',
     },
   },
   {
@@ -361,12 +361,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'sign', feature: 'exchange.flow7', sign: 'outflow' },
     ],
     sentence: {
-      en: 'Price is flat while coins leave exchanges: 7-day change {price.7d}, 7-day exchange net flow {exchange.flow7}.',
-      zh: '价格横盘而代币持续流出交易所：7 日变化 {price.7d}，近 7 日交易所净流入 {exchange.flow7}。',
+      en: 'Price is flat while coins leave exchanges: 90-day change {price.trend}, 7-day exchange net flow {exchange.flow7}.',
+      zh: '价格横盘而代币持续流出交易所：90 日变化 {price.trend}，近 7 日交易所净流入 {exchange.flow7}。',
     },
   },
 
@@ -378,12 +378,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'mixed',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'band', feature: 'fees.rate7', band: 'high' },
     ],
     sentence: {
-      en: 'Price rose alongside a surge in transaction fees: 7-day change {price.7d}, recommended fee rate 7-day change {fees.rate7}.',
-      zh: '价格上涨的同时手续费明显走高：7 日变化 {price.7d}，推荐费率 7 日变化 {fees.rate7}。',
+      en: 'Price rose alongside a surge in transaction fees: 90-day change {price.trend}, recommended fee rate 7-day change {fees.rate7}.',
+      zh: '价格上涨的同时手续费明显走高：90 日变化 {price.trend}，推荐费率 7 日变化 {fees.rate7}。',
     },
   },
   {
@@ -393,12 +393,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'mixed',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'low' },
+      { kind: 'band', feature: 'price.trend', band: 'low' },
       { kind: 'band', feature: 'fees.rate7', band: 'high' },
     ],
     sentence: {
-      en: 'Price fell while transaction fees stayed high: 7-day change {price.7d}, recommended fee rate 7-day change {fees.rate7}.',
-      zh: '价格下跌而手续费仍处高位：7 日变化 {price.7d}，推荐费率 7 日变化 {fees.rate7}。',
+      en: 'Price fell while transaction fees stayed high: 90-day change {price.trend}, recommended fee rate 7-day change {fees.rate7}.',
+      zh: '价格下跌而手续费仍处高位：90 日变化 {price.trend}，推荐费率 7 日变化 {fees.rate7}。',
     },
   },
   {
@@ -408,12 +408,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bull',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'band', feature: 'fees.rate7', band: 'low' },
     ],
     sentence: {
-      en: 'Price rose with transaction fees still quiet: 7-day change {price.7d}, recommended fee rate 7-day change {fees.rate7}.',
-      zh: '价格上涨而手续费仍处低位：7 日变化 {price.7d}，推荐费率 7 日变化 {fees.rate7}。',
+      en: 'Price rose with transaction fees still quiet: 90-day change {price.trend}, recommended fee rate 7-day change {fees.rate7}.',
+      zh: '价格上涨而手续费仍处低位：90 日变化 {price.trend}，推荐费率 7 日变化 {fees.rate7}。',
     },
   },
   {
@@ -423,12 +423,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'band', feature: 'fees.rate7', band: 'high' },
     ],
     sentence: {
-      en: 'Price is flat while transaction fees are elevated: 7-day change {price.7d}, recommended fee rate 7-day change {fees.rate7}.',
-      zh: '价格横盘而手续费处于高位：7 日变化 {price.7d}，推荐费率 7 日变化 {fees.rate7}。',
+      en: 'Price is flat while transaction fees are elevated: 90-day change {price.trend}, recommended fee rate 7-day change {fees.rate7}.',
+      zh: '价格横盘而手续费处于高位：90 日变化 {price.trend}，推荐费率 7 日变化 {fees.rate7}。',
     },
   },
 
@@ -440,12 +440,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'mixed',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'band', feature: 'price.vol30', band: 'high' },
     ],
     sentence: {
-      en: 'Price rose in an unusually volatile market: 7-day change {price.7d}, 30-day realised volatility {price.vol30}.',
-      zh: '价格在一个异常高波动的市场中上涨：7 日变化 {price.7d}，30 日已实现波动率 {price.vol30}。',
+      en: 'Price rose in an unusually volatile market: 90-day change {price.trend}, 30-day realised volatility {price.vol30}.',
+      zh: '价格在一个异常高波动的市场中上涨：90 日变化 {price.trend}，30 日已实现波动率 {price.vol30}。',
     },
   },
   {
@@ -455,12 +455,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bear',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'low' },
+      { kind: 'band', feature: 'price.trend', band: 'low' },
       { kind: 'band', feature: 'price.vol30', band: 'high' },
     ],
     sentence: {
-      en: 'Price fell in an unusually volatile market: 7-day change {price.7d}, 30-day realised volatility {price.vol30}.',
-      zh: '价格在一个异常高波动的市场中下跌：7 日变化 {price.7d}，30 日已实现波动率 {price.vol30}。',
+      en: 'Price fell in an unusually volatile market: 90-day change {price.trend}, 30-day realised volatility {price.vol30}.',
+      zh: '价格在一个异常高波动的市场中下跌：90 日变化 {price.trend}，30 日已实现波动率 {price.vol30}。',
     },
   },
   {
@@ -470,12 +470,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'band', feature: 'price.vol30', band: 'high' },
     ],
     sentence: {
-      en: 'Price is flat but volatility is elevated: 7-day change {price.7d}, 30-day realised volatility {price.vol30}.',
-      zh: '价格横盘但波动率处于高位：7 日变化 {price.7d}，30 日已实现波动率 {price.vol30}。',
+      en: 'Price is flat but volatility is elevated: 90-day change {price.trend}, 30-day realised volatility {price.vol30}.',
+      zh: '价格横盘但波动率处于高位：90 日变化 {price.trend}，30 日已实现波动率 {price.vol30}。',
     },
   },
 
@@ -487,12 +487,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bull',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'high' },
+      { kind: 'band', feature: 'price.trend', band: 'high' },
       { kind: 'band', feature: 'mining.hashrate90', band: 'high' },
     ],
     sentence: {
-      en: 'Price rose as hashpower kept expanding: 7-day change {price.7d}, 90-day hash rate change {mining.hashrate90}.',
-      zh: '价格上涨的同时算力继续扩张：7 日变化 {price.7d}，90 日算力变化 {mining.hashrate90}。',
+      en: 'Price rose as hashpower kept expanding: 90-day change {price.trend}, 90-day hash rate change {mining.hashrate90}.',
+      zh: '价格上涨的同时算力继续扩张：90 日变化 {price.trend}，90 日算力变化 {mining.hashrate90}。',
     },
   },
   {
@@ -502,12 +502,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'composite',
     family: 'bear',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'low' },
+      { kind: 'band', feature: 'price.trend', band: 'low' },
       { kind: 'band', feature: 'mining.hashrate90', band: 'low' },
     ],
     sentence: {
-      en: 'Price fell alongside a contraction in hashpower: 7-day change {price.7d}, 90-day hash rate change {mining.hashrate90}.',
-      zh: '价格下跌的同时算力收缩：7 日变化 {price.7d}，90 日算力变化 {mining.hashrate90}。',
+      en: 'Price fell alongside a contraction in hashpower: 90-day change {price.trend}, 90-day hash rate change {mining.hashrate90}.',
+      zh: '价格下跌的同时算力收缩：90 日变化 {price.trend}，90 日算力变化 {mining.hashrate90}。',
     },
   },
 
@@ -639,7 +639,7 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'price',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'band', feature: 'price.30d', band: 'mid' },
       { kind: 'band', feature: 'price.90d', band: 'mid' },
     ],
@@ -655,7 +655,7 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'price',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'band', feature: 'price.30d', band: 'mid' },
       { kind: 'band', feature: 'price.level365', band: 'high' },
     ],
@@ -671,7 +671,7 @@ export const SCENARIOS: readonly MarketScenario[] = [
     dimension: 'price',
     family: 'neutral',
     conditions: [
-      { kind: 'band', feature: 'price.7d', band: 'mid' },
+      { kind: 'band', feature: 'price.trend', band: 'mid' },
       { kind: 'band', feature: 'price.30d', band: 'mid' },
       { kind: 'band', feature: 'price.level365', band: 'low' },
     ],
@@ -1117,8 +1117,12 @@ export const SCENARIOS: readonly MarketScenario[] = [
     family: 'mixed',
     conditions: [],
     sentence: {
-      en: 'Signals from different dimensions point in opposite directions, so no single reading is supported.',
-      zh: '不同维度的信号方向相反，因此无法给出单一的读数。',
+      // 这句话只陈述**分化**这个事实，不下"因此判不出来"的结论：
+      // 方向分类由 regime 层给出（三态），文案负责解释为什么会有分化。
+      // 早先的写法是"因此无法给出单一的读数"——那等于把"判不了"
+      // 当成了市场状态，而这正是 CLAUDE.md 红线 8 禁止的事。
+      en: 'Signals from different dimensions diverge: some point up, others point down.',
+      zh: '不同维度的信号出现分化：有的方向偏强，有的方向偏弱。',
     },
   },
   {

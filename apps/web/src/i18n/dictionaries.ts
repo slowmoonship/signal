@@ -72,6 +72,10 @@ export type Dictionary = Readonly<{
   heroDays: string
   marketRead: string
   marketReadUnknown: string
+  /** 价格数据故障时的状态词（不是"震荡"） */
+  marketReadFault: string
+  /** 链上数据缺失时的补充说明 */
+  marketReadOnchainMissing: string
   /** 十年价格走势 */
   sparklineNoData: string
   sparklineNoHighlight: string
@@ -182,6 +186,8 @@ const zh: Dictionary = {
   heroDays: '天',
   marketRead: '市场状态',
   marketReadUnknown: '部分输入缺失或已过期。',
+  marketReadFault: '数据故障',
+  marketReadOnchainMissing: '链上数据缺失，仅依据价格趋势',
 
   sparklineNoData: '价格历史不足，无法绘制走势图。',
   sparklineNoHighlight: '当前快照里没有可用的最长等待区间。',
