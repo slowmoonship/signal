@@ -41,7 +41,7 @@ import { isAvailable, resolveAdapter } from '../sources/index.js'
 import type { FetchContext, Logger, RawSeries, SourceAdapter } from '../sources/types.js'
 import type { SnapshotStore } from '../store/db.js'
 import { publishJson, assertPublishable } from '../publish/atomic.js'
-import { mergePublishedPoints, readPublished } from '../publish/merge.js'
+import { collapseToDailySamples, mergePublishedPoints, readPublished } from '../publish/merge.js'
 
 export const consoleLogger: Logger = {
   debug: (m) => console.log(`  · ${m}`),
@@ -521,7 +521,10 @@ function publishAll(opts: IngestOptions, outcomes: readonly MetricOutcome[]): nu
       continue
     }
 
-    const points = mergePublishedPoints(previous?.points ?? null, fresh)
+    // 合并之后收敛到每天一个点：工作流同一天可能跑两次（cron + push 各一次），
+    // 点采样类指标会因此一天冒出两个采样，「日频」的口径当场失守。
+    // 收敛规则见 collapseToDailySamples（有值优先、同值取最晚）。
+    const points = collapseToDailySamples(mergePublishedPoints(previous?.points ?? null, fresh))
 
     // 合并后必须仍有有效数据点。真的一个都没有（既没有旧文件、
     // 本轮又没抓到）时拒绝写这份文件——宁可不更新，也不能把指标清空。

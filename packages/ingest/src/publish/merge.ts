@@ -33,6 +33,43 @@ import { join } from 'node:path'
 import type { PublishedMetric, SeriesPoint } from '@slowmoonship/metrics'
 
 /**
+ * 把序列收敛到**每天一个点**（UTC 自然日）。
+ *
+ * 为什么需要它：点采样类指标（难度 / 区块权重 / 矿池集中度 / 推荐费率）
+ * 的口径是"每天抓取时的那一个采样"，指标定义里写明"每天一个点"。
+ * 但工作流既会被 cron 触发、也会被 push 触发，同一天跑两次就采两次：
+ * 两个不同的区块时间戳、同一个 UTC 自然日，合并后两天的点都留了下来
+ * ——曲线上一天冒出两个点，"日频"这个口径当场失守。
+ *
+ * 收敛规则（可核对）：
+ * - 同一个 UTC 自然日只保留一个点；
+ * - 有值的点优先于 null（null 是"那天没数"，不该盖掉采到的值）；
+ * - 同为有值或同为 null 时取**最晚**的采样——那是那天最后一次成功运行的读数，
+ *   与合并里"新值优先"的方向一致。
+ *
+ * 每天一个点的日频指标（价格、活跃地址这类）不受影响：
+ * 它们本来就一天一个时间戳，收敛前后逐点相同。
+ */
+export function collapseToDailySamples(points: readonly SeriesPoint[]): SeriesPoint[] {
+  // Map<UTC 自然日, 该日的候选点>。一天内候选最多几个，线性扫即可。
+  const byDay = new Map<number, SeriesPoint>()
+  for (const p of points) {
+    const day = Math.floor(p.ts / 86_400)
+    const kept = byDay.get(day)
+    if (!kept) {
+      byDay.set(day, p)
+      continue
+    }
+    const better =
+      (p.value !== null && kept.value === null) ||
+      (p.value !== null && kept.value !== null && p.ts > kept.ts) ||
+      (p.value === null && kept.value === null && p.ts > kept.ts)
+    if (better) byDay.set(day, p)
+  }
+  return [...byDay.values()].sort((a, b) => a.ts - b.ts)
+}
+
+/**
  * 合并"已发布的旧点"与"本轮抓到的新点"。
  *
  * @param previous 磁盘上已发布的旧点；null = 没有旧文件（首次发布）

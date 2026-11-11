@@ -42,21 +42,44 @@ export function subtractSeries(
 }
 
 /**
+ * UTC 自然日索引：floor(ts / 86400) → 该日的值。
+ *
+ * 同一天有多个采样时按发布侧的收敛规则取：有值优先、同值取最晚。
+ * 发布链路（collapseToDailySamples）保证一天只有一个采样，这里是防御性的。
+ */
+export function byUtcDay(points: readonly SeriesPoint[]): Map<number, number | null> {
+  const out = new Map<number, number | null>()
+  for (const p of sorted(points)) {
+    const day = Math.floor(p.ts / DAY_SECONDS)
+    // 首见（prev === undefined）写入；有值覆盖 null 或换成更晚的采样
+    const prev = out.get(day)
+    if (prev === undefined || p.value !== null) out.set(day, p.value)
+  }
+  return out
+}
+
+/**
  * 滚动百分比变化：(p_t / p_{t−N} − 1) × 100。
  *
- * 按**日历天**对齐（t − N×86400 秒）而不是"往前数 N 个点"——
- * 上游漏一天时，"第 7 个点"会悄悄变成 8 天前，读者还会以为是 7 日变化。
+ * 按**日历天**对齐（t 所在的 UTC 自然日往前 N 个自然日），
+ * 而不是"往前数 N 个点"——上游漏一天时，"第 7 个点"会悄悄变成 8 天前，
+ * 读者还会以为是 7 日变化。
+ *
+ * 对齐以**自然日**为键而不是精确时间戳：点采样类指标（难度、区块权重、
+ * 矿池集中度……）的时间戳是区块时间或采集时刻，一天一个不规则时刻，
+ * 精确时间戳查表永远查不到 N 天前的那一点，整列变化会变成空白。
+ * 日频指标（00:00:00 采样）两种口径逐点相同。
+ *
  * 基准点缺失则结果为 null。
  */
 export function percentChangeSeries(
   points: readonly SeriesPoint[],
   windowDays: number,
 ): SeriesPoint[] {
-  const byTs = byTimestamp(points)
-  const offset = windowDays * DAY_SECONDS
+  const byDay = byUtcDay(points)
   return sorted(points).map((p) => {
     if (p.value === null || p.value === 0) return { ts: p.ts, value: null }
-    const base = byTs.get(p.ts - offset)
+    const base = byDay.get(Math.floor(p.ts / DAY_SECONDS) - windowDays)
     if (base === undefined || base === null || base === 0) return { ts: p.ts, value: null }
     return { ts: p.ts, value: (p.value / base - 1) * 100 }
   })

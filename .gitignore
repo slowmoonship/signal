@@ -39,3 +39,6 @@ out/
 # 日志与临时文件
 *.log
 *.tmp
+
+# 历史回填的区块缓存：可再生成的中间产物，不入库（见 packages/ingest/src/backfill/）
+/data/backfill/

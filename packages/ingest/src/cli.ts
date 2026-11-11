@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import { DEFAULT_DB_PATH, SnapshotStore } from './store/db.js'
 import { consoleLogger, runIngest } from './runners/index.js'
 import { publishDir } from './paths.js'
+import { DEFAULT_CACHE_PATH, runBackfill } from './backfill/cli.js'
 import {
   FIXTURE_DIR,
   fixtureSummary,
@@ -136,6 +137,23 @@ async function main(): Promise<number> {
             typeof (p as { value?: unknown }).value === 'number',
         ).length
         if (nonNull === 0) problems.push(`${id}: 没有任何有效数据点`)
+        // 按 UTC 自然日校验：所有指标都是日频（"每天一个点"），
+        // 同一天出现两个采样说明收敛逻辑（collapseToDailySamples）被绕过了。
+        // 工作流一天跑两次（cron + push）正是这样的场景，必须在这里拦住。
+        const seenDays = new Map<number, number>()
+        for (const p of points) {
+          if (typeof p !== 'object' || p === null) continue
+          const ts = (p as { ts?: unknown }).ts
+          if (typeof ts !== 'number' || !Number.isFinite(ts)) continue
+          const day = Math.floor(ts / 86_400)
+          seenDays.set(day, (seenDays.get(day) ?? 0) + 1)
+        }
+        for (const [day, count] of seenDays) {
+          if (count > 1) {
+            const date = new Date(day * 86_400 * 1000).toISOString().slice(0, 10)
+            problems.push(`${id}: ${date} 有 ${count} 个采样点，日频指标一天只允许一个`)
+          }
+        }
         if (metric.stale === true) stale += 1
       }
       // 发布目录里不该有注册表之外的文件（多半是手工误放）
@@ -153,6 +171,25 @@ async function main(): Promise<number> {
       console.log(`✓ ${ids.length} 份发布数据全部通过体检（其中 ${stale} 份标记 stale）`)
       return 0
     }
+    case 'backfill:btc': {
+      // 一次性历史回填。区间必须落在每日流水线第一个数据点之前，
+      // 两段才不会在同一天上各出一个点（见 backfill/cli.ts 的说明）。
+      const from = flag(rest, '--from')
+      const to = flag(rest, '--to')
+      if (!from || !to) {
+        console.error('用法：tsx src/cli.ts backfill:btc --from YYYY-MM-DD --to YYYY-MM-DD [--live]')
+        return 1
+      }
+      return runBackfill({
+        from,
+        to,
+        cachePath: flag(rest, '--cache') ?? DEFAULT_CACHE_PATH,
+        outDir: flag(rest, '--out') ?? publishDir(),
+        live,
+        delayMs: Number(flag(rest, '--delay-ms') ?? '400'),
+        poolWindowDays: Number(flag(rest, '--pool-window-days') ?? '31'),
+      })
+    }
     case 'sources': {
       console.log(`已注册适配器 ${adapters.length} 个：`)
       for (const a of adapters) {
@@ -165,6 +202,8 @@ async function main(): Promise<number> {
     default: {
       console.log(`用法：
   tsx src/cli.ts btc [--live] [--only id,id]   抓取 BTC 指标（默认 dry-run）
+  tsx src/cli.ts backfill:btc --from D --to D [--live]
+                                              历史回填（区块 → 三条日频序列）
   tsx src/cli.ts fixtures:btc [--end D] [--days N] [--out DIR]
                                               生成合成 fixture（仅开发/测试）
   tsx src/cli.ts db:init                       初始化数据库

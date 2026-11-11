@@ -17,6 +17,7 @@
     "db:init": "npm run db:init --workspace @slowmoonship/ingest",
     "db:reset": "npm run db:reset --workspace @slowmoonship/ingest",
     "ingest:btc": "npm run ingest:btc --workspace @slowmoonship/ingest",
+    "backfill:btc": "npm run backfill:btc --workspace @slowmoonship/ingest",
     "fixtures:btc": "npm run fixtures:btc --workspace @slowmoonship/ingest",
     "metrics:validate": "npm run validate --workspace @slowmoonship/metrics",
     "sources": "npm run sources --workspace @slowmoonship/ingest",

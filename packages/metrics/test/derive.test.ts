@@ -107,6 +107,32 @@ describe('滚动百分比变化', () => {
     const out = percentChangeSeries([p('2026-10-01T00:00:00Z', 100), p('2026-10-02T00:00:00Z', null)], 1)
     expect(out[1]?.value).toBeNull()
   })
+
+  it('采样时刻不规则时按 UTC 自然日对齐，而不是要求时间戳精确相等', () => {
+    // 点采样类指标（难度、区块权重……）的时间戳是区块时间，一天一个不规则时刻。
+    // 曾经的精确时间戳查表在这种序列上永远查不到 N 天前的点，
+    // 整列变化静默变成空白——而空白长得就像"没数据"。
+    const irregular = [
+      p('2026-10-01T04:37:12Z', 100),
+      p('2026-10-02T06:01:55Z', 110),
+      p('2026-10-03T11:29:30Z', 121),
+    ]
+    const out = percentChangeSeries(irregular, 2)
+    expect(out[2]?.value).toBeCloseTo(21) // 10-03 对 10-01
+    expect(latestChange(irregular, 2)).toBeCloseTo(21)
+  })
+
+  it('同一 UTC 自然日多个采样时，有值优先、同值取最晚', () => {
+    // 发布链路会把同日采样收敛成一个点；这里守的是收敛规则本身
+    const twoPerDay = [
+      p('2026-10-01T05:00:00Z', 100),
+      p('2026-10-01T11:00:00Z', 90),
+      p('2026-10-02T05:00:00Z', 108),
+    ]
+    const out = percentChangeSeries(twoPerDay, 1)
+    // 10-02 对 10-01：取 10-01 最晚的采样 90 → +20%
+    expect(out[2]?.value).toBeCloseTo(20)
+  })
 })
 
 describe('最新有效值与变化', () => {
