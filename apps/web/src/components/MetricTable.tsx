@@ -116,125 +116,139 @@ export function MetricTable({
   const t = getDictionary()
 
   return (
-    <table className="w-full border-collapse text-sm">
-      <caption className="sr-only">{t.index}</caption>
-      <thead>
-        <tr className="border-b border-rule-strong">
-          {/* 列在窄屏收起时表头必须跟着一起收：表头数量与列数对不上时，
-              读屏软件会把第 3 个表头念到第 2 列上。 */}
-          <th scope="col" className="hidden w-24 py-2 pr-3 text-left align-bottom font-medium text-ink-subtle lg:table-cell">
-            {t.colCategory}
-          </th>
-          <th scope="col" className="py-2 pr-3 text-left align-bottom font-medium text-ink-subtle">
-            {t.colMetric}
-          </th>
-          <th scope="col" className="w-28 py-2 pr-3 text-right align-bottom font-medium text-ink-subtle sm:w-36">
-            {t.colValue}
-          </th>
-          <th scope="col" className="w-16 py-2 pr-3 text-right align-bottom font-medium text-ink-subtle sm:w-20">
-            {t.colChange}
-          </th>
-          <th scope="col" className="w-20 py-2 pr-3 text-left align-bottom font-medium text-ink-subtle">
-            {t.colStatus}
-          </th>
-          <th scope="col" className="hidden w-28 py-2 text-left align-bottom font-medium text-ink-subtle xl:table-cell">
-            {t.colBasis}
-          </th>
-        </tr>
-      </thead>
-
-      {groups.map((group) => (
-        <tbody key={group.key} className={homeTintFor(group.key)}>
-          {/* 组标题：宽屏下与分类列重复，收起；窄屏下靠它区分分组 */}
-          <tr className="lg:hidden">
-            <th
-              scope="colgroup"
-              className="border-b border-rule-strong py-1.5 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-widest"
-            >
-              {t.homeGroups[group.key]}
+    /*
+     * 外框 + 圆角由**外层容器**承担，表格本身不带边框。
+     *
+     * 为什么不能直接给 `<table>` 加 `border` + `rounded-lg`：
+     * `border-collapse: collapse` 与 `border-radius` 不兼容——折叠模式下的
+     * 圆角不会被绘制，浏览器只会给出一个直角的外框（这是 HTML 表格的老问题）。
+     * 所以外框是一个普通 div，圆角由它裁剪（`overflow-hidden`），
+     * 表格的语义与结构原样保留：一个真正的 `<table>` + `rowSpan`。
+     *
+     * 裁剪的代价：焦点环画在外侧的那一圈会被裁掉，因此窄屏下
+     * 指标名列留了 4px 左边距（`pl-1 lg:pl-0`），刚好容下那圈焦点环。
+     */
+    <div className="overflow-hidden rounded-lg border border-rule">
+      <table className="w-full border-collapse text-sm">
+        <caption className="sr-only">{t.index}</caption>
+        <thead>
+          <tr className="border-b border-rule-strong">
+            {/* 列在窄屏收起时表头必须跟着一起收：表头数量与列数对不上时，
+                读屏软件会把第 3 个表头念到第 2 列上。 */}
+            <th scope="col" className="hidden w-24 py-2 pr-3 text-left align-bottom font-medium text-ink-subtle lg:table-cell">
+              {t.colCategory}
             </th>
-            <td
-              // 窄屏下分类列与判定依据列都是 display:none，可见列只剩 4 列
-              // （指标 / 当前值 / 7 日变化 / 当前状态），colSpan 必须跟着减，
-              // 否则读屏软件会以为这一行多出一列。
-              colSpan={4}
-              className="border-b border-rule-strong"
-            />
+            <th scope="col" className="py-2 pr-3 pl-1 text-left align-bottom font-medium text-ink-subtle lg:pl-0">
+              {t.colMetric}
+            </th>
+            <th scope="col" className="w-28 py-2 pr-3 text-right align-bottom font-medium text-ink-subtle sm:w-36">
+              {t.colValue}
+            </th>
+            <th scope="col" className="w-16 py-2 pr-3 text-right align-bottom font-medium text-ink-subtle sm:w-20">
+              {t.colChange}
+            </th>
+            <th scope="col" className="w-20 py-2 pr-3 text-left align-bottom font-medium text-ink-subtle">
+              {t.colStatus}
+            </th>
+            <th scope="col" className="hidden w-28 py-2 text-left align-bottom font-medium text-ink-subtle xl:table-cell">
+              {t.colBasis}
+            </th>
           </tr>
+        </thead>
 
-          {group.metrics.map((def, index) => {
-            const result = data.get(def.id)
-            const metric = result?.ok === true ? result.value : null
-            const status = statusOf(result, metric)
-            const marketStatus = statuses.get(def.id)
-            return (
-              <tr
-                key={def.id}
-                // hover 用**半透明**的 ink 叠加，而不是不透明的 surface-sunken：
-                // 行背景会画在行组（tbody）背景之上，不透明的悬停底色会把
-                // 分类底色整片盖掉——鼠标扫过一组，同一组的行就先后"掉了色"，
-                // 分组边界在读者眼前闪一下就没了。半透明叠加则保留色相。
-                //
-                // 这里**不能**加 `relative`：表格行一旦成为定位容器，
-                // 任何绝对定位的后代（哪怕是别的单元格里链接的伪元素）
-                // 都可能以整张表为包含块，覆盖整页并吞掉所有点击。
-                className="border-b border-rule last:border-b-0 hover:bg-ink/[0.03]"
+        {groups.map((group) => (
+          <tbody key={group.key} className={homeTintFor(group.key)}>
+            {/* 组标题：宽屏下与分类列重复，收起；窄屏下靠它区分分组 */}
+            <tr className="lg:hidden">
+              <th
+                scope="colgroup"
+                className="border-b border-rule-strong py-1.5 pl-1 text-left font-mono text-xs font-medium text-ink-muted uppercase tracking-widest"
               >
-                {index === 0 ? (
-                  <th
-                    scope="rowgroup"
-                    rowSpan={group.metrics.length}
-                    // 分类列在整段合并区里水平 + 垂直居中：
-                    // 用真正的单元格对齐（align-middle），不用绝对定位模拟。
-                    className="hidden w-24 border-b border-rule py-1.5 pr-3 text-center align-middle font-mono text-xs font-medium text-ink-muted uppercase tracking-widest lg:table-cell"
-                  >
-                    {t.homeGroups[group.key]}
-                  </th>
-                ) : null}
+                {t.homeGroups[group.key]}
+              </th>
+              <td
+                // 窄屏下分类列与判定依据列都是 display:none，可见列只剩 4 列
+                // （指标 / 当前值 / 7 日变化 / 当前状态），colSpan 必须跟着减，
+                // 否则读屏软件会以为这一行多出一列。
+                colSpan={4}
+                className="border-b border-rule-strong"
+              />
+            </tr>
 
-                <th scope="row" className="py-1.5 pr-3 text-left font-normal align-baseline">
-                  <Link
-                    href={`/metrics/${def.id}`}
-                    className="text-ink hover:underline"
-                  >
-                    {def.name[locale]}
-                  </Link>
-                </th>
-
-                {/* 数值列：窄屏允许在任意位置折行（wrap-anywhere）。
-                    `break-words` 不够——它不改变单元格的最小内容宽度，
-                    于是 "$1,646,907,492,049.81" 这类长数字会把整张表的
-                    最小宽度撑到 381px，在 375px 屏上横向溢出 26px。
-                    `overflow-wrap: anywhere` 会把最小宽度降到 1 个字符，
-                    表格于是能收进视口。宽屏（sm 以上）恢复默认，
-                    长数字在桌面端仍然完整显示在一行里。 */}
-                <td className="py-1.5 pr-3 text-right font-mono text-sm text-ink tabular-nums wrap-anywhere sm:wrap-normal">
-                  <Value metric={metric} def={def} locale={locale} status={status} />
-                </td>
-
-                <td className="py-1.5 pr-3 text-right font-mono text-sm text-ink-subtle tabular-nums">
-                  <Change metric={metric} locale={locale} windowDays={changeWindowFor(def)} />
-                </td>
-
-                <td className="py-1.5 pr-3 text-left align-baseline">
-                  {marketStatus ? (
-                    <StatusPill status={marketStatus} locale={locale} />
-                  ) : (
-                    <span className="font-mono text-xs text-ink-subtle">{t.dataNoValue}</span>
-                  )}
-                </td>
-
-                <td className="hidden py-1.5 text-left align-baseline font-mono text-xs whitespace-nowrap text-ink-subtle xl:table-cell">
-                  {marketStatus ? (
-                    <Basis marketStatus={marketStatus} features={features} locale={locale} />
+            {group.metrics.map((def, index) => {
+              const result = data.get(def.id)
+              const metric = result?.ok === true ? result.value : null
+              const status = statusOf(result, metric)
+              const marketStatus = statuses.get(def.id)
+              return (
+                <tr
+                  key={def.id}
+                  // hover 用**半透明**的 ink 叠加，而不是不透明的 surface-sunken：
+                  // 行背景会画在行组（tbody）背景之上，不透明的悬停底色会把
+                  // 分类底色整片盖掉——鼠标扫过一组，同一组的行就先后"掉了色"，
+                  // 分组边界在读者眼前闪一下就没了。半透明叠加则保留色相。
+                  //
+                  // 这里**不能**加 `relative`：表格行一旦成为定位容器，
+                  // 任何绝对定位的后代（哪怕是别的单元格里链接的伪元素）
+                  // 都可能以整张表为包含块，覆盖整页并吞掉所有点击。
+                  className="border-b border-rule last:border-b-0 hover:bg-ink/[0.03]"
+                >
+                  {index === 0 ? (
+                    <th
+                      scope="rowgroup"
+                      rowSpan={group.metrics.length}
+                      // 分类列在整段合并区里水平 + 垂直居中：
+                      // 用真正的单元格对齐（align-middle），不用绝对定位模拟。
+                      className="hidden w-24 border-b border-rule py-1.5 pr-3 text-center align-middle font-mono text-xs font-medium text-ink-muted uppercase tracking-widest lg:table-cell"
+                    >
+                      {t.homeGroups[group.key]}
+                    </th>
                   ) : null}
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      ))}
-    </table>
+
+                  <th scope="row" className="py-1.5 pr-3 pl-1 text-left font-normal align-baseline lg:pl-0">
+                    <Link
+                      href={`/metrics/${def.id}`}
+                      className="text-ink hover:underline"
+                    >
+                      {def.name[locale]}
+                    </Link>
+                  </th>
+
+                  {/* 数值列：窄屏允许在任意位置折行（wrap-anywhere）。
+                      `break-words` 不够——它不改变单元格的最小内容宽度，
+                      于是 "$1,646,907,492,049.81" 这类长数字会把整张表的
+                      最小宽度撑到 381px，在 375px 屏上横向溢出 26px。
+                      `overflow-wrap: anywhere` 会把最小宽度降到 1 个字符，
+                      表格于是能收进视口。宽屏（sm 以上）恢复默认，
+                      长数字在桌面端仍然完整显示在一行里。 */}
+                  <td className="py-1.5 pr-3 text-right font-mono text-sm text-ink tabular-nums wrap-anywhere sm:wrap-normal">
+                    <Value metric={metric} def={def} locale={locale} status={status} />
+                  </td>
+
+                  <td className="py-1.5 pr-3 text-right font-mono text-sm text-ink-subtle tabular-nums">
+                    <Change metric={metric} locale={locale} windowDays={changeWindowFor(def)} />
+                  </td>
+
+                  <td className="py-1.5 pr-3 text-left align-baseline">
+                    {marketStatus ? (
+                      <StatusPill status={marketStatus} locale={locale} />
+                    ) : (
+                      <span className="font-mono text-xs text-ink-subtle">{t.dataNoValue}</span>
+                    )}
+                  </td>
+
+                  <td className="hidden py-1.5 text-left align-baseline font-mono text-xs whitespace-nowrap text-ink-subtle xl:table-cell">
+                    {marketStatus ? (
+                      <Basis marketStatus={marketStatus} features={features} locale={locale} />
+                    ) : null}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        ))}
+      </table>
+    </div>
   )
 }
 
