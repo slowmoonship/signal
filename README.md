@@ -7,11 +7,12 @@
 
 ## 状态
 
-**Phase 0–4 完成。上线（Phase 5）待批准。**
+**V0.1 已上线**（<https://slowmoonship.github.io/signal/>）。
+GitHub Actions 每天自动采集、计算、校验、导出并部署；数据快照连同历史一起提交回仓库。
 
 - Phase 0：项目骨架、开发规范、数据适配器接口与数据质量约束。
 - Phase 1：18 个 BTC 指标定义（中英双语文案齐全）、首页与详情页、明暗主题、历史曲线。
-- Phase 2：接入真实免费源，`public/data` 已是 18 份真实快照，站点读的就是真数据。
+- Phase 2：接入真实免费源，`public/data` 已是 20 份真实快照，站点读的就是真数据。
 - Phase 3：视觉规范落地（语义 token、web 字体、320px 排版、键盘可达性），见 `docs/DESIGN.md`。
 - Phase 4：GitHub Actions 日更与 CI、stale 与新鲜度文案、sitemap / robots / OG。
 - V0.1：界面收敛为中文单语言（`/` 直接是首页，`/zh` 保留为历史别名）、
