@@ -12,6 +12,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import {
+  buildDetailChart,
+  detailChartParents,
   formatSignedPercent,
   formatValue,
   latestChange,
@@ -19,9 +21,14 @@ import {
   MISSING,
   registry,
   SITE_LOCALE,
+  STATUS_SPEC_BY_METRIC,
+  statusBasis,
+  type SeriesPoint,
 } from '@slowmoonship/metrics'
 
 import { MetricChart } from '@/components/MetricChart'
+import { OverlayChart } from '@/components/OverlayChart'
+import { StatusPill } from '@/components/StatusPill'
 import {
   Block,
   Coverage,
@@ -32,6 +39,7 @@ import {
   Warnings,
 } from '@/components/MetricDetails'
 import { loadMetric } from '@/data/load'
+import { siteRead } from '@/data/read'
 import { getDictionary } from '@/i18n/dictionaries'
 import { formatUtcDateTime } from '@/lib/format-time'
 
@@ -52,20 +60,33 @@ export function MetricView({ id }: { readonly id: string }) {
   const windowDays = def.changeWindowDays === undefined ? CHANGE_WINDOW_DAYS : def.changeWindowDays
   const change = points && windowDays !== null ? latestChange(points, windowDays) : null
   const value = latest ? formatValue(latest.value, def.format, locale) : null
+  const overlay = detailOverlay(def.id, points, locale)
+  const { features, statuses } = siteRead()
+  const status = statuses.get(def.id)
+  const spec = STATUS_SPEC_BY_METRIC.get(def.id)
+  const feature = spec ? features[spec.featureId] : undefined
+  const basis = status
+    ? statusBasis(status, feature && feature.ok ? feature.value : undefined, locale)
+    : null
 
   return (
-    // 详情页收窄到可读行宽：根容器为了首页的双栏放大到了 max-w-6xl，
-    // 而 method 这类长段落铺满 1152px 会让每行超过 100 个字符，反而更难读。
-    <article className="max-w-prose">
+    // 叠加图需要比一段正文更宽。文字块自己仍收在 max-w-prose 里。
+    <article className={overlay ? 'max-w-4xl' : 'max-w-prose'}>
       <Link href="/" className="text-xs text-ink-muted hover:text-ink hover:underline">
         ← {t.backToIndex}
       </Link>
 
-      <header className="mt-6">
+      <header className="mt-6 max-w-prose">
         <p className="text-xs font-medium uppercase tracking-widest text-ink-subtle">
           {t.categories[def.category]}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{def.name[locale]}</h1>
+        {status && basis ? (
+          <p className="mt-3 flex items-center gap-3">
+            <StatusPill status={status} locale={locale} />
+            <span className="font-mono text-xs text-ink-subtle">{basis}</span>
+          </p>
+        ) : null}
 
         <p className="mt-6 font-mono text-2xl tabular-nums break-words sm:text-3xl">
           {value ?? MISSING}
@@ -105,8 +126,13 @@ export function MetricView({ id }: { readonly id: string }) {
         </p>
       ) : null}
 
-      {points ? <MetricChart def={def} locale={locale} points={points} /> : null}
+      {overlay ? (
+        <OverlayChart chart={overlay} locale={locale} />
+      ) : points ? (
+        <MetricChart def={def} locale={locale} points={points} />
+      ) : null}
 
+      <div className="max-w-prose">
       <Coverage coverage={result.ok ? result.value.coverage : undefined} />
 
       <Distribution distribution={result.ok ? result.value.distribution : undefined} />
@@ -118,6 +144,12 @@ export function MetricView({ id }: { readonly id: string }) {
       <Block title={t.howItIsCalculated}>
         <p>{def.methodology[locale]}</p>
       </Block>
+
+      {def.limits ? (
+        <Block title={t.limits}>
+          <p>{def.limits[locale]}</p>
+        </Block>
+      ) : null}
 
       <Block title={t.dataSource}>
         <SourceList
@@ -147,6 +179,26 @@ export function MetricView({ id }: { readonly id: string }) {
           <Warnings warnings={result.value.warnings} />
         </div>
       ) : null}
+      </div>
     </article>
   )
+}
+
+/**
+ * 有专用叠加图的指标在这里组装父序列。
+ * 父文件读不出来就退回单线，而不是画出一条缺了一半的彩虹。
+ */
+function detailOverlay(
+  metricId: string,
+  points: readonly SeriesPoint[] | null,
+  locale: typeof SITE_LOCALE,
+) {
+  if (!points) return null
+  const series: Record<string, readonly SeriesPoint[]> = { [metricId]: points }
+  for (const parent of detailChartParents(metricId)) {
+    const loaded = loadMetric(parent)
+    if (!loaded.ok) return null
+    series[parent] = loaded.value.points
+  }
+  return buildDetailChart(metricId, series, locale)
 }

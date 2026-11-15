@@ -27,18 +27,17 @@ export const CATEGORY_TINT: Readonly<Record<MetricCategory, string>> = {
  * 展示分组与注册表分类不是一回事：`market-cap` 在注册表里属于 `valuation`，
  * 首页却把它和价格分在两组，因此首页表格按展示分组上色，而不是按注册表分类。
  *
- * 六组正好用满六个 `--cat-*` token，一一对应、不复用——
- * 复用会让相邻两组看起来是同一组，而"这是两组"正是底色要说的唯一一件事。
+ * 费用与挖矿已经离开首页，所以「牛熊周期」复用 `--cat-fees`。
+ * 这个色相在表格上不再和另一组相邻，不必为第五组再加一个色相。
  *
  * 底色仍然只承担"分组"这一个职责（CLAUDE.md §分类底色）。
  */
 export const HOME_GROUP_TINT: Readonly<Record<HomeGroupKey, string>> = {
   marketOverview: 'bg-cat-market',
   valuationAnchors: 'bg-cat-valuation',
+  cycle: 'bg-cat-fees',
   exchangeFlows: 'bg-cat-exchange',
   onchainActivity: 'bg-cat-onchain',
-  feesBlocks: 'bg-cat-fees',
-  miningSecurity: 'bg-cat-mining',
 }
 
 /** 分组底色之外还要用的类：组标题的左侧色条与分组之间的留白节奏 */

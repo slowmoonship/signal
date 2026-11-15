@@ -22,6 +22,7 @@
  */
 
 import type { SeriesPoint } from '../types.js'
+import { readDirect } from '../formulas/direct.js'
 
 /** 特征的稳定标识。规则表按它引用，改名等于改规则，因此一旦发布不再改。 */
 export type FeatureId =
@@ -47,6 +48,17 @@ export type FeatureId =
   | 'valuation.mvrv'
   | 'onchain.blocks7'
   | 'fees.weight7'
+  | 'price.drawdownAth'
+  | 'valuation.ahr999'
+  | 'valuation.rainbow'
+  | 'valuation.mayer'
+  | 'valuation.nupl'
+  | 'valuation.mvrvZ'
+  | 'valuation.puell'
+  | 'cycle.pi'
+  | 'cycle.sma200w'
+  | 'cycle.ma2y'
+  | 'mining.hashRibbons'
 
 /** 标准化后的档位。三个档，而不是"高/低"两档——中间那一档是绝大多数日子。 */
 export type FeatureBand = 'low' | 'mid' | 'high'
@@ -76,6 +88,11 @@ export type FeatureObservation = Readonly<{
   prevSign: FeatureSign | null
   /** 特征所依据的数据时间（UTC 纪元秒） */
   asOf: number
+  /**
+   * 绝对档的短依据。有它时状态列显示这句话，而不是「近1年 Pxx」。
+   * 分位类特征不填。省略这个字段，而不是写成 undefined，旧的相等断言才不会被多出来的键绊倒。
+   */
+  note?: Readonly<{ en: string; zh: string }>
 }>
 
 export type FeatureFailureReason =
@@ -177,6 +194,8 @@ function lastKnown(points: readonly SeriesPoint[]): SeriesPoint | null {
  * - `realizedVol`     N 日对数收益的年化波动率（%），再取分位
  * - `trend`           多窗口**方向**（见 `TREND_*` 阈值）。档位即方向：
  *                      high = 上行、low = 下行、mid = 没有明确方向
+ * - `direct`          指标自己的阈值或事件（彩虹区、均线上穿）。档位由公式给出，
+ *                      不是分位。不进入场景规则（ADR-029）。
  */
 export type FeatureKind =
   | 'ownValue'
@@ -186,6 +205,7 @@ export type FeatureKind =
   | 'drawdown'
   | 'realizedVol'
   | 'trend'
+  | 'direct'
 
 export type FeatureSpec = Readonly<{
   id: FeatureId
@@ -237,6 +257,19 @@ export const FEATURE_SPECS: readonly FeatureSpec[] = [
   { id: 'valuation.mvrv', metricId: 'mvrv', kind: 'levelPercentile', windowDays: 1, historyDays: 730 },
   { id: 'onchain.blocks7', metricId: 'block-count', kind: 'percentChange', windowDays: 7, historyDays: 365 },
   { id: 'fees.weight7', metricId: 'block-weight', kind: 'percentChange', windowDays: 7, historyDays: 365 },
+  // 下面这些只服务首页状态列。它们大多是价格的另一种写法，
+  // 不放进 CORE_FEATURES，也不写进任何场景规则（ADR-029）。
+  { id: 'price.drawdownAth', metricId: 'drawdown-ath', kind: 'levelPercentile', windowDays: 1, historyDays: 365 },
+  { id: 'valuation.ahr999', metricId: 'ahr999', kind: 'levelPercentile', windowDays: 1, historyDays: 365 },
+  { id: 'valuation.mayer', metricId: 'mayer-multiple', kind: 'levelPercentile', windowDays: 1, historyDays: 365 },
+  { id: 'valuation.nupl', metricId: 'nupl', kind: 'levelPercentile', windowDays: 1, historyDays: 365 },
+  { id: 'valuation.mvrvZ', metricId: 'mvrv-zscore', kind: 'levelPercentile', windowDays: 1, historyDays: 365 },
+  { id: 'valuation.puell', metricId: 'puell-multiple', kind: 'levelPercentile', windowDays: 1, historyDays: 365 },
+  { id: 'valuation.rainbow', metricId: 'rainbow-zone', kind: 'direct', windowDays: 1, historyDays: 365 },
+  { id: 'cycle.pi', metricId: 'pi-cycle-top', kind: 'direct', windowDays: 1, historyDays: 365 },
+  { id: 'cycle.sma200w', metricId: 'sma-200w', kind: 'direct', windowDays: 1, historyDays: 365 },
+  { id: 'cycle.ma2y', metricId: 'ma-2y', kind: 'direct', windowDays: 1, historyDays: 365 },
+  { id: 'mining.hashRibbons', metricId: 'hash-ribbons', kind: 'direct', windowDays: 1, historyDays: 365 },
 ]
 
 export const FEATURE_SPEC_BY_ID: Readonly<Record<FeatureId, FeatureSpec>> = Object.fromEntries(
@@ -648,6 +681,14 @@ export function computeFeature(spec: FeatureSpec, input: FeatureInput): FeatureR
         direction === 'up' ? 'high' : direction === 'down' ? 'low' : 'mid'
       return ok(spec, anchor, null, null, null, last.ts, band)
     }
+    case 'direct': {
+      // 档位来自指标自己的阈值或事件。分位在这里没有含义，所以 percentile 为 null。
+      const reading = readDirect(spec.metricId, input.series)
+      if (!reading) {
+        return fail(spec, 'uncomputable', `指标 ${spec.metricId} 的绝对档算不出来`)
+      }
+      return ok(spec, reading.observed, null, null, null, last.ts, reading.band, reading.note)
+    }
   }
 }
 
@@ -660,6 +701,7 @@ function ok(
   asOf: number,
   /** 显式档位。分位类特征由分位决定；方向类特征（`trend`）由方向决定 */
   band?: FeatureBand,
+  note?: FeatureObservation['note'],
 ): FeatureResult {
   return {
     ok: true,
@@ -673,6 +715,7 @@ function ok(
       sign,
       prevSign,
       asOf,
+      ...(note ? { note } : {}),
     },
   }
 }

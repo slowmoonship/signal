@@ -283,6 +283,11 @@ function formatFeatureValue(id: FeatureId, value: FeatureObservation, locale: Lo
       const formatted = def ? formatValue(value.observed, def.format, locale) : null
       return formatted ?? String(value.observed)
     }
+    case 'direct': {
+      // 绝对档的观测量是比值或区号，不是百分比。默认分支会把它乘成百分号。
+      const rounded = Math.round(value.observed * 100) / 100
+      return String(rounded)
+    }
     default:
       return formatSignedPercent(value.observed, locale, 1) ?? String(value.observed)
   }

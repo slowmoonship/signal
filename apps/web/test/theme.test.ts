@@ -461,6 +461,34 @@ describe('市场状态卡片底色', () => {
     expect(users).toEqual(['components/HeroMetric.tsx'])
   })
 
+  it('彩虹分区只在详情图里使用，色相避开高亮绿', () => {
+    const decls = [
+      ...css.matchAll(/(?<![-\w])--rainbow-(\d):\s*hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/g),
+    ]
+    expect(decls.length).toBe(18)
+    const seen = new Map<string, number>()
+    for (const match of decls) {
+      const name = String(match[1] ?? '')
+      const hue = Number(match[2])
+      seen.set(name, (seen.get(name) ?? 0) + 1)
+      expect(hue < 90 || hue > 150, `${name} 的色相落在绿色区间`).toBe(true)
+    }
+    for (let i = 1; i <= 9; i += 1) expect(seen.get(String(i))).toBe(2)
+
+    const inline = /@theme\s+inline\s*\{([^}]*)\}/.exec(css)?.[1] ?? ''
+    for (let i = 1; i <= 9; i += 1) {
+      expect(inline).toMatch(new RegExp(`--color-rainbow-${i}:\\s*var\\(--rainbow-${i}\\)`))
+    }
+
+    const users: string[] = []
+    for (const file of files) {
+      if (!file.endsWith('.tsx') && !file.endsWith('.css')) continue
+      const src = readFileSync(file, 'utf8')
+      if (/rainbow-\d/.test(src)) users.push(file.replace(WEB_SRC, ''))
+    }
+    expect(users.sort()).toEqual(['app/globals.css', 'components/OverlayChart.tsx'])
+  })
+
   it('底色只做背景，不给文字另配一套颜色', () => {
     for (const file of files) {
       if (!file.endsWith('.tsx')) continue

@@ -11,6 +11,7 @@ import {
   type MetricDefinition,
   type MetricContract,
   ASSETS,
+  LOCAL_FORMULA_PARENTS,
   METRIC_CATEGORIES,
   METRIC_FREQUENCIES,
   MISSING_POLICIES,
@@ -395,7 +396,36 @@ function checkDerivation(
         `dcaMaxWait 要求基准序列为日频（1d），${def.id} 声明的是 ${String(frequency)}`,
       )
     }
+    return
   }
+
+  if (d.kind === 'local') {
+    if (def.id !== d.formula) {
+      push(
+        'error',
+        'derivation.formulaId',
+        `本地公式 id "${d.formula}" 必须与指标 id "${def.id}" 相同，避免公式和序列各叫各的`,
+      )
+    }
+    const expected = LOCAL_FORMULA_PARENTS[d.formula]
+    if (!def.deriveFrom || def.deriveFrom.length === 0) {
+      push('error', 'derivation.missingDeriveFrom', 'local 公式必须声明 deriveFrom（父序列）')
+      return
+    }
+    const got = [...def.deriveFrom].sort()
+    const want = [...expected].sort()
+    if (got.join('|') !== want.join('|')) {
+      push(
+        'error',
+        'derivation.parents',
+        `本地公式 "${d.formula}" 的父序列必须是 [${want.join(', ')}]，实际是 [${got.join(', ')}]`,
+      )
+    }
+    return
+  }
+
+  const unreachable: never = d
+  push('error', 'derivation.unknownKind', `未知的 derivation.kind：${String(unreachable)}`)
 }
 
 // ── 时间工具 ────────────────────────────────────────────

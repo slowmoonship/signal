@@ -148,6 +148,65 @@ export const STATUS_SPECS: readonly StatusSpec[] = [
     featureId: 'mining.revenue30',
     words: band(['falling', '回落'], ['flat', '平稳'], ['rising', '上升']),
   },
+  {
+    metricId: 'drawdown-ath',
+    featureId: 'price.drawdownAth',
+    // 数值越低（更负）越深。low 档是分布的下端，所以词是「深回撤」而不是「近高点」。
+    words: band(['deep', '深回撤'], ['mid', '回撤中'], ['near', '近高点']),
+  },
+  {
+    metricId: 'ahr999',
+    featureId: 'valuation.ahr999',
+    words: band(['low', '偏低'], ['mid', '中位'], ['high', '偏高']),
+  },
+  {
+    metricId: 'mayer-multiple',
+    featureId: 'valuation.mayer',
+    words: band(['low', '偏低'], ['mid', '中位'], ['high', '偏高']),
+  },
+  {
+    metricId: 'nupl',
+    featureId: 'valuation.nupl',
+    words: band(['low', '偏低'], ['mid', '中位'], ['high', '偏高']),
+  },
+  {
+    metricId: 'mvrv-zscore',
+    featureId: 'valuation.mvrvZ',
+    words: band(['low', '偏低'], ['mid', '中位'], ['high', '偏高']),
+  },
+  {
+    metricId: 'puell-multiple',
+    featureId: 'valuation.puell',
+    words: band(['low', '偏低'], ['mid', '中位'], ['high', '偏高']),
+  },
+  {
+    metricId: 'rainbow-zone',
+    featureId: 'valuation.rainbow',
+    // 区号的三等分。第 4 区是中位，不是因为文案里出现了「中」字。
+    words: band(['low', '低位'], ['mid', '中位'], ['high', '高位']),
+  },
+  {
+    metricId: 'pi-cycle-top',
+    featureId: 'cycle.pi',
+    // mid 不是「接近触发」。它只留给「比值已经 ≥ 1，但历史上没见过上穿」这种算不实的情况。
+    words: band(['off', '未触发'], ['unconfirmed', '未确认'], ['on', '已触发']),
+  },
+  {
+    metricId: 'sma-200w',
+    featureId: 'cycle.sma200w',
+    words: band(['under', '均线下'], ['over', '均线上'], ['extended', '两倍上']),
+  },
+  {
+    metricId: 'ma-2y',
+    featureId: 'cycle.ma2y',
+    words: band(['under', '均线下'], ['inside', '轨道内'], ['above', '上轨上']),
+  },
+  {
+    metricId: 'hash-ribbons',
+    featureId: 'mining.hashRibbons',
+    // 上穿只占交叉当天。之后比值仍 ≥ 1 时是「恢复」，两者不是同一个词。
+    words: band(['contract', '收缩'], ['cross', '上穿'], ['recover', '恢复']),
+  },
 ]
 
 export const STATUS_SPEC_BY_METRIC: ReadonlyMap<string, StatusSpec> = new Map(

@@ -124,6 +124,21 @@
   --status-cold-ink: hsl(214 66% 36%);
   --status-void: hsl(240 6% 96.5%);
   --status-void-ink: hsl(240 5% 46%);
+
+  /*
+   * 彩虹图分区（ADR-029）。只填彩虹详情图的九个色带。
+   * 色相跳过 90–150，避免和 --highlight、--market-bull 的绿读成同一个「好」。
+   * 纯色，没有渐变。第 1 区最低，第 9 区最高。
+   */
+  --rainbow-1: hsl(222 42% 86%);
+  --rainbow-2: hsl(204 40% 84%);
+  --rainbow-3: hsl(186 36% 82%);
+  --rainbow-4: hsl(48 42% 84%);
+  --rainbow-5: hsl(36 44% 82%);
+  --rainbow-6: hsl(24 46% 82%);
+  --rainbow-7: hsl(12 44% 82%);
+  --rainbow-8: hsl(2 42% 82%);
+  --rainbow-9: hsl(344 38% 84%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -172,6 +187,16 @@
     --status-cold-ink: hsl(214 72% 74%);
     --status-void: hsl(240 5% 18%);
     --status-void-ink: hsl(240 6% 58%);
+
+    --rainbow-1: hsl(222 36% 30%);
+    --rainbow-2: hsl(204 34% 28%);
+    --rainbow-3: hsl(186 32% 26%);
+    --rainbow-4: hsl(48 36% 28%);
+    --rainbow-5: hsl(36 38% 28%);
+    --rainbow-6: hsl(24 40% 28%);
+    --rainbow-7: hsl(12 38% 28%);
+    --rainbow-8: hsl(2 36% 28%);
+    --rainbow-9: hsl(344 34% 30%);
   }
 }
 
@@ -211,6 +236,17 @@
   --color-status-cold-ink: var(--status-cold-ink);
   --color-status-void: var(--status-void);
   --color-status-void-ink: var(--status-void-ink);
+
+  /* 彩虹分区：组件只认 fill-rainbow-N / bg-rainbow-N。 */
+  --color-rainbow-1: var(--rainbow-1);
+  --color-rainbow-2: var(--rainbow-2);
+  --color-rainbow-3: var(--rainbow-3);
+  --color-rainbow-4: var(--rainbow-4);
+  --color-rainbow-5: var(--rainbow-5);
+  --color-rainbow-6: var(--rainbow-6);
+  --color-rainbow-7: var(--rainbow-7);
+  --color-rainbow-8: var(--rainbow-8);
+  --color-rainbow-9: var(--rainbow-9);
 }
 
 @theme {

@@ -7,7 +7,7 @@
  * - 百分比派生：基准序列历史不够时不能硬算
  */
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -24,6 +24,7 @@ import {
 } from '../src/index.js'
 import {
   defineMetric,
+  registry,
   toUtcSecondsBrand,
   type MetricContract,
   type Point,
@@ -434,5 +435,39 @@ describe('发布', () => {
   it('从未成功过的指标不发布空壳文件', async () => {
     await runIngest(opts([txAdapter(undefined, '上游 500')]))
     expect(existsSync(join(dir, 'tx-count.json'))).toBe(false)
+  })
+})
+
+describe('本地公式', () => {
+  it('只读已发布的父序列，不请求网络', async () => {
+    const pub = join(dir, 'published')
+    mkdirSync(pub)
+    const start = Math.floor(Date.parse('2025-01-01T00:00:00Z') / 1000)
+    const points = Array.from({ length: 220 }, (_, i) => ({
+      ts: start + i * DAY,
+      value: 100 + (i % 7),
+    }))
+    writeFileSync(
+      join(pub, 'price.json'),
+      JSON.stringify({
+        metricId: 'price',
+        points,
+        sourceTime: '2025-08-08T00:00:00.000Z',
+      }),
+    )
+    const fetchImpl: typeof fetch = () => Promise.reject(new Error('不应请求网络'))
+    const outcome = await ingestMetric(registry.get('ahr999'), {
+      asset: 'btc',
+      store,
+      ctx: { ...ctx(), fetchImpl },
+      logger: silentLogger,
+      publishDir: pub,
+      adapters: [],
+      dryRun: true,
+    })
+    expect(outcome.status).toBe('ok')
+    expect(outcome.points).toBe(220)
+    expect(outcome.nullPoints).toBeGreaterThan(0)
+    expect(outcome.nullPoints).toBeLessThan(outcome.points)
   })
 })

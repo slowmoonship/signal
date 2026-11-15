@@ -133,6 +133,10 @@ export function formatValue(value: number | null, spec: FormatSpec, locale: Loca
           : `≈ ${nf(locale, { maximumFractionDigits: 1 }).format(years)} yr`
       return locale === 'zh' ? `${exact} 天（${approx}）` : `${exact} days (${approx})`
     }
+    case 'zone': {
+      const zone = Math.round(value)
+      return locale === 'zh' ? `第${zone}/${spec.of}区` : `${zone}/${spec.of}`
+    }
   }
 }
 

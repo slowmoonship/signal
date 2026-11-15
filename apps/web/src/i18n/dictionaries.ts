@@ -35,6 +35,8 @@ export type Dictionary = Readonly<{
   changeWindow: string
   whatItMeasures: string
   howItIsCalculated: string
+  /** 估值模型单独说清它不能被当成什么 */
+  limits: string
   dataSource: string
   history: string
   historyFrom: string
@@ -124,12 +126,11 @@ const zh: Dictionary = {
     valuation: '估值与周期',
   },
   homeGroups: {
-    marketOverview: '价格与市场',
-    valuationAnchors: '估值',
-    exchangeFlows: '交易所与持仓',
+    marketOverview: '市场行情',
+    valuationAnchors: '估值与定投',
+    cycle: '牛熊周期',
+    exchangeFlows: '资金流向',
     onchainActivity: '链上活动',
-    feesBlocks: '费用与区块',
-    miningSecurity: '矿工与安全',
   },
   updatedAt: '更新于',
   sourceTime: '来源时间',
@@ -146,6 +147,7 @@ const zh: Dictionary = {
   changeWindow: '7 日变化',
   whatItMeasures: '这个数说明了什么',
   howItIsCalculated: '怎么算出来的',
+  limits: '模型边界',
   dataSource: '数据来源',
   history: '历史口径',
   historyFrom: '可得起点',

@@ -163,16 +163,12 @@ describe.skipIf(!available)('真实浏览器：首页导航', () => {
     }
   }, TIMEOUT)
 
-  it('点击「矿工收入」进入矿工收入详情页', async () => {
+  it('点击「AHR999」进入囤币指数详情页', async () => {
     const browser = await launch()
     try {
       const page = await openHome(browser)
-      await clickAndWait(
-        page,
-        `a[href="${BASE_PATH}/metrics/miner-revenue-usd/"]`,
-        '**/metrics/miner-revenue-usd/',
-      )
-      expect(page.url()).toContain('/metrics/miner-revenue-usd')
+      await clickAndWait(page, `a[href="${BASE_PATH}/metrics/ahr999/"]`, '**/metrics/ahr999/')
+      expect(page.url()).toContain('/metrics/ahr999')
     } finally {
       await browser.close()
     }
@@ -404,6 +400,54 @@ describe.skipIf(!available)('真实浏览器：市场状态与页脚', () => {
         expect(link.rel).toContain('noopener')
         expect(link.rel).toContain('noreferrer')
       }
+    } finally {
+      await browser.close()
+    }
+  }, TIMEOUT)
+})
+
+describe.skipIf(!available)('真实浏览器：估值与周期详情页', () => {
+  const pages = [
+    ['ahr999', 'AHR999'],
+    ['rainbow-zone', '彩虹图'],
+    ['pi-cycle-top', 'Pi Cycle'],
+    ['puell-multiple', 'Puell'],
+  ] as const
+
+  for (const [id, title] of pages) {
+    it(`${title} 详情页有历史图`, async () => {
+      const browser = await launch()
+      try {
+        const page = await browser.newPage({ viewport: { width: 1366, height: 768 } })
+        const res = await page.goto(`${SITE}/metrics/${id}/`, {
+          waitUntil: 'networkidle',
+          timeout: TIMEOUT,
+        })
+        expect(res?.status(), `${id} 应当 200`).toBe(200)
+        const heading = (await page.evaluate(`document.querySelector('h1')?.textContent || ''`)) as string
+        expect(heading).toContain(title)
+        const svgs = (await page.evaluate(`document.querySelectorAll('svg').length`)) as number
+        expect(svgs).toBeGreaterThan(0)
+      } finally {
+        await browser.close()
+      }
+    }, TIMEOUT)
+  }
+
+  it('375 宽的首页不横向溢出，分组名还在', async () => {
+    const browser = await launch()
+    try {
+      const page = await browser.newPage({ viewport: { width: 375, height: 812 } })
+      await page.goto(`${SITE}/`, { waitUntil: 'networkidle', timeout: TIMEOUT })
+      const fits = (await page.evaluate(
+        `document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1`,
+      )) as boolean
+      expect(fits).toBe(true)
+      const text = (await page.evaluate(`document.body.innerText`)) as string
+      expect(text).toContain('AHR999')
+      expect(text).toContain('彩虹图')
+      expect(text).toContain('估值与定投')
+      expect(text).toContain('牛熊周期')
     } finally {
       await browser.close()
     }
