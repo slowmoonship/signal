@@ -41,8 +41,8 @@ jobs:
   publish:
     name: 采集 · 校验 · 导出 · 部署
     runs-on: ubuntu-latest
-    # 20 个指标串行抓取 + 定投回测 + 全量测试 + 静态导出 + 部署；
-    # 45 分钟是留给网络重试与构建的余量，不是留给机器的。
+    # 31 个指标串行抓取。本地公式排在父序列之后，同一轮用本轮库里的父数据重算。
+    # 45 分钟是留给网络重试、定投回测与构建的余量，不是留给机器的。
     timeout-minutes: 45
     environment:
       name: github-pages

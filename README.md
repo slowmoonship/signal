@@ -7,16 +7,23 @@
 
 ## 状态
 
-**V0.1 已上线**（<https://slowmoonship.github.io/signal/>）。
-GitHub Actions 每天自动采集、计算、校验、导出并部署；数据快照连同历史一起提交回仓库。
+**当前版本 V0.12.0**（<https://slowmoonship.github.io/signal/>）。
+GitHub Actions 每天 04:37 UTC（北京时间 12:37）自动采集、计算、校验、导出并部署。
+发布物是 31 份指标快照，历史写在 `public/data/*.json` 里，不靠 runner 上的临时数据库。
 
 - Phase 0：项目骨架、开发规范、数据适配器接口与数据质量约束。
 - Phase 1：18 个 BTC 指标定义（中英双语文案齐全）、首页与详情页、明暗主题、历史曲线。
-- Phase 2：接入真实免费源，`public/data` 已是 20 份真实快照，站点读的就是真数据。
+- Phase 2：接入真实免费源，站点读的就是真数据。
 - Phase 3：视觉规范落地（语义 token、web 字体、320px 排版、键盘可达性），见 `docs/DESIGN.md`。
 - Phase 4：GitHub Actions 日更与 CI、stale 与新鲜度文案、sitemap / robots / OG。
 - V0.1：界面收敛为中文单语言（`/` 直接是首页，`/zh` 保留为历史别名）、
   市场状态卡片加语义底色、页脚改为品牌署名。
+- V0.11：市场状态改为牛市 / 熊市 / 震荡，首页表格外框与左栏对齐，
+  并由区块历史回填网络难度、区块权重、矿池集中度。
+- V0.12：用已有价格、市值、MVRV、发行收入和算力补上 AHR999、彩虹图、
+  Pi Cycle、Puell、Mayer、未实现盈亏、MVRV Z-Score、200 周均线、2 年倍数、
+  算力丝带和距历史高点。首页右侧是 5 类 18 项。详情曲线按真实缺口分段后再抽稀。
+  首页状态和判定依据来自同一条规则，不写 Pxx。这些阈值是读数归类，不是买卖建议。
 
 ## 环境变量
 
@@ -85,7 +92,7 @@ Coin Metrics 免费层把美元计价的费用类指标（`FeeTotUSD`/`RevUSD`/`
 | `docs/PLAN.md` | MVP 范围、架构、实施计划、数据源实测结果 |
 | `docs/METRIC_AUTHORING.md` | 新增指标的唯一权威流程与必填字段 |
 | `docs/DESIGN.md` | 视觉规范：token、字体、排版层级、移动端与键盘可达性 |
-| `docs/DECISIONS.md` | 架构决策记录（ADR-001 ~ 026） |
+| `docs/DECISIONS.md` | 架构决策记录（ADR-001 起，只追加） |
 
 ## 数据质量红线
 

@@ -269,32 +269,45 @@ describe('已发布快照', () => {
   })
 
   it('2026-11-09 的读数和参考线一致', () => {
-    expect(readings.get('ahr999')).toMatchObject({
+    // 锁的是这一天，不是“最新一天”。日更之后最新读数会变，
+    // 若把当天的词写进测试，发布流水线里的测试步骤会把正常更新拦下来。
+    const asOf = Math.floor(Date.parse('2026-11-09T23:59:59Z') / 1000)
+    const frozen = published.map((metric) => ({
+      ...metric,
+      points: metric.points.filter((point) => point.ts <= asOf),
+    }))
+    const frozenSeries: Record<string, readonly SeriesPoint[]> = {}
+    for (const row of frozen) frozenSeries[row.metricId] = row.points
+    const snapshot = interpretHome({
+      features: buildFeatureTable(frozen).features,
+      series: frozenSeries,
+    })
+    expect(snapshot.get('ahr999')).toMatchObject({
       word: { zh: '低位' },
       basis: { zh: '低于0.45参考线' },
     })
-    expect(readings.get('rainbow-zone')).toMatchObject({
+    expect(snapshot.get('rainbow-zone')).toMatchObject({
       word: { zh: '中位' },
       basis: { zh: '处于第4/9区' },
     })
-    expect(readings.get('pi-cycle-top')?.word.zh).toBe('未触发')
-    expect(readings.get('pi-cycle-top')?.basis.zh).toContain('尚未上穿')
-    expect(readings.get('puell-multiple')).toMatchObject({
+    expect(snapshot.get('pi-cycle-top')?.word.zh).toBe('未触发')
+    expect(snapshot.get('pi-cycle-top')?.basis.zh).toContain('尚未上穿')
+    expect(snapshot.get('puell-multiple')).toMatchObject({
       word: { zh: '偏低' },
       basis: { zh: '低于年度均值' },
     })
-    expect(readings.get('mvrv')?.word.zh).toBe('溢价')
-    expect(readings.get('mvrv-zscore')?.basis.zh).toBe('零线与7之间')
-    expect(readings.get('nupl')?.basis.zh).toMatch(/高出已实现 \d+%/)
-    expect(readings.get('nupl')?.basis.zh).not.toMatch(/持币人/)
-    expect(readings.get('mayer-multiple')?.basis.zh).toBe('接近200日均线')
-    expect(readings.get('drawdown-ath')?.word.zh).toBe('深回撤')
-    expect(readings.get('price-change-7d')?.word.zh).toBe('回落')
-    expect(readings.get('hash-ribbons')).toMatchObject({
+    expect(snapshot.get('mvrv')?.word.zh).toBe('溢价')
+    expect(snapshot.get('mvrv-zscore')?.basis.zh).toBe('零线与7之间')
+    expect(snapshot.get('nupl')?.basis.zh).toMatch(/高出已实现 \d+%/)
+    expect(snapshot.get('nupl')?.basis.zh).not.toMatch(/持币人/)
+    expect(snapshot.get('mayer-multiple')?.basis.zh).toBe('接近200日均线')
+    expect(snapshot.get('drawdown-ath')?.word.zh).toBe('深回撤')
+    expect(snapshot.get('price-change-7d')?.word.zh).toBe('回落')
+    expect(snapshot.get('hash-ribbons')).toMatchObject({
       word: { zh: '恢复' },
       basis: { zh: '30日高于60日' },
     })
-    expect(readings.get('sma-200w')?.basis.zh).toContain('200周线')
-    expect(readings.get('ma-2y')?.basis.zh).toContain('730日线')
+    expect(snapshot.get('sma-200w')?.basis.zh).toContain('200周线')
+    expect(snapshot.get('ma-2y')?.basis.zh).toContain('730日线')
   })
 })

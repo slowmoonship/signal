@@ -1634,10 +1634,6 @@
       "value": 1555.424320385421
     },
     {
-      "ts": 1794355353,
-      "value": 1555.4299143072062
-    },
-    {
       "ts": 1794398768,
       "value": 1548.5748744732323
     },
@@ -1658,12 +1654,12 @@
       "value": 1536.8537938263082
     },
     {
-      "ts": 1794834361,
-      "value": 1541.9542793883452
+      "ts": 1794838935,
+      "value": 1543.8686889775945
     }
   ],
-  "sourceTime": "2026-11-16T13:06:01.000Z",
-  "ingestedAt": "2026-11-16T13:06:01.074Z",
+  "sourceTime": "2026-11-16T14:22:15.000Z",
+  "ingestedAt": "2026-11-16T14:22:15.983Z",
   "stale": false,
   "sources": [
     {
@@ -1672,19 +1668,7 @@
       "endpoint": "https://mempool.space/api/v1/mining/pools/1m",
       "auth": "none",
       "labelConfidence": "heuristic"
-    },
-    {
-      "provider": "mempool.space",
-      "metric": "mempool.PoolConcentrationFromBlocks",
-      "endpoint": "https://mempool.space/api/v1/blocks/{height}",
-      "auth": "none",
-      "labelConfidence": "heuristic"
     }
   ],
-  "warnings": [
-    "历史回填：区块历史来自 mempool.space 的 /api/v1/blocks/{height}，覆盖 2025-10-01 → 2026-10-18，每日采样时刻 4:37 UTC",
-    "难度由区块头 nBits 按 Bitcoin Core 的 GetDifficulty 公式算出，与 Blockstream 的 difficulty 字段逐位一致",
-    "矿池集中度由逐区块的矿池标注重建 31 天滚动窗口的出块份额 HHI",
-    "历史回填：区块历史来自 mempool.space 的 /api/v1/blocks/{height}，覆盖 2025-10-01 → 2026-11-09，每日采样时刻 4:37 UTC"
-  ]
+  "warnings": []
 }

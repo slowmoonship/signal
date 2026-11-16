@@ -1654,12 +1654,12 @@
       "value": 134823837323272.66
     },
     {
-      "ts": 1794834163,
+      "ts": 1794838613,
       "value": 134823837323272.66
     }
   ],
-  "sourceTime": "2026-11-16T13:02:43.000Z",
-  "ingestedAt": "2026-11-16T13:06:01.002Z",
+  "sourceTime": "2026-11-16T14:16:53.000Z",
+  "ingestedAt": "2026-11-16T14:22:15.756Z",
   "stale": false,
   "sources": [
     {
@@ -1668,19 +1668,7 @@
       "endpoint": "https://blockstream.info/api/block/{hash}",
       "auth": "none",
       "labelConfidence": "verified"
-    },
-    {
-      "provider": "mempool.space",
-      "metric": "mempool.BlockDifficulty",
-      "endpoint": "https://mempool.space/api/v1/blocks/{height}",
-      "auth": "none",
-      "labelConfidence": "verified"
     }
   ],
-  "warnings": [
-    "历史回填：区块历史来自 mempool.space 的 /api/v1/blocks/{height}，覆盖 2025-10-01 → 2026-10-18，每日采样时刻 4:37 UTC",
-    "难度由区块头 nBits 按 Bitcoin Core 的 GetDifficulty 公式算出，与 Blockstream 的 difficulty 字段逐位一致",
-    "矿池集中度由逐区块的矿池标注重建 31 天滚动窗口的出块份额 HHI",
-    "历史回填：区块历史来自 mempool.space 的 /api/v1/blocks/{height}，覆盖 2025-10-01 → 2026-11-09，每日采样时刻 4:37 UTC"
-  ]
+  "warnings": []
 }

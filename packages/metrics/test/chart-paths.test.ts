@@ -192,15 +192,15 @@ describe('真实价格序列', () => {
 describe('彩虹图坐标', () => {
   const price = load('price')
 
-  it('系数保持 signal-rainbow-loglog-v1，当前区号仍是 4', () => {
+  it('系数保持 signal-rainbow-loglog-v1，2026-11-09 区号是 4', () => {
     const model = fitRainbow(price)
     expect(model?.version).toBe('signal-rainbow-loglog-v1')
     expect(model?.a).toBeCloseTo(-16.201672532660076, 8)
     expect(model?.b).toBeCloseTo(5.593103087108639, 8)
     expect(model?.sigma).toBeCloseTo(0.3525236329354935, 8)
     const zone = rainbowZoneSeries(price).points
-    const last = [...zone].reverse().find((point) => point.value !== null)
-    expect(last?.value).toBe(4)
+    const day = Math.floor(Date.parse('2026-11-09T00:00:00Z') / 1000)
+    expect(zone.find((point) => point.ts === day)?.value).toBe(4)
   })
 
   it('纵轴贴着价格，外缘色带仍留在数据里', () => {
