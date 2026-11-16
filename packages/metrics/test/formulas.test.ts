@@ -208,7 +208,7 @@ describe('Pi Cycle', () => {
   it('比值低于 1 是未触发；从一开始就不低于 1 是未确认；真上穿才是已触发', () => {
     const below = readDirect('pi-cycle-top', { 'pi-cycle-top': span(400, (i) => (i === 399 ? 0.8 : 0.5)) })
     expect(below?.band).toBe('low')
-    expect(below?.note.zh).toMatch(/^距上穿 /)
+    expect(below?.note.zh).toMatch(/^尚未上穿 /)
 
     const unconfirmed = readDirect('pi-cycle-top', { 'pi-cycle-top': span(400, () => 1.2) })
     expect(unconfirmed?.band).toBe('mid')
@@ -228,7 +228,7 @@ describe('Pi Cycle', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.value.band).toBe('low')
-    expect(result.value.note?.zh).toMatch(/距上穿/)
+    expect(result.value.note?.zh).toMatch(/尚未上穿/)
   })
 })
 

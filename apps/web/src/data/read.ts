@@ -9,8 +9,10 @@
 import {
   buildFeatureTable,
   deriveAllStatuses,
+  interpretHome,
   STATUS_SPECS,
   type FeatureTable,
+  type HomeReading,
   type MetricStatus,
   type PublishedMetric,
 } from '@slowmoonship/metrics'
@@ -20,6 +22,7 @@ import { loadAsset } from './load'
 export type SiteRead = Readonly<{
   features: FeatureTable
   statuses: ReadonlyMap<string, MetricStatus>
+  readings: ReadonlyMap<string, HomeReading>
 }>
 
 let cached: SiteRead | undefined
@@ -32,6 +35,12 @@ export function siteRead(): SiteRead {
     if (result.ok) published.push(result.value)
   }
   const { features } = buildFeatureTable(published)
-  cached = { features, statuses: deriveAllStatuses(STATUS_SPECS, features) }
+  const series: Record<string, PublishedMetric['points']> = {}
+  for (const row of published) series[row.metricId] = row.points
+  cached = {
+    features,
+    statuses: deriveAllStatuses(STATUS_SPECS, features),
+    readings: interpretHome({ features, series }),
+  }
   return cached
 }

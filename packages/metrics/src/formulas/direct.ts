@@ -68,7 +68,7 @@ function piReading(series: readonly SeriesPoint[]): DirectReading | null {
     return {
       observed: ratio,
       band: 'low',
-      note: { zh: `距上穿 ${pct}%`, en: `${pct}% below line` },
+      note: { zh: `尚未上穿 差${pct}%`, en: `${pct}% short of a cross` },
     }
   }
   if (!sawUpwardCross(series, 1)) {
@@ -119,12 +119,7 @@ function rainbowReading(series: readonly SeriesPoint[]): DirectReading | null {
   if (zone < 1 || zone > 9) return null
   const band: DirectBand = zone <= 3 ? 'low' : zone <= 6 ? 'mid' : 'high'
   // 数值列已经是「第4/9区」。依据列说它落在哪一截，避免两列同一句话。
-  const note =
-    band === 'low'
-      ? { zh: '下三区', en: 'lower third' }
-      : band === 'mid'
-        ? { zh: '中三区', en: 'middle third' }
-        : { zh: '上三区', en: 'upper third' }
+  const note = { zh: `处于第${zone}/9区`, en: `zone ${zone} of 9` }
   return { observed: zone, band, note }
 }
 
@@ -133,17 +128,18 @@ function ma2yReading(series: readonly SeriesPoint[]): DirectReading | null {
   if (!last || last.value === null || !(last.value > 0)) return null
   const multiple = last.value
   if (multiple < 1) {
+    const pct = Math.round((1 - multiple) * 100)
     return {
       observed: multiple,
       band: 'low',
-      note: { zh: '低于730日线', en: 'below 730d line' },
+      note: { zh: `低于730日线 ${pct}%`, en: `${pct}% under the 730 day line` },
     }
   }
   if (multiple <= MA2Y_UPPER) {
     return {
       observed: multiple,
       band: 'mid',
-      note: { zh: '位于1至5倍', en: 'between 1x and 5x' },
+      note: { zh: '730日线到5倍之间', en: 'between the line and 5x' },
     }
   }
   return {
@@ -167,20 +163,23 @@ function sma200wReading(
     return {
       observed: ratio,
       band: 'low',
-      note: { zh: `低于均线 ${pct}%`, en: `${pct}% below line` },
+      note: { zh: `低于200周线 ${pct}%`, en: `${pct}% under the 200 week line` },
     }
   }
   if (ratio < SMA200W_EXTENDED) {
     return {
       observed: ratio,
       band: 'mid',
-      note: pct === 0 ? { zh: '贴近均线', en: 'on the line' } : { zh: `高于均线 ${pct}%`, en: `${pct}% above line` },
+      note:
+        pct === 0
+          ? { zh: '贴着200周线', en: 'on the 200 week line' }
+          : { zh: `高于200周线 ${pct}%`, en: `${pct}% over the 200 week line` },
     }
   }
   return {
     observed: ratio,
     band: 'high',
-    note: { zh: `达到 ${ratio.toFixed(1)} 倍`, en: `${ratio.toFixed(1)}x the line` },
+    note: { zh: `达到200周线的${ratio.toFixed(1)}倍`, en: `${ratio.toFixed(1)} times the 200 week line` },
   }
 }
 

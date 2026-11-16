@@ -92,8 +92,9 @@ describe('分类列', () => {
 
 describe('判定依据列', () => {
   it('不换行，且不出现内部 metric id', () => {
-    const basis = /<td className="hidden[^"]*whitespace-nowrap[^"]*">/.exec(TABLE)
+    const basis = /<td className="hidden[^"]*whitespace-nowrap[^"]*"[^>]*>/.exec(TABLE)
     expect(basis, '判定依据单元格缺少 whitespace-nowrap').not.toBeNull()
+    expect(basis?.[0]).toContain('data-basis')
   })
 
   it('失败原因不直接进可见文本（只进 title）', () => {

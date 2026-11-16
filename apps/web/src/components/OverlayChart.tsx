@@ -8,6 +8,8 @@
 import {
   formatAxisTick,
   formatHashRate,
+  formatLogTick,
+  logMajorTicks,
   type DetailChart,
   type ChartPaint,
   type ChartPoint,
@@ -63,8 +65,6 @@ const SWATCH: Readonly<Record<ChartPaint, string>> = {
   'rainbow-9': 'bg-rainbow-9',
 }
 
-const DAY = 86_400
-
 export function OverlayChart({
   chart,
   locale,
@@ -78,15 +78,19 @@ export function OverlayChart({
     for (const p of band.upper) if (usable(p.value, chart.yScale)) values.push(p.value)
   }
   for (const series of chart.lines) {
-    for (const p of series.points) if (usable(p.value, chart.yScale)) values.push(p.value)
+    for (const segment of series.segments) {
+      for (const p of segment) if (usable(p.value, chart.yScale)) values.push(p.value)
+    }
   }
   for (const rule of chart.rules) if (usable(rule.value, chart.yScale)) values.push(rule.value)
-  const domain = yDomain(values, chart.yScale, chart.floorAtZero)
+  const domain = chart.yDomain ?? yDomain(values, chart.yScale, chart.floorAtZero)
   if (!domain) return null
 
   const times: number[] = []
   for (const series of chart.lines) {
-    for (const p of series.points) times.push(p.ts)
+    for (const segment of series.segments) {
+      for (const p of segment) times.push(p.ts)
+    }
   }
   for (const band of chart.bands) {
     for (const p of band.lower) times.push(p.ts)
@@ -105,9 +109,11 @@ export function OverlayChart({
     return PAD.top + (1 - (vv - bot) / (top - bot || 1)) * (VIEW_H - PAD.top - PAD.bottom)
   }
 
-  const ticks = chart.yScale === 'log'
-    ? [domain.min, Math.pow(10, (Math.log10(domain.min) + Math.log10(domain.max)) / 2), domain.max]
-    : [domain.min, (domain.min + domain.max) / 2, domain.max]
+  const ticks = (
+    chart.yScale === 'log'
+      ? logMajorTicks(domain.min, domain.max)
+      : [domain.min, (domain.min + domain.max) / 2, domain.max]
+  ).filter((tick) => tickLabel(tick, chart, locale) !== '')
 
   return (
     <figure className="mt-8">
@@ -115,15 +121,19 @@ export function OverlayChart({
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         role="img"
         aria-label={chart.legend.map((item) => item.label).join(' / ')}
-        className="w-full"
+        className="w-full overflow-hidden"
       >
-        {chart.bands.map((band) => (
-          <polygon
-            key={band.paint}
-            points={polygon(band.lower, band.upper, x, y)}
-            className={FILL[band.paint]}
-          />
-        ))}
+        {chart.bands.map((band, index) => {
+          const points = polygon(band.lower, band.upper, x, y, domain)
+          if (points === null) return null
+          return (
+            <polygon
+              key={`${band.paint}-${band.lower[0]?.ts ?? index}-${index}`}
+              points={points}
+              className={FILL[band.paint]}
+            />
+          )
+        })}
         {ticks.map((tick) => (
           <g key={tick}>
             <line
@@ -168,16 +178,23 @@ export function OverlayChart({
           ) : null,
         )}
         {chart.lines.map((series) =>
-          segments(series.points).map((seg) => (
-            <polyline
-              key={`${series.paint}-${seg[0]?.ts ?? 0}`}
-              points={seg.map((p) => `${x(p.ts).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ')}
-              fill="none"
-              className={STROKE[series.paint]}
-              strokeWidth={series.width}
-              strokeDasharray={series.dash ? '5 3' : undefined}
-            />
-          )),
+          series.segments.map((seg) =>
+            seg.length < 2 ? null : (
+              <polyline
+                key={`${series.paint}-${seg[0]?.ts ?? 0}`}
+                data-chart-line=""
+                points={seg
+                  .filter((p) => Number.isFinite(y(p.value)))
+                  .map((p) => `${x(p.ts).toFixed(1)},${y(p.value).toFixed(1)}`)
+                  .join(' ')}
+                fill="none"
+                className={STROKE[series.paint]}
+                strokeWidth={series.width}
+                strokeLinejoin="round"
+                strokeDasharray={series.dash ? '5 3' : undefined}
+              />
+            ),
+          ),
         )}
         {chart.markers.map((marker) => (
           <circle
@@ -209,13 +226,8 @@ export function OverlayChart({
 
 function tickLabel(value: number, chart: DetailChart, locale: SiteLocale): string {
   if (chart.tick === 'hashrate') return formatHashRate(value, locale)
-  const label = formatAxisTick(value, locale)
-  // 对数轴的下沿常常是一个很小的正数。两位小数会把它收成「0」，
-  // 读起来像价格曾经为零。那种刻度改用科学计数。
-  if (chart.yScale === 'log' && value > 0 && (label === '0' || label === '-0')) {
-    return value.toExponential(0)
-  }
-  return label
+  if (chart.yScale === 'log') return formatLogTick(value, locale, chart.tick === 'usd' ? 'usd' : 'plain')
+  return formatAxisTick(value, locale)
 }
 
 function usable(value: number, scale: 'linear' | 'log'): boolean {
@@ -251,41 +263,25 @@ function polygon(
   upper: readonly ChartPoint[],
   x: (ts: number) => number,
   y: (v: number) => number,
-): string {
-  const fwd = upper.map((p) => `${x(p.ts).toFixed(1)},${y(p.value).toFixed(1)}`)
-  const back = [...lower].reverse().map((p) => `${x(p.ts).toFixed(1)},${y(p.value).toFixed(1)}`)
+  domain: { min: number; max: number },
+): string | null {
+  // 整段都在画面外就别画。跨出画面的边收到轴上，真实区间数值仍留在数据里。
+  let seen = false
+  for (let i = 0; i < lower.length; i += 1) {
+    const lo = lower[i]?.value
+    const hi = upper[i]?.value
+    if (lo === undefined || hi === undefined) continue
+    if (hi > domain.min && lo < domain.max) seen = true
+  }
+  if (!seen) return null
+  const clamp = (value: number): number => Math.min(domain.max, Math.max(domain.min, value))
+  const place = (point: ChartPoint): string | null => {
+    const yy = y(clamp(point.value))
+    if (!Number.isFinite(yy)) return null
+    return `${x(point.ts).toFixed(1)},${yy.toFixed(1)}`
+  }
+  const fwd = upper.map(place).filter((part): part is string => part !== null)
+  const back = [...lower].reverse().map(place).filter((part): part is string => part !== null)
+  if (fwd.length < 2 || back.length < 2) return null
   return [...fwd, ...back].join(' ')
-}
-
-function segments(points: readonly ChartPoint[]): ChartPoint[][] {
-  const out: ChartPoint[][] = []
-  let cur: ChartPoint[] = []
-  // 画之前会把日序列抽稀到几百个点，相邻点本来就隔着好几天。
-  // 按「超过 1.5 天就断开」来切，整条线会被切成孤立的点，图上就什么都没有。
-  // 只有明显大于抽稀步长的缺口才是真缺数据。
-  const limit = gapLimit(points)
-  for (const p of points) {
-    const prev = cur[cur.length - 1]
-    if (prev && p.ts - prev.ts > limit) {
-      if (cur.length > 1) out.push(cur)
-      cur = [p]
-      continue
-    }
-    cur.push(p)
-  }
-  if (cur.length > 1) out.push(cur)
-  return out
-}
-
-function gapLimit(points: readonly ChartPoint[]): number {
-  if (points.length < 3) return DAY * 1.5
-  const gaps: number[] = []
-  for (let i = 1; i < points.length; i += 1) {
-    const left = points[i - 1]
-    const right = points[i]
-    if (left && right) gaps.push(right.ts - left.ts)
-  }
-  gaps.sort((a, b) => a - b)
-  const mid = gaps[Math.floor(gaps.length / 2)] ?? DAY
-  return Math.max(DAY * 1.5, mid * 3)
 }

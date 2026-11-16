@@ -157,7 +157,8 @@ export const STATUS_SPECS: readonly StatusSpec[] = [
   {
     metricId: 'ahr999',
     featureId: 'valuation.ahr999',
-    words: band(['low', '偏低'], ['mid', '中位'], ['high', '偏高']),
+    // 首页展示改走参考线（interpret.ts）。这里的词与那条规则对齐：≤0.45 低位，≤1.2 中位，其上高位。
+    words: band(['low', '低位'], ['mid', '中位'], ['high', '高位']),
   },
   {
     metricId: 'mayer-multiple',

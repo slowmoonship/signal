@@ -6,6 +6,7 @@
  */
 
 import type { Locale, SeriesPoint } from '../types.js'
+import { downsampleRuns } from './paths.js'
 import {
   AHR999_REFERENCE_HIGH,
   AHR999_REFERENCE_LOW,
@@ -45,7 +46,12 @@ export type DetailChart = Readonly<{
   yScale: 'linear' | 'log'
   /** 数据本身非负时，纵轴不下探到 0 以下。 */
   floorAtZero: boolean
-  tick: 'number' | 'hashrate'
+  tick: 'number' | 'hashrate' | 'usd'
+  /**
+   * 指定时，纵轴不再被色带的外缘撑开。
+   * 超出这个范围的色带仍留在数据里，由画面裁切。区号不跟着改。
+   */
+  yDomain?: Readonly<{ min: number; max: number }>
   caption: string
   bands: readonly {
     lower: readonly ChartPoint[]
@@ -53,7 +59,7 @@ export type DetailChart = Readonly<{
     paint: ChartPaint
   }[]
   lines: readonly {
-    points: readonly ChartPoint[]
+    segments: readonly (readonly ChartPoint[])[]
     paint: ChartPaint
     width: number
     dash: boolean
@@ -69,43 +75,21 @@ function text(locale: Locale, zh: string, en: string): string {
   return locale === 'zh' ? zh : en
 }
 
-function positive(points: readonly SeriesPoint[]): ChartPoint[] {
-  const out: ChartPoint[] = []
-  for (const p of points) {
-    if (p.value !== null && p.value > 0 && Number.isFinite(p.value)) {
-      out.push({ ts: p.ts, value: p.value })
-    }
-  }
-  out.sort((a, b) => a.ts - b.ts)
-  return out
+function runsOf(
+  points: readonly SeriesPoint[] | undefined,
+  mode: 'positive' | 'finite',
+  keep: readonly number[] = [],
+): ChartPoint[][] {
+  if (!points) return []
+  return downsampleRuns(points, { maxPoints: MAX_POINTS, mode, keepTs: keep })
 }
 
-function finite(points: readonly SeriesPoint[]): ChartPoint[] {
-  const out: ChartPoint[] = []
-  for (const p of points) {
-    if (p.value !== null && Number.isFinite(p.value)) out.push({ ts: p.ts, value: p.value })
-  }
-  out.sort((a, b) => a.ts - b.ts)
-  return out
+function drawable(segments: readonly (readonly ChartPoint[])[]): boolean {
+  return segments.some((segment) => segment.length >= 2)
 }
 
-/** 抽稀，但最后一点和交叉日必须留下，否则最新读数和事件会从线上消失。 */
-function sample(points: readonly ChartPoint[], extra: readonly number[]): ChartPoint[] {
-  if (points.length <= MAX_POINTS) return [...points]
-  const byTs = new Map(points.map((p) => [p.ts, p]))
-  const picked = new Map<number, ChartPoint>()
-  const stride = Math.ceil(points.length / MAX_POINTS)
-  for (let i = 0; i < points.length; i += stride) {
-    const p = points[i]
-    if (p) picked.set(p.ts, p)
-  }
-  const last = points[points.length - 1]
-  if (last) picked.set(last.ts, last)
-  for (const ts of extra) {
-    const p = byTs.get(ts)
-    if (p) picked.set(p.ts, p)
-  }
-  return [...picked.values()].sort((a, b) => a.ts - b.ts)
+function flatten(segments: readonly (readonly ChartPoint[])[]): ChartPoint[] {
+  return segments.flat()
 }
 
 function at(points: readonly ChartPoint[], ts: number): number | null {
@@ -126,12 +110,12 @@ function markersOn(line: readonly ChartPoint[], times: readonly number[]): { ts:
 }
 
 function line(
-  points: readonly ChartPoint[],
+  segments: readonly (readonly ChartPoint[])[],
   paint: ChartPaint,
   width: number,
   dash = false,
 ): DetailChart['lines'][number] {
-  return { points, paint, width, dash }
+  return { segments, paint, width, dash }
 }
 
 function rule(value: number, label: string): DetailChart['rules'][number] {
@@ -210,16 +194,15 @@ function indexChart(
   floorAtZero = true,
 ): DetailChart | null {
   if (!points) return null
-  const known = yScale === 'log' ? positive(points) : finite(points)
-  const sampled = sample(known, [])
-  if (sampled.length < 2) return null
+  const segments = runsOf(points, yScale === 'log' ? 'positive' : 'finite')
+  if (!drawable(segments)) return null
   return {
     yScale,
     floorAtZero,
     tick: 'number',
     caption,
     bands: [],
-    lines: [line(sampled, 'ink', 1.25)],
+    lines: [line(segments, 'ink', 1.25)],
     rules,
     markers: [],
     legend: [{ label: text(locale, '数值', 'value'), paint: 'ink', swatch: 'line' }],
@@ -230,13 +213,16 @@ function rainbowChart(price: readonly SeriesPoint[] | undefined, locale: Locale)
   if (!price) return null
   const model = fitRainbow(price)
   if (!model) return null
-  const px = positive(price)
-  const sampled = sample(px, [])
-  if (sampled.length < 2) return null
+  const runs = runsOf(price, 'positive')
+  if (!drawable(runs)) return null
+  const sampled = flatten(runs)
+  const priceMin = Math.min(...sampled.map((p) => p.value))
+  const priceMax = Math.max(...sampled.map((p) => p.value))
+  // 一个标准差大约是 2.2 倍。纵轴在价格两端各留这么一截，
+  // 色带的更外缘仍画在数据里，超出画面的部分裁掉，不改 ±2σ 的区号。
+  const pad = 10 ** 0.35
+  const yDomain = { min: priceMin / pad, max: priceMax * pad }
 
-  const edges = RAINBOW_EDGES.map((z) =>
-    sampled.map((p) => rainbowBoundaryPrice(ageDays(p.ts), model, z)),
-  )
   const bands: DetailChart['bands'][number][] = []
   const paints: ChartPaint[] = [
     'rainbow-1',
@@ -249,41 +235,41 @@ function rainbowChart(price: readonly SeriesPoint[] | undefined, locale: Locale)
     'rainbow-8',
     'rainbow-9',
   ]
-  // 第 1 区与第 9 区向外再加半个标准差，好让两端有面积。
-  // 分区规则仍然是 ±2σ。按 4 倍去扩会把对数轴拉出很远的空档，九个色带就被挤成一条。
-  const floor = sampled.map((p) => rainbowBoundaryPrice(ageDays(p.ts), model, -2.5))
-  const cap = sampled.map((p) => rainbowBoundaryPrice(ageDays(p.ts), model, 2.5))
-  const levels = [floor, ...edges, cap]
-  for (let i = 0; i < 9; i += 1) {
-    const lower = levels[i]
-    const upper = levels[i + 1]
-    const paint = paints[i]
-    if (!lower || !upper || !paint) continue
-    const lo: ChartPoint[] = []
-    const hi: ChartPoint[] = []
-    for (let k = 0; k < sampled.length; k += 1) {
-      const ts = sampled[k]?.ts
-      const a = lower[k]
-      const b = upper[k]
-      if (ts === undefined || a === null || a === undefined || b === null || b === undefined) continue
-      if (!(b > a) || !(a > 0)) continue
-      lo.push({ ts, value: a })
-      hi.push({ ts, value: b })
+  const zEdges = [-2.5, ...RAINBOW_EDGES, 2.5]
+  for (const run of runs) {
+    const levels = zEdges.map((z) => run.map((p) => rainbowBoundaryPrice(ageDays(p.ts), model, z)))
+    for (let i = 0; i < 9; i += 1) {
+      const lower = levels[i]
+      const upper = levels[i + 1]
+      const paint = paints[i]
+      if (!lower || !upper || !paint) continue
+      const lo: ChartPoint[] = []
+      const hi: ChartPoint[] = []
+      for (let k = 0; k < run.length; k += 1) {
+        const ts = run[k]?.ts
+        const a = lower[k]
+        const b = upper[k]
+        if (ts === undefined || a === null || a === undefined || b === null || b === undefined) continue
+        if (!(b > a) || !(a > 0)) continue
+        lo.push({ ts, value: a })
+        hi.push({ ts, value: b })
+      }
+      if (lo.length >= 2) bands.push({ lower: lo, upper: hi, paint })
     }
-    if (lo.length >= 2) bands.push({ lower: lo, upper: hi, paint })
   }
 
   return {
     yScale: 'log',
     floorAtZero: true,
-    tick: 'number',
+    tick: 'usd',
+    yDomain,
     caption: text(
       locale,
-      `${model.version}。拟合窗 ${model.fitFrom} 至 ${model.fitUntil}，决定系数 ${model.r2.toFixed(2)}。2018 年前是样本内结果，之后是冻结系数的外推，都不是当时已知的预测。`,
-      `${model.version}. Fit ${model.fitFrom} to ${model.fitUntil}, R2 ${model.r2.toFixed(2)}. In-sample before 2018, frozen extrapolation after. Neither is a forecast that existed at the time.`,
+      `${model.version}。拟合窗 ${model.fitFrom} 至 ${model.fitUntil}，决定系数 ${model.r2.toFixed(2)}。2018 年前是样本内结果，之后是冻结系数的外推，都不是当时已知的预测。纵轴按历史价格收窄，画出画面的色带被裁掉，区号仍按 ±2σ 计算。`,
+      `${model.version}. Fit ${model.fitFrom} to ${model.fitUntil}, R2 ${model.r2.toFixed(2)}. In-sample before 2018, frozen extrapolation after. Neither is a forecast that existed at the time. The axis is limited to the price history; bands past the frame are clipped, and the zone rule stays ±2 sigma.`,
     ),
     bands,
-    lines: [line(sampled, 'ink', 1.25)],
+    lines: [line(runs, 'ink', 1.75)],
     rules: [],
     markers: [],
     legend: [
@@ -301,14 +287,14 @@ function piChart(price: readonly SeriesPoint[] | undefined, locale: Locale): Det
   if (!price) return null
   const lines = piCycleLines(price)
   const crosses = upwardCrosses(lines.ratio)
-  const px = sample(positive(price), crosses)
-  const fast = sample(positive(lines.fast), crosses)
-  const slow = sample(positive(lines.slowTwice), crosses)
-  if (px.length < 2 || fast.length < 2 || slow.length < 2) return null
+  const px = runsOf(price, 'positive', crosses)
+  const fast = runsOf(lines.fast, 'positive', crosses)
+  const slow = runsOf(lines.slowTwice, 'positive', crosses)
+  if (!drawable(px) || !drawable(fast) || !drawable(slow)) return null
   return {
     yScale: 'log',
     floorAtZero: true,
-    tick: 'number',
+    tick: 'usd',
     caption: text(
       locale,
       '对数坐标。圆点是快线真正上穿 2 倍慢线的日子，比值接近 1 不会画点。',
@@ -321,7 +307,7 @@ function piChart(price: readonly SeriesPoint[] | undefined, locale: Locale): Det
       line(slow, 'muted', 1.25, true),
     ],
     rules: [],
-    markers: markersOn(fast, crosses),
+    markers: markersOn(flatten(fast), crosses),
     legend: [
       { label: text(locale, '价格', 'price'), paint: 'faint', swatch: 'line' },
       { label: 'SMA111', paint: 'ink', swatch: 'line' },
@@ -336,15 +322,15 @@ function maChart(
   which: '200w' | '2y',
 ): DetailChart | null {
   if (!price) return null
-  const px = sample(positive(price), [])
-  if (px.length < 2) return null
+  const px = runsOf(price, 'positive')
+  if (!drawable(px)) return null
   if (which === '200w') {
-    const ma = sample(positive(sma200wSeries(price)), [])
-    if (ma.length < 2) return null
+    const ma = runsOf(sma200wSeries(price), 'positive')
+    if (!drawable(ma)) return null
     return {
       yScale: 'log',
       floorAtZero: true,
-      tick: 'number',
+      tick: 'usd',
       caption: text(
         locale,
         '对数坐标。均线取周日的日均参考价，不是 1400 日均线，也不是交易所周收盘价。',
@@ -361,13 +347,13 @@ function maChart(
     }
   }
   const built = ma2yLines(price)
-  const average = sample(positive(built.average), [])
-  const upper = sample(positive(built.upper), [])
-  if (average.length < 2 || upper.length < 2) return null
+  const average = runsOf(built.average, 'positive')
+  const upper = runsOf(built.upper, 'positive')
+  if (!drawable(average) || !drawable(upper)) return null
   return {
     yScale: 'log',
     floorAtZero: true,
-    tick: 'number',
+    tick: 'usd',
     caption: text(
       locale,
       '对数坐标。均线是 730 个 UTC 日，上轨是它的 5 倍。',
@@ -389,9 +375,9 @@ function hashChart(hashrate: readonly SeriesPoint[] | undefined, locale: Locale)
   if (!hashrate) return null
   const built = hashRibbonLines(hashrate)
   const crosses = upwardCrosses(built.ratio)
-  const fast = sample(positive(built.fast), crosses)
-  const slow = sample(positive(built.slow), crosses)
-  if (fast.length < 2 || slow.length < 2) return null
+  const fast = runsOf(built.fast, 'positive', crosses)
+  const slow = runsOf(built.slow, 'positive', crosses)
+  if (!drawable(fast) || !drawable(slow)) return null
   return {
     yScale: 'log',
     floorAtZero: true,
@@ -404,7 +390,7 @@ function hashChart(hashrate: readonly SeriesPoint[] | undefined, locale: Locale)
     bands: [],
     lines: [line(fast, 'ink', 1.25), line(slow, 'muted', 1.25, true)],
     rules: [],
-    markers: markersOn(fast, crosses),
+    markers: markersOn(flatten(fast), crosses),
     legend: [
       { label: text(locale, '30日均线', '30-day average'), paint: 'ink', swatch: 'line' },
       { label: text(locale, '60日均线', '60-day average'), paint: 'muted', swatch: 'line' },

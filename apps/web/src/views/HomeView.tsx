@@ -71,7 +71,7 @@ export function HomeView() {
   // - `regime`：**方向分类**（牛市 / 熊市 / 震荡），卡片底色只跟它走；
   // - `read`：**解释性文案**（场景规则给出的那一句）；
   // - `statuses`：**指标当前状态**（分位档 / 方向）。
-  const { features, statuses } = siteRead()
+  const { features, statuses, readings } = siteRead()
   const read = readMarketScenario(features)
   const regime = classifyRegime(features)
 
@@ -138,6 +138,7 @@ export function HomeView() {
             changeWindowFor={changeWindowFor}
             statuses={statuses}
             features={features}
+            readings={readings}
           />
         </div>
       </div>

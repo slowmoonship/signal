@@ -12,9 +12,8 @@
  * 数据异常另有标记（待更新 / 历史不足 / 文件异常），挂在数值旁边。
  * 把两者混进同一列，读者就会把"抓取失败"读成"市场出事了"。
  *
- * **判定依据列不写死文案。** 它由特征层的数据现场生成
- * （"近一年分位 P82" / "7 日累计 +1,173 BTC"），
- * 写死的解释迟早和数值对不上，而生成的一句永远与状态词一致。
+ * **判定依据列不写死文案，也不写 Pxx。** 首页 18 行的状态和依据
+ * 来自同一条 `interpretHome` 规则。百分位留在详情页，写成完整的句子。
  *
  * 可点击范围：**只有指标名称本身**。第一版不做整行可点。
  *
@@ -38,9 +37,11 @@ import {
   latestChange,
   latestKnown,
   MISSING,
+  readingAsStatus,
   statusBasis,
   type FeatureTable,
   type HomeGroupKey,
+  type HomeReading,
   type SiteLocale,
   type MetricDefinition,
   type MetricStatus,
@@ -68,6 +69,8 @@ export type MetricTableProps = {
   readonly statuses: ReadonlyMap<string, MetricStatus>
   /** 判定依据列要用的特征表 */
   readonly features: FeatureTable
+  /** 首页 18 行的状态与依据。有它时不再使用分位缩写。 */
+  readonly readings: ReadonlyMap<string, HomeReading>
 }
 
 /**
@@ -112,6 +115,7 @@ export function MetricTable({
   changeWindowFor,
   statuses,
   features,
+  readings,
 }: MetricTableProps) {
   const t = getDictionary()
 
@@ -180,6 +184,8 @@ export function MetricTable({
               const metric = result?.ok === true ? result.value : null
               const status = statusOf(result, metric)
               const marketStatus = statuses.get(def.id)
+              const reading = readings.get(def.id)
+              const shown = reading ? readingAsStatus(reading) : marketStatus
               return (
                 <tr
                   key={def.id}
@@ -230,16 +236,21 @@ export function MetricTable({
                   </td>
 
                   <td className="py-1.5 pr-3 text-left align-baseline">
-                    {marketStatus ? (
-                      <StatusPill status={marketStatus} locale={locale} />
+                    {shown ? (
+                      <StatusPill status={shown} locale={locale} />
                     ) : (
                       <span className="font-mono text-xs text-ink-subtle">{t.dataNoValue}</span>
                     )}
                   </td>
 
-                  <td className="hidden py-1.5 text-left align-baseline font-mono text-xs whitespace-nowrap text-ink-subtle xl:table-cell">
-                    {marketStatus ? (
-                      <Basis marketStatus={marketStatus} features={features} locale={locale} />
+                  <td className="hidden py-1.5 text-left align-baseline font-mono text-xs whitespace-nowrap text-ink-subtle xl:table-cell" data-basis="">
+                    {shown ? (
+                      <Basis
+                        marketStatus={shown}
+                        reading={reading}
+                        features={features}
+                        locale={locale}
+                      />
                     ) : null}
                   </td>
                 </tr>
@@ -259,24 +270,24 @@ export function MetricTable({
  * "指标 pool-concentration 的历史不足 365 天，无法做分位标准化"
  * 这种句子会把行高撑成两行、把整张表的下沿顶开，
  * 而且它把内部的 metric id 与计算口径直接摆到了读者面前。
- * 短版由 `statusBasis` 生成（"近1年 P66" / "7日净流入 1,173 BTC" / "历史不足"），
+ * 首页行的短句来自 `HomeReading`。没有这条规则的指标才退回 `statusBasis`。
  * 完整解释留在 `title`（悬停可见）与指标详情页。
  */
 function Basis({
   marketStatus,
+  reading,
   features,
   locale,
 }: {
   readonly marketStatus: MetricStatus
+  readonly reading: HomeReading | undefined
   readonly features: FeatureTable
   readonly locale: SiteLocale
 }) {
   const obs = features[marketStatus.featureId]
-  const short = statusBasis(
-    marketStatus,
-    obs && obs.ok ? obs.value : undefined,
-    locale,
-  )
+  const short = reading
+    ? reading.basis[locale]
+    : statusBasis(marketStatus, obs && obs.ok ? obs.value : undefined, locale)
   // 完整原因只进 title，不进可见文本。
   const full = marketStatus.ok ? short : marketStatus.detail
   return <span title={full === short ? undefined : full}>{short}</span>

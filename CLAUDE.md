@@ -88,7 +88,10 @@ apps/web ──→ packages/metrics ←── packages/ingest
 
 首页"当前状态"列用一个**低饱和胶囊**标出该指标当前处在什么位置，
 配色只有三档：偏强（暖红）/ 中性（灰）/ 偏弱（冷蓝）。
-词表、判定依据与配色全部住在 `packages/metrics/src/status.ts`，页面层不持有任何"哪些指标算高"的知识。
+词表与配色住在 `packages/metrics/src/status.ts`。首页 18 行的状态词和判定依据
+来自 `packages/metrics/src/interpret.ts` 的同一条规则（ADR-030），
+页面层不持有阈值。首页这一列不写 Pxx。百分位留在详情页，
+并且写明比较的是当前读数还是变化率。
 
 它与分类底色的区别必须讲清楚：
 

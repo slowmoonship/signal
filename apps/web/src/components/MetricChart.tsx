@@ -79,18 +79,27 @@ export function MetricChart({ def, locale, points }: Props) {
   const y = (v: number): number =>
     PAD.top + (1 - (v - min) / (max - min || 1)) * (VIEW_H - PAD.top - PAD.bottom)
 
-  // 缺失处断开：按连续的非空片段分组，每段一条 polyline
+  // 缺失和真正空出来的日期断开。相邻两个有效点隔了超过 1.5 天，
+  // 中间就没有观测，不能连成“那天也有这个数”。
+  const GAP_SECONDS = 86_400 * 1.5
   const segments: string[] = []
   let current: string[] = []
+  let prevTs: number | null = null
+  const flush = (): void => {
+    if (current.length > 1) segments.push(current.join(' '))
+    current = []
+  }
   for (const p of points) {
     if (p.value === null) {
-      if (current.length > 1) segments.push(current.join(' '))
-      current = []
+      flush()
+      prevTs = null
       continue
     }
+    if (prevTs !== null && p.ts - prevTs > GAP_SECONDS) flush()
     current.push(`${x(p.ts).toFixed(1)},${y(p.value).toFixed(1)}`)
+    prevTs = p.ts
   }
-  if (current.length > 1) segments.push(current.join(' '))
+  flush()
 
   const ticks = [min, min + (max - min) / 2, max]
   const last = latestKnownPoint(known)
@@ -131,6 +140,7 @@ export function MetricChart({ def, locale, points }: Props) {
         {segments.map((seg, i) => (
           <polyline
             key={i}
+            data-chart-line=""
             points={seg}
             fill="none"
             className="stroke-ink"

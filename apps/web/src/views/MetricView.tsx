@@ -13,12 +13,16 @@ import { notFound } from 'next/navigation'
 
 import {
   buildDetailChart,
+  countWindowSamples,
   detailChartParents,
+  FEATURE_SPEC_BY_ID,
   formatSignedPercent,
   formatValue,
+  historyRankText,
   latestChange,
   latestKnown,
   MISSING,
+  readingAsStatus,
   registry,
   SITE_LOCALE,
   STATUS_SPEC_BY_METRIC,
@@ -61,13 +65,26 @@ export function MetricView({ id }: { readonly id: string }) {
   const change = points && windowDays !== null ? latestChange(points, windowDays) : null
   const value = latest ? formatValue(latest.value, def.format, locale) : null
   const overlay = detailOverlay(def.id, points, locale)
-  const { features, statuses } = siteRead()
-  const status = statuses.get(def.id)
+  const { features, statuses, readings } = siteRead()
+  const reading = readings.get(def.id)
+  const legacy = reading ? undefined : statuses.get(def.id)
+  const pill = reading ? readingAsStatus(reading) : legacy
   const spec = STATUS_SPEC_BY_METRIC.get(def.id)
   const feature = spec ? features[spec.featureId] : undefined
-  const basis = status
-    ? statusBasis(status, feature && feature.ok ? feature.value : undefined, locale)
-    : null
+  const basis = reading
+    ? reading.basis[locale]
+    : legacy
+      ? statusBasis(legacy, feature && feature.ok ? feature.value : undefined, locale)
+      : null
+  const featureSpec = feature && feature.ok ? FEATURE_SPEC_BY_ID[feature.value.id] : undefined
+  const rank =
+    reading && feature && feature.ok && featureSpec
+      ? historyRankText(
+          feature.value,
+          countWindowSamples(points, featureSpec.historyDays, feature.value.asOf),
+          reading.basisKind,
+        )
+      : null
 
   return (
     // 叠加图需要比一段正文更宽。文字块自己仍收在 max-w-prose 里。
@@ -81,9 +98,9 @@ export function MetricView({ id }: { readonly id: string }) {
           {t.categories[def.category]}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{def.name[locale]}</h1>
-        {status && basis ? (
+        {pill && basis ? (
           <p className="mt-3 flex items-center gap-3">
-            <StatusPill status={status} locale={locale} />
+            <StatusPill status={pill} locale={locale} />
             <span className="font-mono text-xs text-ink-subtle">{basis}</span>
           </p>
         ) : null}
@@ -133,6 +150,19 @@ export function MetricView({ id }: { readonly id: string }) {
       ) : null}
 
       <div className="max-w-prose">
+      {reading ? (
+        <Block title={t.whyThisStatus}>
+          <p>{reading.basis[locale]}</p>
+          <p>{t.readingDisclaimer}</p>
+        </Block>
+      ) : null}
+
+      {rank ? (
+        <Block title={t.historyRank}>
+          <p>{rank}</p>
+        </Block>
+      ) : null}
+
       <Coverage coverage={result.ok ? result.value.coverage : undefined} />
 
       <Distribution distribution={result.ok ? result.value.distribution : undefined} />

@@ -34,6 +34,11 @@ export type Dictionary = Readonly<{
   change7d: string
   changeWindow: string
   whatItMeasures: string
+  /** 详情页：状态是按哪条规则来的 */
+  whyThisStatus: string
+  /** 详情页：百分位的完整说法。首页不放这个。 */
+  historyRank: string
+  readingDisclaimer: string
   howItIsCalculated: string
   /** 估值模型单独说清它不能被当成什么 */
   limits: string
@@ -146,6 +151,9 @@ const zh: Dictionary = {
   change7d: '7 日',
   changeWindow: '7 日变化',
   whatItMeasures: '这个数说明了什么',
+  whyThisStatus: '为什么是这个状态',
+  historyRank: '历史位置',
+  readingDisclaimer: '上面是读数的归类，不是买卖建议。历史上处在类似区间，不保证以后还这样走。',
   howItIsCalculated: '怎么算出来的',
   limits: '模型边界',
   dataSource: '数据来源',
