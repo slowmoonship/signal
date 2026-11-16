@@ -9268,10 +9268,14 @@
     {
       "ts": 1794614400,
       "value": 340
+    },
+    {
+      "ts": 1794700800,
+      "value": 340
     }
   ],
-  "sourceTime": "2026-11-14T00:00:00.000Z",
-  "ingestedAt": "2026-11-15T12:12:51.100Z",
+  "sourceTime": "2026-11-15T00:00:00.000Z",
+  "ingestedAt": "2026-11-16T13:06:07.997Z",
   "stale": false,
   "sources": [
     {
@@ -9292,11 +9296,11 @@
   ],
   "warnings": [
     "由 \"price\" 序列本地回测（3650 天窗口，+5% 阈值）",
-    "最近一个 as-of 日有 3592 个起点参与计算，58 个起点在窗口内未达 +5%，已作为右删失排除"
+    "最近一个 as-of 日有 3591 个起点参与计算，59 个起点在窗口内未达 +5%，已作为右删失排除"
   ],
   "coverage": {
-    "included": 3592,
-    "censored": 58,
+    "included": 3591,
+    "censored": 59,
     "invalidated": 0
   },
   "worstCase": {
@@ -9306,7 +9310,7 @@
     "maxDrawdownPercent": -33.46800517687611
   },
   "distribution": {
-    "count": 3592,
+    "count": 3591,
     "min": 1,
     "p50": 16,
     "p90": 80,
