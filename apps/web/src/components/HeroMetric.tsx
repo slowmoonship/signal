@@ -6,7 +6,7 @@
  * 它说的**不是**"等 340 天就一定赚"，而是"在已经达标的那些起点里，最久的一次等了 340 天"。
  * 这个区别不是措辞洁癖：窗口内还有一批起点到今天为止没回本，
  * 把它们算进"最长等待期"会让读者高估自己等待的确定性。
- * 卡片下方那四个小数字（已达标 / 尚未达标 / 中位 / P90）就是给这件事兜底的：
+ * 卡片下方那四个小数字（已达标 / 尚未达标 / 中位 / 九成）就是给这件事兜底的：
  * 有了中位数，340 天这个最大值才被当成一个分布的尾端，而不是一个典型结果。
  *
  * 标题刻意写短（"定投要等多久？"）。完整口径在副标题与详情页里——
@@ -103,7 +103,7 @@ export function HeroMetric({
  * 四个补充数字。
  *
  * 它们的职责是把头条那个**最大值**还原成一个分布：
- * 只给 340 天，读者会以为那就是常态；给出中位数与 P90 之后，
+ * 只给 340 天，读者会以为那就是常态；给出中位数与九成位之后，
  * 340 天的性质就变了——它是尾部，不是常态。
  *
  * 缺哪一格就不显示哪一格。四个格子里的数字全部来自派生计算，
@@ -134,7 +134,12 @@ function StatStrip({
     <dl className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-rule pt-4 sm:grid-cols-4">
       {cells.map(([value, label]) => (
         <div key={label}>
-          <dt className="font-mono text-[10px] text-ink-subtle">{label}</dt>
+          <dt
+            className="font-mono text-[10px] text-ink-subtle"
+            title={label === t.heroStatP90 ? '已达标起点里，九成的等待不超过这个天数' : undefined}
+          >
+            {label}
+          </dt>
           <dd className="font-mono text-sm text-ink tabular-nums">
             {value}
             {/* 单位只挂在天数上：起点数是"个"，挂上天会读成"个天"。 */}

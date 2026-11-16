@@ -95,6 +95,8 @@ describe('判定依据列', () => {
     const basis = /<td className="hidden[^"]*whitespace-nowrap[^"]*"[^>]*>/.exec(TABLE)
     expect(basis, '判定依据单元格缺少 whitespace-nowrap').not.toBeNull()
     expect(basis?.[0]).toContain('data-basis')
+    const dict = readFileSync(join(WEB_SRC, 'i18n/dictionaries.ts'), 'utf8')
+    expect(dict, '首页文案仍写着 Pxx').not.toMatch(/'P\d+/)
   })
 
   it('失败原因不直接进可见文本（只进 title）', () => {

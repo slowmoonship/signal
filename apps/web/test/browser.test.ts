@@ -283,6 +283,8 @@ describe.skipIf(!available)('真实浏览器：排版', () => {
       })()`)) as string[]
       expect(bases.length).toBe(18)
       for (const text of bases) expect(text).not.toMatch(/P\d+/)
+      const body = (await page.evaluate(`document.body.innerText`)) as string
+      expect(body, '首页仍出现分位缩写').not.toMatch(/P\d+/)
     } finally {
       await browser.close()
     }
