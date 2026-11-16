@@ -20,6 +20,7 @@ import {
   FEATURE_SPECS,
   marketSentence,
   readMarketScenario,
+  SCENARIO_BY_ID,
   SCENARIOS,
   scenarioMatches,
   toneOf,
@@ -91,10 +92,15 @@ function table(over: Partial<Record<FeatureId, FeatureResult>>): FeatureTable {
   return out
 }
 
-/** 一张只有两个核心特征可用的表，其余全缺。 */
+/**
+ * 一张只有两个核心特征可用的表，其余全缺。
+ *
+ * 核心是 `price.trend`（多窗口方向）——场景规则与三态分类共用它，
+ * 因此这里给的是**方向**（档位），而不是某一天的涨跌幅。
+ */
 function coreTable(over: Partial<Record<FeatureId, FeatureResult>> = {}): FeatureTable {
   return table({
-    'price.7d': feat('price.7d', { band: 'mid' }),
+    'price.trend': feat('price.trend', { band: 'mid', observed: 1 }),
     'onchain.addresses30': feat('onchain.addresses30', { band: 'mid' }),
     ...over,
   })
@@ -112,6 +118,23 @@ describe('特征层：不再做不该做的算术', () => {
   function longSeries(values: readonly number[], start = 1_600_000_000): SeriesPoint[] {
     return values.map((value, i) => ({ ts: start + i * DAY, value }))
   }
+
+  it('采样时刻不规则的指标也能做窗口变化：按 UTC 自然日对齐', () => {
+    // 难度 / 区块权重这类点采样指标每天一个不规则时刻的采样。
+    // 特征层若按精确时间戳查 N 天前的基准，会整批判成"算不出"，
+    // 页面于是把有历史的指标显示成"缺数据"。
+    const start = 1_600_000_000
+    const points: SeriesPoint[] = Array.from({ length: 400 }, (_, i) => ({
+      // 每天一个不规则时刻（3 小时到 21 小时之间摆动）
+      ts: start + i * DAY + ((i * 7) % 18) * 3600,
+      value: 100 + i,
+    }))
+    const { features } = buildFeatureTable([
+      { metricId: 'price', points } as never,
+    ])
+    const trend = features['price.30d']
+    expect(trend.ok, '按精确时间戳查表会把这里判成 uncomputable').toBe(true)
+  })
 
   it('price.7d 直接用 7 日涨跌幅本身，不再对它变化一次', () => {
     // 回归：早先的原型对 price-change-7d 又算了一次百分比变化，
@@ -304,7 +327,7 @@ describe('场景层', () => {
       }
       const built = table(over)
       const sentence = marketSentence(
-        { status: 'known', scenarioId: scenario.id, tone: 'neutral', sentence: scenario.sentence, participants: [], exclusions: [], alsoMatched: [] },
+        { status: 'known', scenarioId: scenario.id, sentence: scenario.sentence, participants: [], exclusions: [], alsoMatched: [] },
         built,
         'en',
       )
@@ -315,6 +338,18 @@ describe('场景层', () => {
 })
 
 /** 把一条条件翻译成"要让这条规则命中，特征得长什么样" */
+/**
+ * 命中规则的展示语义（改善 / 恶化 / 中性）。
+ *
+ * 注意它住在**规则**上，不在 `MarketRead` 上：V0.11 起，市场卡片的底色
+ * 跟三态方向走（`regime.ts`），场景的 tone 只是规则自身的性质。
+ */
+function toneOfScenario(id: string): string {
+  const scenario = SCENARIO_BY_ID[id]
+  if (!scenario) throw new Error(`未知场景 ${id}`)
+  return toneOf(scenario)
+}
+
 function conditionOverrides(condition: Condition): FeatureOverrides {
   switch (condition.kind) {
     case 'band':
@@ -339,7 +374,7 @@ describe('判定层：命中哪一条', () => {
   it('(1) 价格上涨 + 链上走强', () => {
     const read = readMarketScenario(
       coreTable({
-        'price.7d': feat('price.7d', { band: 'high', observed: 12 }),
+        'price.trend': feat('price.trend', { band: 'high', observed: 32 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
       }),
     )
@@ -350,7 +385,7 @@ describe('判定层：命中哪一条', () => {
   it('(2) 价格上涨 + 链上背离', () => {
     const read = readMarketScenario(
       coreTable({
-        'price.7d': feat('price.7d', { band: 'high', observed: 12 }),
+        'price.trend': feat('price.trend', { band: 'high', observed: 68 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'low', observed: -15 }),
       }),
     )
@@ -361,7 +396,7 @@ describe('判定层：命中哪一条', () => {
   it('(3) 价格下跌 + 链上走强', () => {
     const read = readMarketScenario(
       coreTable({
-        'price.7d': feat('price.7d', { band: 'low', observed: -12 }),
+        'price.trend': feat('price.trend', { band: 'low', observed: -40 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
       }),
     )
@@ -372,7 +407,7 @@ describe('判定层：命中哪一条', () => {
   it('(4) 价格横盘 + 链上低迷', () => {
     const read = readMarketScenario(
       coreTable({
-        'price.7d': feat('price.7d', { band: 'mid', observed: 1 }),
+        'price.trend': feat('price.trend', { band: 'mid', observed: 5 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'low', observed: -15 }),
       }),
     )
@@ -397,6 +432,9 @@ describe('判定层：命中哪一条', () => {
   it('(6) 多信号互相矛盾时如实说矛盾，不硬挑一个', () => {
     const read = readMarketScenario(
       coreTable({
+        // price.decline 讲的是"过去一周"，它要的是 price.7d；
+        // 方向本身由 price.trend 给出。两个都要摆出来，冲突才成立。
+        'price.trend': feat('price.trend', { band: 'low', observed: -30 }),
         'price.7d': feat('price.7d', { band: 'low', observed: -12 }),
         'price.30d': feat('price.30d', { band: 'low', observed: -30 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
@@ -413,7 +451,7 @@ describe('判定层：命中哪一条', () => {
   it('(7) 关键数据缺失 → unknown，而不是中性', () => {
     const read = readMarketScenario(
       table({
-        'price.7d': fail('price.7d', 'missing'),
+        'price.trend': fail('price.trend', 'missing'),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'mid' }),
       }),
     )
@@ -427,7 +465,7 @@ describe('判定层：命中哪一条', () => {
   it('(8) 数据过期 → unknown', () => {
     const read = readMarketScenario(
       table({
-        'price.7d': feat('price.7d', { band: 'high' }),
+        'price.trend': feat('price.trend', { band: 'high' }),
         'onchain.addresses30': fail('onchain.addresses30', 'expired'),
       }),
     )
@@ -438,7 +476,7 @@ describe('判定层：命中哪一条', () => {
   it('(9) 只有一天历史 → unknown', () => {
     const read = readMarketScenario(
       table({
-        'price.7d': feat('price.7d', { band: 'high' }),
+        'price.trend': feat('price.trend', { band: 'high' }),
         'onchain.addresses30': fail('onchain.addresses30', 'insufficient-history'),
       }),
     )
@@ -449,6 +487,7 @@ describe('判定层：命中哪一条', () => {
   it('(10) 多条规则同时命中时按显式优先级取最高的那条', () => {
     const read = readMarketScenario(
       coreTable({
+        'price.trend': feat('price.trend', { band: 'high', observed: 32 }),
         'price.7d': feat('price.7d', { band: 'high', observed: 12 }),
         'price.30d': feat('price.30d', { band: 'high', observed: 30 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
@@ -464,7 +503,7 @@ describe('判定层：命中哪一条', () => {
 
   it('一句话里填的是真实观测值', () => {
     const features = coreTable({
-      'price.7d': feat('price.7d', { band: 'high', observed: 12.3 }),
+      'price.trend': feat('price.trend', { band: 'high', observed: 12.3 }),
       'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
     })
     const read = readMarketScenario(features)
@@ -477,7 +516,7 @@ describe('判定层：命中哪一条', () => {
 
   it('参与判定的特征与数据时间都留痕', () => {
     const features = coreTable({
-      'price.7d': feat('price.7d', { band: 'high', observed: 12 }),
+      'price.trend': feat('price.trend', { band: 'high', observed: 32 }),
       'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
     })
     const read = readMarketScenario(features)
@@ -608,30 +647,32 @@ describe('展示语义：市场状态卡片的底色', () => {
   it('命中改善规则时读数是 improving', () => {
     const read = readMarketScenario(
       coreTable({
-        'price.7d': feat('price.7d', { band: 'high', observed: 12 }),
-        'price.30d': feat('price.30d', { band: 'high', observed: 30 }),
+        'price.trend': feat('price.trend', { band: 'high', observed: 32 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
       }),
     )
     expect(read.scenarioId).toBe('combo.price-up-onchain-strong')
-    expect(read.tone).toBe('improving')
+    expect(toneOfScenario(read.scenarioId)).toBe('improving')
   })
 
   it('命中恶化规则时读数是 deteriorating', () => {
     // 价格横盘而链上活跃度低迷：条件本身在变差（方向族 bear）
     const read = readMarketScenario(
       coreTable({
-        'price.7d': feat('price.7d', { band: 'mid', observed: 0.4 }),
+        'price.trend': feat('price.trend', { band: 'mid', observed: 0.4 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'low', observed: -30 }),
       }),
     )
     expect(read.scenarioId).toBe('combo.price-sideways-onchain-weak')
-    expect(read.tone).toBe('deteriorating')
+    expect(toneOfScenario(read.scenarioId)).toBe('deteriorating')
   })
 
   it('信号冲突是中性：两个方向相反的信号在场时判不出改善还是恶化', () => {
     const read = readMarketScenario(
       coreTable({
+        // price.decline 讲的是"过去一周"，它要的是 price.7d；
+        // 方向本身由 price.trend 给出。两个都要摆出来，冲突才成立。
+        'price.trend': feat('price.trend', { band: 'low', observed: -30 }),
         'price.7d': feat('price.7d', { band: 'low', observed: -12 }),
         'price.30d': feat('price.30d', { band: 'low', observed: -30 }),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'high', observed: 20 }),
@@ -639,23 +680,23 @@ describe('展示语义：市场状态卡片的底色', () => {
       }),
     )
     expect(read.scenarioId).toBe('conflict.signals-disagree')
-    expect(read.tone).toBe('neutral')
+    expect(toneOfScenario(read.scenarioId)).toBe('neutral')
   })
 
   it('判不了是中性：没有数据时不能编一个方向出来', () => {
     const read = readMarketScenario(
       table({
-        'price.7d': fail('price.7d', 'missing'),
+        'price.trend': fail('price.trend', 'missing'),
         'onchain.addresses30': feat('onchain.addresses30', { band: 'mid' }),
       }),
     )
     expect(read.status).toBe('unknown')
-    expect(read.tone).toBe('neutral')
+    expect(toneOfScenario(read.scenarioId)).toBe('neutral')
   })
 
   it('常态兜底是中性', () => {
     const read = readMarketScenario(coreTable())
     expect(read.scenarioId).toBe('fallback.no-clear-signal')
-    expect(read.tone).toBe('neutral')
+    expect(toneOfScenario(read.scenarioId)).toBe('neutral')
   })
 })

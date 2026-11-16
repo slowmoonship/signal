@@ -40,14 +40,13 @@ describe('首页白名单', () => {
     expect(HOME_METRIC_IDS.length).toBeLessThanOrEqual(MAX_ROWS)
   })
 
-  it('六个分组：价格与市场 / 估值 / 交易所与持仓 / 链上活动 / 费用与区块 / 矿工与安全', () => {
+  it('五个分组：市场行情 / 估值与定投 / 牛熊周期 / 资金流向 / 链上活动', () => {
     expect(HOME_GROUPS.map((g) => g.key)).toEqual([
       'marketOverview',
       'valuationAnchors',
+      'cycle',
       'exchangeFlows',
       'onchainActivity',
-      'feesBlocks',
-      'miningSecurity',
     ])
   })
 
@@ -70,29 +69,24 @@ describe('首页白名单', () => {
 
   it('白名单就是规格里那些指标，逐个点名', () => {
     expect([...HOME_METRIC_IDS]).toEqual([
-      // 价格与市场
       'price',
       'price-change-7d',
-      'supply',
-      // 估值
-      'market-cap',
+      'drawdown-ath',
+      'ahr999',
+      'rainbow-zone',
       'mvrv',
-      // 交易所与持仓
+      'mvrv-zscore',
+      'nupl',
+      'mayer-multiple',
+      'pi-cycle-top',
+      'sma-200w',
+      'ma-2y',
+      'puell-multiple',
+      'hash-ribbons',
       'exchange-netflow',
       'exchange-balance',
-      'pool-concentration',
-      // 链上活动
       'active-addresses',
-      'tx-count',
-      'block-count',
-      // 费用与区块
       'fees-total',
-      'recommended-fee-rate',
-      'block-weight',
-      // 矿工与安全
-      'hashrate',
-      'difficulty',
-      'miner-revenue-usd',
     ])
   })
 

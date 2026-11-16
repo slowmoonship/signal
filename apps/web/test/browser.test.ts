@@ -163,16 +163,12 @@ describe.skipIf(!available)('真实浏览器：首页导航', () => {
     }
   }, TIMEOUT)
 
-  it('点击「矿工收入」进入矿工收入详情页', async () => {
+  it('点击「AHR999」进入囤币指数详情页', async () => {
     const browser = await launch()
     try {
       const page = await openHome(browser)
-      await clickAndWait(
-        page,
-        `a[href="${BASE_PATH}/metrics/miner-revenue-usd/"]`,
-        '**/metrics/miner-revenue-usd/',
-      )
-      expect(page.url()).toContain('/metrics/miner-revenue-usd')
+      await clickAndWait(page, `a[href="${BASE_PATH}/metrics/ahr999/"]`, '**/metrics/ahr999/')
+      expect(page.url()).toContain('/metrics/ahr999')
     } finally {
       await browser.close()
     }
@@ -280,7 +276,15 @@ describe.skipIf(!available)('真实浏览器：排版', () => {
       expect(rows.length).toBeGreaterThan(0)
       for (const r of rows) {
         expect(r.lines, `判定依据换行了：${r.text}`).toBeLessThanOrEqual(1)
+        expect(r.text, `判定依据出现了分位缩写：${r.text}`).not.toMatch(/P\d+/)
       }
+      const bases = (await page.evaluate(`(() => {
+        return Array.from(document.querySelectorAll('[data-basis]')).map((c) => (c.textContent || '').trim())
+      })()`)) as string[]
+      expect(bases.length).toBe(18)
+      for (const text of bases) expect(text).not.toMatch(/P\d+/)
+      const body = (await page.evaluate(`document.body.innerText`)) as string
+      expect(body, '首页仍出现分位缩写').not.toMatch(/P\d+/)
     } finally {
       await browser.close()
     }
@@ -357,7 +361,7 @@ describe.skipIf(!available)('真实浏览器：排版', () => {
 })
 
 describe.skipIf(!available)('真实浏览器：市场状态与页脚', () => {
-  it('市场状态卡片带着三档之一的中性/改善/恶化底色', async () => {
+  it('市场状态卡片带着三档之一的牛市/熊市/震荡底色', async () => {
     // 颜色必须由规则结果决定，而不是文案里有没有"上涨"两个字。
     // 这里只断言"三档之一"，具体落在哪一档由当时的快照决定。
     const browser = await launch()
@@ -369,7 +373,7 @@ describe.skipIf(!available)('真实浏览器：市场状态与页脚', () => {
         )
         return section ? String(section.className) : ''
       })()`)) as string
-      expect(cls).toMatch(/bg-market-(improving|deteriorating|neutral)/)
+      expect(cls).toMatch(/bg-market-(bull|bear|range)/)
     } finally {
       await browser.close()
     }
@@ -404,6 +408,114 @@ describe.skipIf(!available)('真实浏览器：市场状态与页脚', () => {
         expect(link.rel).toContain('noopener')
         expect(link.rel).toContain('noreferrer')
       }
+    } finally {
+      await browser.close()
+    }
+  }, TIMEOUT)
+})
+
+describe.skipIf(!available)('真实浏览器：估值与周期详情页', () => {
+  const pages = [
+    ['ahr999', 'AHR999', 'log'],
+    ['rainbow-zone', '彩虹图', 'log'],
+    ['pi-cycle-top', 'Pi Cycle', 'log'],
+    ['puell-multiple', 'Puell', 'log'],
+    ['mayer-multiple', 'Mayer', 'log'],
+    ['nupl', '未实现盈亏', 'linear'],
+    ['mvrv', 'MVRV', 'linear'],
+    ['mvrv-zscore', 'MVRV Z', 'linear'],
+    ['sma-200w', '200周均线', 'log'],
+    ['ma-2y', '2年倍数', 'log'],
+    ['hash-ribbons', '算力丝带', 'log'],
+    ['drawdown-ath', '距历史高点', 'linear'],
+  ] as const
+
+  it('经典指标详情图有可见曲线，对数轴不出现假零', async () => {
+    const browser = await launch()
+    try {
+      const page = await browser.newPage({ viewport: { width: 1366, height: 900 } })
+      for (const [id, title, scale] of pages) {
+        const res = await page.goto(`${SITE}/metrics/${id}/`, {
+          waitUntil: 'networkidle',
+          timeout: TIMEOUT,
+        })
+        expect(res?.status(), `${id} 应当 200`).toBe(200)
+        const heading = (await page.evaluate(`document.querySelector('h1')?.textContent || ''`)) as string
+        expect(heading, id).toContain(title)
+        const geom = (await page.evaluate(`(() => {
+          const lines = Array.from(document.querySelectorAll('polyline[data-chart-line]')).map((el) => {
+            const box = el.getBBox()
+            const pts = (el.getAttribute('points') || '').trim().split(/\\s+/).filter(Boolean)
+            return { width: box.width, height: box.height, n: pts.length }
+          })
+          const ticks = Array.from(document.querySelectorAll('svg text')).map((t) => (t.textContent || '').trim())
+          return {
+            lines,
+            ticks,
+            circles: document.querySelectorAll('svg circle').length,
+            zones: Array.from({ length: 9 }, (_, i) => document.querySelectorAll('polygon.fill-rainbow-' + (i + 1)).length),
+          }
+        })()`)) as {
+          lines: { width: number; height: number; n: number }[]
+          ticks: string[]
+          circles: number
+          zones: number[]
+        }
+        const visible = geom.lines.filter((line) => line.n >= 2 && line.width > 30 && line.height > 1)
+        expect(visible.length, `${id} 没有可见曲线`).toBeGreaterThan(0)
+        if (scale === 'log') {
+          for (const tick of geom.ticks) {
+            expect(tick, `${id} 对数刻度写成了 0`).not.toMatch(/^\$?0(\.0+)?$/)
+          }
+        }
+        if (id === 'rainbow-zone') {
+          expect(geom.zones.every((count) => count > 0), '彩虹九区没有都画出来').toBe(true)
+          const body = (await page.evaluate(`document.body.innerText`)) as string
+          expect(body).toMatch(/处于第\d\/9区/)
+        }
+        if (id === 'pi-cycle-top') expect(geom.circles).toBeGreaterThanOrEqual(4)
+      }
+    } finally {
+      await browser.close()
+    }
+  }, 120_000)
+
+  it('375 宽的彩虹图和 200 周均线没有横向溢出，曲线仍在', async () => {
+    const browser = await launch()
+    try {
+      const page = await browser.newPage({ viewport: { width: 375, height: 812 } })
+      for (const id of ['rainbow-zone', 'sma-200w']) {
+        await page.goto(`${SITE}/metrics/${id}/`, { waitUntil: 'networkidle', timeout: TIMEOUT })
+        const check = (await page.evaluate(`(() => {
+          const line = document.querySelector('polyline[data-chart-line]')
+          const box = line ? line.getBBox() : null
+          return {
+            overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            width: box ? box.width : 0,
+          }
+        })()`)) as { overflow: number; width: number }
+        expect(check.overflow, `${id} 在 375px 横向溢出`).toBeLessThanOrEqual(1)
+        expect(check.width, `${id} 在 375px 没有曲线`).toBeGreaterThan(30)
+      }
+    } finally {
+      await browser.close()
+    }
+  }, TIMEOUT)
+
+  it('375 宽的首页不横向溢出，分组名还在', async () => {
+    const browser = await launch()
+    try {
+      const page = await browser.newPage({ viewport: { width: 375, height: 812 } })
+      await page.goto(`${SITE}/`, { waitUntil: 'networkidle', timeout: TIMEOUT })
+      const fits = (await page.evaluate(
+        `document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1`,
+      )) as boolean
+      expect(fits).toBe(true)
+      const text = (await page.evaluate(`document.body.innerText`)) as string
+      expect(text).toContain('AHR999')
+      expect(text).toContain('彩虹图')
+      expect(text).toContain('估值与定投')
+      expect(text).toContain('牛熊周期')
     } finally {
       await browser.close()
     }

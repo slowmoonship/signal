@@ -209,10 +209,50 @@ export type HistoryCoverage = Readonly<{
  * 第三种（`dcaMaxWait`）**确实引入了假设**——"每天投 1 美元"是一个模型，
  * 不是链上事实。允许它的理由与代价见 ADR-014；它必须披露右删失观测数。
  *
+ * 第四种（`local`）是一组**版本化的本地公式**（AHR999、彩虹、Pi Cycle 等，ADR-029）。
+ * 它们引入的假设写在公式模块和指标的 methodology / limits 里，
+ * 计算只读父序列，不用未来数据，窗口不足时返回 null。
+ *
  * `left` / `right` / `base` 既可以是已注册指标 id（从库里已有序列推导），
  * 也可以是上游指标名（同源取两条序列相减）。两者都必须是 `sources` 里
  * 已声明的指标，否则定义校验会报错——避免拼错指标名却静默产出 0。
  */
+/**
+ * 本地公式的稳定 id。与指标 id 相同：公式和它发布出去的那条序列不能各叫各的。
+ *
+ * 这些公式只读已经发布的父序列（价格、市值、MVRV、发行收入、算力），
+ * 不再为每个指标单独打第三方 API。父序列清单在 `LOCAL_FORMULA_PARENTS`。
+ */
+export const LOCAL_FORMULA_IDS = [
+  'drawdown-ath',
+  'ahr999',
+  'rainbow-zone',
+  'pi-cycle-top',
+  'puell-multiple',
+  'mayer-multiple',
+  'nupl',
+  'mvrv-zscore',
+  'sma-200w',
+  'ma-2y',
+  'hash-ribbons',
+] as const
+export type LocalFormulaId = (typeof LOCAL_FORMULA_IDS)[number]
+
+/** 每个本地公式依赖的父指标。顺序即计算时的阅读顺序。 */
+export const LOCAL_FORMULA_PARENTS: Readonly<Record<LocalFormulaId, readonly string[]>> = {
+  'drawdown-ath': ['price'],
+  ahr999: ['price'],
+  'rainbow-zone': ['price'],
+  'pi-cycle-top': ['price'],
+  'puell-multiple': ['miner-revenue-usd'],
+  'mayer-multiple': ['price'],
+  nupl: ['mvrv'],
+  'mvrv-zscore': ['market-cap', 'mvrv'],
+  'sma-200w': ['price'],
+  'ma-2y': ['price'],
+  'hash-ribbons': ['hashrate'],
+}
+
 export type Derivation =
   | Readonly<{ kind: 'difference'; left: string; right: string }>
   | Readonly<{ kind: 'percentChange'; base: string; windowDays: number }>
@@ -224,6 +264,7 @@ export type Derivation =
       /** 回测窗口长度（天）。起点日在该窗口内枚举 */
       windowDays: number
     }>
+  | Readonly<{ kind: 'local'; formula: LocalFormulaId }>
 
 // ── 指标定义 ────────────────────────────────────────────
 
@@ -236,6 +277,8 @@ export type FormatSpec =
   | { kind: 'hashrate' }
   | { kind: 'satPerVbyte' }
   | { kind: 'days' }
+  /** 序数分区。`3` + `of: 9` 显示成「第3/9区」。百分比变化对序数没有含义。 */
+  | { kind: 'zone'; of: number }
 
 export type MetricDefinition = Readonly<{
   id: string
@@ -247,6 +290,13 @@ export type MetricDefinition = Readonly<{
   description: Localized
   /** 计算公式本身，不是公式的名字 */
   methodology: Localized
+  /**
+   * 模型局限性。省略 = 方法论里已经把边界说完。
+   *
+   * 估值模型单独放一块：读者先看公式，再看这句"它不能被当成什么"。
+   * 放进 methodology 会让公式和免责声明粘在同一段里，两件都读不清。
+   */
+  limits?: Localized
   unit: Unit
   frequency: MetricFrequency
   format: FormatSpec

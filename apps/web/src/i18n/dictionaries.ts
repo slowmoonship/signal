@@ -34,7 +34,14 @@ export type Dictionary = Readonly<{
   change7d: string
   changeWindow: string
   whatItMeasures: string
+  /** 详情页：状态是按哪条规则来的 */
+  whyThisStatus: string
+  /** 详情页：百分位的完整说法。首页不放这个。 */
+  historyRank: string
+  readingDisclaimer: string
   howItIsCalculated: string
+  /** 估值模型单独说清它不能被当成什么 */
+  limits: string
   dataSource: string
   history: string
   historyFrom: string
@@ -72,6 +79,10 @@ export type Dictionary = Readonly<{
   heroDays: string
   marketRead: string
   marketReadUnknown: string
+  /** 价格数据故障时的状态词（不是"震荡"） */
+  marketReadFault: string
+  /** 链上数据缺失时的补充说明 */
+  marketReadOnchainMissing: string
   /** 十年价格走势 */
   sparklineNoData: string
   sparklineNoHighlight: string
@@ -120,12 +131,11 @@ const zh: Dictionary = {
     valuation: '估值与周期',
   },
   homeGroups: {
-    marketOverview: '价格与市场',
-    valuationAnchors: '估值',
-    exchangeFlows: '交易所与持仓',
+    marketOverview: '市场行情',
+    valuationAnchors: '估值与定投',
+    cycle: '牛熊周期',
+    exchangeFlows: '资金流向',
     onchainActivity: '链上活动',
-    feesBlocks: '费用与区块',
-    miningSecurity: '矿工与安全',
   },
   updatedAt: '更新于',
   sourceTime: '来源时间',
@@ -141,7 +151,11 @@ const zh: Dictionary = {
   change7d: '7 日',
   changeWindow: '7 日变化',
   whatItMeasures: '这个数说明了什么',
+  whyThisStatus: '为什么是这个状态',
+  historyRank: '历史位置',
+  readingDisclaimer: '上面是读数的归类，不是买卖建议。历史上处在类似区间，不保证以后还这样走。',
   howItIsCalculated: '怎么算出来的',
+  limits: '模型边界',
   dataSource: '数据来源',
   history: '历史口径',
   historyFrom: '可得起点',
@@ -178,10 +192,12 @@ const zh: Dictionary = {
   heroStatReached: '已达标起点',
   heroStatUnreached: '尚未达标',
   heroStatMedian: '中位等待',
-  heroStatP90: 'P90 等待',
+  heroStatP90: '九成等待',
   heroDays: '天',
   marketRead: '市场状态',
   marketReadUnknown: '部分输入缺失或已过期。',
+  marketReadFault: '数据故障',
+  marketReadOnchainMissing: '链上数据缺失，仅依据价格趋势',
 
   sparklineNoData: '价格历史不足，无法绘制走势图。',
   sparklineNoHighlight: '当前快照里没有可用的最长等待区间。',
@@ -208,8 +224,8 @@ const zh: Dictionary = {
   distributionCount: '个已达标起点',
   distributionMin: '最短',
   distributionP50: '中位',
-  distributionP90: 'P90',
-  distributionP99: 'P99',
+  distributionP90: '九成',
+  distributionP99: '九十九',
   distributionMax: '最长',
   daysUnit: '天',
   excludedCosts: '未计入手续费、滑点与税。',

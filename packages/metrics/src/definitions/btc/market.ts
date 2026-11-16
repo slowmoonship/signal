@@ -147,3 +147,55 @@ export const priceChange7d = defineMetric({
   missingPolicy: 'null',
   betterWhen: null,
 })
+
+export const drawdownAth = defineMetric({
+  id: 'drawdown-ath',
+  asset: 'btc',
+  category: 'market',
+  name: { en: 'Drawdown from ATH', zh: '距历史高点' },
+  description: {
+    en: 'How far the daily reference price sits below the highest PriceUSD on or before that day.',
+    zh: '日均参考价比截至当日的最高 PriceUSD 低多少。',
+  },
+  methodology: {
+    en: 'Version drawdown-ath-v1. (price / running maximum − 1) × 100. The running maximum uses only positive prices on or before that day. A null does not update the maximum and does not reset it. The day of the maximum itself is 0. A missing price is null. PriceUSD is a UTC-day average of reference quotes, not an exchange extreme print.',
+    zh: '版本 drawdown-ath-v1。（当日价格 / 截至当日的最高价 − 1）× 100。最高价只使用当日及更早的正价格。null 不更新最高价，也不把最高价清零。当日就是最高价时为 0。价格缺失则为 null。PriceUSD 是参考报价的 UTC 日均，不是某一笔成交的极值。',
+  },
+  limits: {
+    en: 'This is a distance from a past high. It is not an estimate of the next high.',
+    zh: '这是离过去最高价的距离，不是对下一个最高价的估计。',
+  },
+  unit: 'percent',
+  frequency: '1d',
+  format: { kind: 'percent', maxDecimals: 1 },
+  contract: {
+    unit: 'percent',
+    scale: 1,
+    aggregation: 'last',
+    window: 'calendar-day-utc',
+    labelSemantics: LABEL_SEMANTICS.none,
+  },
+  sources: [
+    {
+      provider: 'Coin Metrics',
+      metric: 'PriceUSD',
+      endpoint: cmEndpoint('PriceUSD'),
+      auth: 'none',
+      labelConfidence: 'verified',
+    },
+  ],
+  deriveFrom: ['price'],
+  derivation: { kind: 'local', formula: 'drawdown-ath' },
+  canBeNegative: true,
+  changeWindowDays: null,
+  history: {
+    availableFrom: '2010-07-18',
+    note: {
+      en: 'Starts with PriceUSD. The first day is 0 because that day is its own maximum.',
+      zh: '与 PriceUSD 同一天开始。第一天是 0，因为那天的最高价就是它自己。',
+    },
+    mayBeRevised: false,
+  },
+  missingPolicy: 'null',
+  betterWhen: null,
+})

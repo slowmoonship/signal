@@ -6,25 +6,28 @@
  * 白名单放这里，是为了让"首页放哪几个"这件事也由唯一事实源说了算。
  *
  * **行数不设硬上限，但有取舍标准**：一个组里的指标要能互相解释。
- * 价格与市值放一起是因为后者是前者的换算；活跃地址与交易笔数放一起是因为它们
- * 一起回答"链上还有多少人用"。反过来，`block-tx-count` 与 `tx-count` 高度重合
- * （前者是后者的每日均值），两个都放就只是把同一个事实说了两遍，因此只上一个。
- * 注册表里的其余指标一律保留：仍然有详情页，仍然参与规则计算，只是不上首页表格。
+ * 估值组里的 AHR999、彩虹、MVRV、NUPL、Mayer 都从价格或市值写出来，
+ * 放在一起是为了让读者看见它们是同一类问题的不同口径，而不是五张独立的选票。
+ * 它们不进入三态分类（ADR-029）。
  *
- * 展示分组与注册表的 `category` 不是一回事，但**一一对应**——
- * 六组正好用满六个分类底色 token，不需要为分组新增颜色。
+ * 注册表里的其余指标一律保留：仍然有详情页，只是不上首页表格。
+ * 出块数、区块权重、网络难度留在目录里，不再占比估值指标更显眼的位置。
  */
 
 import { registry } from './definitions/index.js'
 
-/** 首页展示分组。每组对应一个分类底色 token（见 `globals.css` 的 `--cat-*`）。 */
+/**
+ * 首页展示分组。
+ *
+ * `cycle` 复用 `--cat-fees`：费用与挖矿两组已经离开首页，
+ * 这个色相在表格上不再和另一组相邻。不为第五组再发明第七个色相。
+ */
 export const HOME_GROUP_KEYS = [
   'marketOverview',
   'valuationAnchors',
+  'cycle',
   'exchangeFlows',
   'onchainActivity',
-  'feesBlocks',
-  'miningSecurity',
 ] as const
 export type HomeGroupKey = (typeof HOME_GROUP_KEYS)[number]
 
@@ -36,16 +39,21 @@ export type HomeGroup = Readonly<{
 /**
  * 首页右侧表格的内容与顺序。
  *
- * 顺序即读者的阅读顺序：现在这个市场处在什么价 → 贵不贵 →
- * 钱往哪走 → 有没有人用 → 用得多不多 → 矿工赚不赚钱。
+ * 顺序即读者的阅读顺序：价格到了哪 → 估值口径怎么说 →
+ * 周期位置在哪 → 交易所里的币怎么流 → 链上还有没有人用。
  */
 export const HOME_GROUPS: readonly HomeGroup[] = [
-  { key: 'marketOverview', metricIds: ['price', 'price-change-7d', 'supply'] },
-  { key: 'valuationAnchors', metricIds: ['market-cap', 'mvrv'] },
-  { key: 'exchangeFlows', metricIds: ['exchange-netflow', 'exchange-balance', 'pool-concentration'] },
-  { key: 'onchainActivity', metricIds: ['active-addresses', 'tx-count', 'block-count'] },
-  { key: 'feesBlocks', metricIds: ['fees-total', 'recommended-fee-rate', 'block-weight'] },
-  { key: 'miningSecurity', metricIds: ['hashrate', 'difficulty', 'miner-revenue-usd'] },
+  { key: 'marketOverview', metricIds: ['price', 'price-change-7d', 'drawdown-ath'] },
+  {
+    key: 'valuationAnchors',
+    metricIds: ['ahr999', 'rainbow-zone', 'mvrv', 'mvrv-zscore', 'nupl', 'mayer-multiple'],
+  },
+  {
+    key: 'cycle',
+    metricIds: ['pi-cycle-top', 'sma-200w', 'ma-2y', 'puell-multiple', 'hash-ribbons'],
+  },
+  { key: 'exchangeFlows', metricIds: ['exchange-netflow', 'exchange-balance'] },
+  { key: 'onchainActivity', metricIds: ['active-addresses', 'fees-total'] },
 ]
 
 /** 首页白名单的全部指标 id（去重后的顺序即展示顺序）。 */

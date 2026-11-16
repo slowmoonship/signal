@@ -16,15 +16,13 @@
  */
 
 import {
-  buildFeatureTable,
-  deriveAllStatuses,
+  classifyRegime,
   HERO_METRIC_ID,
   HOME_GROUPS,
   readMarketScenario,
   registry,
   SITE_LOCALE,
   SPARKLINE_PRICE_METRIC_ID,
-  STATUS_SPECS,
   type MetricDefinition,
   type PublishedMetric,
 } from '@slowmoonship/metrics'
@@ -32,6 +30,7 @@ import {
 import { HeroMetric, MarketRead } from '@/components/HeroMetric'
 import { MetricTable, type MetricGroup } from '@/components/MetricTable'
 import { loadAsset, type LoadResult } from '@/data/load'
+import { siteRead } from '@/data/read'
 import { getDictionary } from '@/i18n/dictionaries'
 import { formatAge, formatUtcDateTime } from '@/lib/format-time'
 
@@ -65,11 +64,16 @@ export function HomeView() {
   const nowMs = Date.now()
   const outdated = newest !== null && nowMs - Date.parse(newest) > 3 * 24 * 3_600_000
 
-  // 市场解释与状态列：特征标准化 → 场景匹配 / 分位分档 → 一句话或一个词。
+  // 市场解释与状态列：特征标准化 → 场景匹配 / 分位分档 / 三态分类 → 一句话或一个词。
   // 全部住在 packages/metrics，页面层只取结论（CLAUDE.md §架构边界）。
-  const { features } = buildFeatureTable(publishedOf(data))
+  //
+  // 三条结论各司其职，不互相顶替：
+  // - `regime`：**方向分类**（牛市 / 熊市 / 震荡），卡片底色只跟它走；
+  // - `read`：**解释性文案**（场景规则给出的那一句）；
+  // - `statuses`：**指标当前状态**（分位档 / 方向）。
+  const { features, statuses, readings } = siteRead()
   const read = readMarketScenario(features)
-  const statuses = deriveAllStatuses(STATUS_SPECS, features)
+  const regime = classifyRegime(features)
 
   return (
     <div>
@@ -114,7 +118,7 @@ export function HomeView() {
             />
           ) : null}
 
-          <MarketRead locale={locale} read={read} features={features} />
+          <MarketRead locale={locale} read={read} regime={regime} features={features} />
 
           <p className="mt-4 font-mono text-xs text-ink-subtle tabular-nums">
             {newest
@@ -134,6 +138,7 @@ export function HomeView() {
             changeWindowFor={changeWindowFor}
             statuses={statuses}
             features={features}
+            readings={readings}
           />
         </div>
       </div>
@@ -161,17 +166,6 @@ function homeGroups(): MetricGroup[] {
 /** 一条成功的结果；失败或缺失一律归一成 null，页面不该处理第三种状态 */
 function ok(result: LoadResult<PublishedMetric> | undefined): PublishedMetric | null {
   return result?.ok === true ? result.value : null
-}
-
-/** 成功加载的快照。缺失的自动退出判定。 */
-function publishedOf(
-  data: ReadonlyMap<string, LoadResult<PublishedMetric>>,
-): PublishedMetric[] {
-  const out: PublishedMetric[] = []
-  for (const result of data.values()) {
-    if (result.ok) out.push(result.value)
-  }
-  return out
 }
 
 function newestSourceTime(data: ReadonlyMap<string, LoadResult<PublishedMetric>>): string | null {

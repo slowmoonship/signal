@@ -133,6 +133,10 @@ export function formatValue(value: number | null, spec: FormatSpec, locale: Loca
           : `≈ ${nf(locale, { maximumFractionDigits: 1 }).format(years)} yr`
       return locale === 'zh' ? `${exact} 天（${approx}）` : `${exact} days (${approx})`
     }
+    case 'zone': {
+      const zone = Math.round(value)
+      return locale === 'zh' ? `第${zone}/${spec.of}区` : `${zone}/${spec.of}`
+    }
   }
 }
 
@@ -169,4 +173,46 @@ export function formatAxisTick(value: number, locale: Locale): string {
 /** 缺失占位。调用方在需要"显示点什么"时才用它，而不是在格式化层。 */
 export function formatOrMissing(value: string | null): string {
   return value ?? MISSING
+}
+
+/**
+ * 对数轴上落在可见范围内的 10 的整数次幂。
+ * 不用最小/最大/几何平均当刻度：0.12、142、2.99M 读不出价格量级。
+ */
+export function logMajorTicks(min: number, max: number): number[] {
+  if (!(min > 0) || !(max > min)) return []
+  const lo = Math.floor(Math.log10(min))
+  const hi = Math.ceil(Math.log10(max))
+  const ticks: number[] = []
+  for (let exp = lo; exp <= hi; exp += 1) {
+    const tick = 10 ** exp
+    if (tick >= min * 0.999 && tick <= max * 1.001) ticks.push(tick)
+  }
+  if (ticks.length >= 2 && ticks.length <= 8) return ticks
+  if (ticks.length > 8) {
+    const step = Math.ceil(ticks.length / 6)
+    const thinned = ticks.filter((_, index) => index % step === 0)
+    const last = ticks[ticks.length - 1]
+    if (last !== undefined && thinned[thinned.length - 1] !== last) thinned.push(last)
+    return thinned
+  }
+  return [min, max]
+}
+
+/**
+ * 对数刻度的文字。正数不能收成「0」。
+ * `usd` 只给价格轴，比值轴不加货币符号。
+ */
+export function formatLogTick(value: number, locale: Locale, style: 'plain' | 'usd' = 'plain'): string {
+  if (!(value > 0) || !Number.isFinite(value)) return ''
+  let body: string
+  if (value >= 1e12) body = `${nf(locale, { maximumFractionDigits: 2 }).format(value / 1e12)}T`
+  else if (value >= 1e9) body = `${nf(locale, { maximumFractionDigits: 2 }).format(value / 1e9)}B`
+  else if (value >= 1e6) body = `${nf(locale, { maximumFractionDigits: 2 }).format(value / 1e6)}M`
+  else if (value >= 1e3) body = `${nf(locale, { maximumFractionDigits: value >= 1e4 ? 0 : 1 }).format(value / 1e3)}K`
+  else if (value >= 1) body = nf(locale, { maximumFractionDigits: 0 }).format(value)
+  else if (value >= 0.01) body = value.toFixed(2)
+  else body = value.toExponential(0)
+  if (body === '0' || body === '0.00' || body === '-0') body = value.toExponential(0)
+  return style === 'usd' ? `$${body}` : body
 }

@@ -21,8 +21,8 @@ import {
 const byId = new Map(btcMetrics.map((d) => [d.id, d]))
 
 describe('注册表', () => {
-  it('BTC 指标共 20 个', () => {
-    expect(registry.byAsset('btc')).toHaveLength(20)
+  it('BTC 指标共 31 个', () => {
+    expect(registry.byAsset('btc')).toHaveLength(31)
   })
 
   it('id 唯一且全部为小写连字符', () => {
@@ -36,17 +36,17 @@ describe('注册表', () => {
     expect(errors).toEqual([])
   })
 
-  it('分类分布为 market 3 / onchain 3 / exchange 2 / fees 5 / mining 4 / valuation 3', () => {
+  it('分类分布为 market 4 / onchain 3 / exchange 2 / fees 5 / mining 5 / valuation 12', () => {
     const counts = Object.fromEntries(
       registry.grouped('btc').map((g) => [g.category, g.metrics.length]),
     )
     expect(counts).toEqual({
-      market: 3,
+      market: 4,
       onchain: 3,
       exchange: 2,
       fees: 5,
-      mining: 4,
-      valuation: 3,
+      mining: 5,
+      valuation: 12,
     })
   })
 
@@ -82,6 +82,10 @@ describe('双语文案齐全', () => {
       for (const field of LOCALIZED_FIELDS) {
         expect(def[field].en.trim(), `${def.id}.${field}.en`).not.toBe('')
         expect(def[field].zh.trim(), `${def.id}.${field}.zh`).not.toBe('')
+      }
+      if (def.limits) {
+        expect(def.limits.en.trim(), `${def.id}.limits.en`).not.toBe('')
+        expect(def.limits.zh.trim(), `${def.id}.limits.zh`).not.toBe('')
       }
     }
   })
@@ -184,7 +188,9 @@ describe('派生指标', () => {
       const upstream = def.sources.map((s) => s.metric)
       const covered =
         (parents.length > 0 &&
-          (def.derivation.kind === 'percentChange' || def.derivation.kind === 'dcaMaxWait')) ||
+          (def.derivation.kind === 'percentChange' ||
+            def.derivation.kind === 'dcaMaxWait' ||
+            def.derivation.kind === 'local')) ||
         (upstream.length > 1 && def.derivation.kind === 'difference')
       expect(covered, `${def.id} 的 derivation 没有对应依赖声明`).toBe(true)
     }
@@ -271,11 +277,13 @@ describe('变化列窗口', () => {
     }
   })
 
-  it('关闭变化列的只有两种理由：本身就是变化量，或会取负值', () => {
+  it('关闭变化列要有理由：本身就是变化量、会取负值，或区号', () => {
     for (const def of btcMetrics) {
       if (def.changeWindowDays !== null) continue
       const justified =
-        def.derivation?.kind === 'percentChange' || def.canBeNegative === true
+        def.derivation?.kind === 'percentChange' ||
+        def.canBeNegative === true ||
+        def.format.kind === 'zone'
       expect(justified, `${def.id} 无理由关闭变化列`).toBe(true)
     }
   })

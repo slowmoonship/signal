@@ -103,10 +103,10 @@ export const difficulty = defineMetric({
     },
   ],
   history: {
-    availableFrom: null,
+    availableFrom: '2025-10-01',
     note: {
-      en: 'Read from the chain tip once per daily run: history starts on the day Signal began collecting and grows one point per day. Difficulty is reconstructible from block headers, but Signal does not backfill it.',
-      zh: '每日从链尖读取一次：历史自 Signal 开始采集之日起累积，每天增加一个点。难度本身可由区块头回溯重建，但 Signal 不做回补。',
+      en: 'One point per day, the difficulty of the chain-tip block at sampling time. Back to 2025-10-01 the series is reconstructed deterministically from block headers (the nBits field, via Bitcoin Core’s GetDifficulty formula), which matches the Blockstream difficulty field bit for bit. Values before that date are also reconstructible from block headers but Signal does not fetch them. Difficulty changes only at retargets, so the series is a staircase.',
+      zh: '每天一个点，取采样时链尖区块的难度。2025-10-01 以前的历史由区块头（nBits 字段，按 Bitcoin Core 的 GetDifficulty 公式）确定性重建，与 Blockstream 的 difficulty 字段逐位一致；更早的历史同样可由区块头重建，Signal 不再往前抓取。难度只在调整周期边界跳变，因此这条序列是阶梯形的。',
     },
     mayBeRevised: false,
   },
@@ -150,10 +150,10 @@ export const poolConcentration = defineMetric({
     },
   ],
   history: {
-    availableFrom: null,
+    availableFrom: '2025-10-01',
     note: {
-      en: 'Computed from the trailing 30-day window mempool.space publishes, sampled once per daily run: history starts on the day Signal began collecting and grows one point per day.',
-      zh: '由 mempool.space 发布的 30 天滚动窗口计算，每日抓取时采样一次：历史自 Signal 开始采集之日起累积，每天增加一个点。',
+      en: 'Back to 2025-10-01 the daily rolling HHI is reconstructed block by block from mempool.space’s per-block pool tags (a 31-day window of block shares, matching that service’s own trailing-month aggregate exactly). From the collection date on, one point per day sampled from the published rolling window. The values may be revised whenever upstream revises its pool attribution.',
+      zh: '2025-10-01 以前的逐日滚动 HHI 由逐区块的矿池标注重建（31 天出块份额窗口，与该服务自己的月度聚合逐池核对一致）；自采集日起每天一个点，取自上游发布的滚动窗口。上游修正矿池归属时，历史值可能随之修正。',
     },
     mayBeRevised: true,
   },

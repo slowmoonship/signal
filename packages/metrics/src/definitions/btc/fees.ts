@@ -147,7 +147,14 @@ export const recommendedFeeRate = defineMetric({
       labelConfidence: 'verified',
     },
   ],
-  history: { ...selfCollected },
+  history: {
+    availableFrom: null,
+    note: {
+      en: 'Sampled once per daily run: history starts on the day Signal began collecting and grows one point per day. There is no backfillable history — the recommended fee is the service’s suggestion derived from its view of the mempool at that moment, and no historical series of that suggestion is published. Historical confirmation fee rates exist but measure what transactions actually paid, which is not the same thing and is not spliced in.',
+      zh: '每日抓取时采样一次：历史从 Signal 开始采集之日起累积，每天增加一个点。这条序列无法回补——推荐费率是该服务在采样时刻基于自身内存池视图给出的建议值，没有历史建议值序列可取。历史确认费率确实存在，但那度量的是交易实际支付的费用，与推荐费率不是同一个口径，因此不拿来拼接。',
+    },
+    mayBeRevised: false,
+  },
   missingPolicy: 'null',
   betterWhen: 'lower',
 })
@@ -221,7 +228,14 @@ export const blockWeight = defineMetric({
       labelConfidence: 'verified',
     },
   ],
-  history: { ...selfCollected },
+  history: {
+    availableFrom: '2025-10-01',
+    note: {
+      en: 'One point per day, the weight of the chain-tip block at sampling time. Back to 2025-10-01 the series is reconstructed from block history: the weight field of the same block the daily run would have sampled. Values before that date are reconstructible from block history too, but Signal does not fetch them.',
+      zh: '每天一个点，取采样时链尖区块的权重。2025-10-01 以前的历史由区块历史重建：取的是每日采样本应取到的那个区块的 weight 字段。更早的历史同样可重建，Signal 不再往前抓取。',
+    },
+    mayBeRevised: false,
+  },
   missingPolicy: 'null',
   betterWhen: null,
 })

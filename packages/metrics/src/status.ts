@@ -239,6 +239,10 @@ export function statusBasis(
 ): string {
   if (!status.ok) return statusReason(status, locale)
   if (!obs) return locale === 'zh' ? '—' : '—'
+  if (obs.note) {
+    const text = locale === 'zh' ? obs.note.zh : obs.note.en
+    if (text.trim() !== '') return text
+  }
   if (status.via === 'flow' || status.via === 'divergence') {
     const magnitude = Math.abs(obs.observed).toLocaleString('en-US', { maximumFractionDigits: 0 })
     const direction: LocalizedText =

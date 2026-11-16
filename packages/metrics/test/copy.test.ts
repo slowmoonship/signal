@@ -29,6 +29,7 @@ function metricCopy(id: string): string {
     flat(def.name),
     flat(def.description),
     flat(def.methodology),
+    def.limits ? flat(def.limits) : '',
     history,
   ].join('\n')
 }

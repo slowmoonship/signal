@@ -5,13 +5,14 @@
  * 单个指标失败**不影响其他指标**；失败指标只标记 stale，
  * 绝不覆盖上一份有效快照。
  *
- * 三条取数路径：
+ * 取数路径：
  * 1. 直接取：定义里第一个可用来源取到就用；取数失败才试下一个来源（fallback）。
  * 2. 差值派生：交易所净流入这类"两条上游相减"，两条都取到才算得出。
  * 3. 百分比派生：7 日价格变化这类"对某条已注册序列做窗口对比"，
  *    取基准序列后本地计算。
  * 4. 定投回测：枚举价格序列上的每一个起点，取首次达标的等待天数。
  *    与前三者不同，它会**排除一部分观测**，因此额外产出 coverage。
+ * 5. 本地公式：只读已经发布或已经落库的父序列（ADR-029），不再请求上游。
  *
  * fallback 只在**口径检查通过**之后才允许发生，且最终用到的来源会写进快照。
  * 口径不兼容一律直接失败——静默换源等于把两种含义不同的数字混成一条曲线。
@@ -23,6 +24,7 @@ import {
   maxDcaWaitSeries,
   percentChangeSeries,
   registry,
+  runLocalFormula,
   subtractSeries,
   toUtcSecondsBrand,
   type Asset,
@@ -41,7 +43,8 @@ import { isAvailable, resolveAdapter } from '../sources/index.js'
 import type { FetchContext, Logger, RawSeries, SourceAdapter } from '../sources/types.js'
 import type { SnapshotStore } from '../store/db.js'
 import { publishJson, assertPublishable } from '../publish/atomic.js'
-import { mergePublishedPoints, readPublished } from '../publish/merge.js'
+import { collapseToDailySamples, mergePublishedPoints, readPublished } from '../publish/merge.js'
+import { publishDir as defaultPublishDir } from '../paths.js'
 
 export const consoleLogger: Logger = {
   debug: (m) => console.log(`  · ${m}`),
@@ -264,6 +267,85 @@ async function fetchPercentChange(
  * 造一个 brand 断言等于骗编译器）。落库前在这里把时间戳重新盖上 brand，
  * 边界只在这一处，方向也只有这一处。
  */
+/**
+ * 本地公式：父序列来自「已发布 JSON ∪ 本轮库」，不打网络。
+ *
+ * 短库不能盖掉已发布的长历史，所以先按发布规则合并再计算。
+ * `--only` 在空库上也能算：父文件已经在 public/data 里。
+ * 一个有效点都没有就抛错，外层会标 stale 并保留上一份，而不是写出一条空序列。
+ */
+function fetchLocal(
+  def: MetricDefinition,
+  d: Extract<NonNullable<MetricDefinition['derivation']>, { kind: 'local' }>,
+  opts: IngestOptions,
+): Resolved {
+  const dir = opts.publishDir ?? defaultPublishDir()
+  const logger = opts.logger ?? consoleLogger
+  const parents = def.deriveFrom ?? []
+  if (parents.length === 0) {
+    throw new Error(`本地公式 ${def.id} 没有声明父序列`)
+  }
+
+  const inputs: Record<string, SeriesPoint[]> = {}
+  const times: string[] = []
+  for (const parentId of parents) {
+    const published = readPublished(dir, parentId, (message) => logger.warn(message))
+    const stored = opts.store.readPoints(parentId)
+    const merged = collapseToDailySamples(mergePublishedPoints(published?.points ?? null, stored))
+    if (!merged.some((p) => p.value !== null)) {
+      throw new Error(`本地公式 ${def.id} 缺少父指标 ${parentId} 的有效点`)
+    }
+    inputs[parentId] = merged
+    const meta = opts.store.readMeta(parentId)
+    if (published?.sourceTime) times.push(published.sourceTime)
+    if (meta?.sourceTime) times.push(meta.sourceTime)
+  }
+
+  const result = runLocalFormula(d.formula, inputs)
+  const points = toStoredPoints(result.points)
+  if (!points.some((p) => p.value !== null)) {
+    throw new Error(`本地公式 ${d.formula} 没有产出任何有效点`)
+  }
+
+  const sourceTime = earliestIso(times) ?? isoFromLatest(points)
+  const labelConfidence: LabelConfidence = def.sources.every((s) => s.labelConfidence === 'verified')
+    ? 'verified'
+    : 'heuristic'
+
+  return {
+    raw: {
+      points,
+      contract: def.contract,
+      sourceTime,
+      labelConfidence,
+      warnings: [...result.warnings],
+    },
+    sources: [...def.sources],
+  }
+}
+
+function earliestIso(times: readonly string[]): string | null {
+  let best: string | null = null
+  let bestMs = Number.POSITIVE_INFINITY
+  for (const time of times) {
+    const ms = Date.parse(time)
+    if (Number.isNaN(ms)) continue
+    if (ms < bestMs) {
+      bestMs = ms
+      best = time
+    }
+  }
+  return best
+}
+
+function isoFromLatest(points: readonly Point[]): string {
+  let latest = 0
+  for (const p of points) {
+    if (p.value !== null && p.ts > latest) latest = p.ts
+  }
+  return new Date(latest * 1000).toISOString()
+}
+
 function toStoredPoints(points: readonly SeriesPoint[]): Point[] {
   return points.map((p) => ({ ts: toUtcSecondsBrand(p.ts), value: p.value }))
 }
@@ -368,7 +450,9 @@ export async function ingestMetric(
           ? await fetchPercentChange(def, derived, opts)
           : derived?.kind === 'dcaMaxWait'
             ? await fetchDcaMaxWait(def, derived, opts)
-            : await fetchDirect(def, opts)
+            : derived?.kind === 'local'
+              ? fetchLocal(def, derived, opts)
+              : await fetchDirect(def, opts)
 
     const raw = resolved.raw
     const nullPoints = raw.points.filter((p) => p.value === null).length
@@ -521,7 +605,10 @@ function publishAll(opts: IngestOptions, outcomes: readonly MetricOutcome[]): nu
       continue
     }
 
-    const points = mergePublishedPoints(previous?.points ?? null, fresh)
+    // 合并之后收敛到每天一个点：工作流同一天可能跑两次（cron + push 各一次），
+    // 点采样类指标会因此一天冒出两个采样，「日频」的口径当场失守。
+    // 收敛规则见 collapseToDailySamples（有值优先、同值取最晚）。
+    const points = collapseToDailySamples(mergePublishedPoints(previous?.points ?? null, fresh))
 
     // 合并后必须仍有有效数据点。真的一个都没有（既没有旧文件、
     // 本轮又没抓到）时拒绝写这份文件——宁可不更新，也不能把指标清空。

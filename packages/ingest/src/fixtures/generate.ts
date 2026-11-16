@@ -20,10 +20,12 @@ import {
   maxDcaWaitSeries,
   percentChangeSeries,
   registry,
+  runLocalFormula,
   subtractSeries,
   toUtcSecondsBrand,
   type MetricDefinition,
   type Point,
+  type SeriesPoint,
   type PublishedMetric,
   type UtcSeconds,
 } from '@slowmoonship/metrics'
@@ -279,7 +281,12 @@ export function generateFixtures(opts: FixtureOptions): Map<string, PublishedMet
   const pricePoints = points(price, dayStartMs)
 
   const out = new Map<string, PublishedMetric>()
+  const pendingLocal: MetricDefinition[] = []
   for (const def of registry.byAsset('btc')) {
+    if (def.derivation?.kind === 'local') {
+      pendingLocal.push(def)
+      continue
+    }
     const seriesValues = series[def.id]
     const pointValue: number | undefined = pointMetrics[def.id]
     const dca = dcaOf(def, pricePoints)
@@ -294,6 +301,30 @@ export function generateFixtures(opts: FixtureOptions): Map<string, PublishedMet
         : [{ ts: tipTs, value: pointValue ?? null }]
 
     out.set(def.id, buildFixtureFile(def, data, tipTs, dca))
+  }
+
+  // 本地公式第二遍：父序列已经在 out 里。
+  // 合成价格从约 2016 年才开始，盖不住彩虹图 2012–2017 的拟合窗，
+  // 那种情况下公式返回全 null，fixture 照样收下并写进警告，不改拟合窗。
+  for (const def of pendingLocal) {
+    const derivation = def.derivation
+    if (!derivation || derivation.kind !== 'local') continue
+    const inputs: Record<string, readonly SeriesPoint[]> = {}
+    for (const parent of def.deriveFrom ?? []) {
+      inputs[parent] = out.get(parent)?.points ?? []
+    }
+    let points: Point[] = []
+    let warnings: string[] = []
+    try {
+      const result = runLocalFormula(derivation.formula, inputs)
+      points = result.points.map((p) => ({ ts: toUtcSecondsBrand(p.ts), value: p.value }))
+      warnings = [...result.warnings]
+    } catch (e) {
+      warnings = [`fixture 无法计算 ${def.id}：${e instanceof Error ? e.message : String(e)}`]
+    }
+    if (points.length === 0) points = [{ ts: tipTs, value: null }]
+    const file = buildFixtureFile(def, points, tipTs)
+    out.set(def.id, { ...file, warnings: [...file.warnings, ...warnings] })
   }
   return out
 }
