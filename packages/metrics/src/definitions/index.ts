@@ -8,9 +8,10 @@
 import { createRegistry } from '../registry.js'
 import type { MetricDefinition } from '../types.js'
 import { btcMetrics } from './btc/index.js'
+import { mstrMetrics } from './mstr/index.js'
 
-const DEFINITIONS: readonly MetricDefinition[] = [...btcMetrics]
+const DEFINITIONS: readonly MetricDefinition[] = [...btcMetrics, ...mstrMetrics]
 
 export const registry = createRegistry(DEFINITIONS)
 
-export { btcMetrics }
+export { btcMetrics, mstrMetrics }

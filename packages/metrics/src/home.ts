@@ -28,6 +28,7 @@ export const HOME_GROUP_KEYS = [
   'cycle',
   'exchangeFlows',
   'onchainActivity',
+  'strategy',
 ] as const
 export type HomeGroupKey = (typeof HOME_GROUP_KEYS)[number]
 
@@ -43,17 +44,15 @@ export type HomeGroup = Readonly<{
  * 周期位置在哪 → 交易所里的币怎么流 → 链上还有没有人用。
  */
 export const HOME_GROUPS: readonly HomeGroup[] = [
-  { key: 'marketOverview', metricIds: ['price', 'price-change-7d', 'drawdown-ath'] },
+  { key: 'marketOverview', metricIds: ['price', 'drawdown-ath'] },
+  { key: 'valuationAnchors', metricIds: ['ahr999', 'rainbow-zone', 'mvrv-zscore'] },
+  { key: 'cycle', metricIds: ['pi-cycle-top', 'sma-200w', 'puell-multiple'] },
+  { key: 'exchangeFlows', metricIds: ['exchange-netflow'] },
+  { key: 'onchainActivity', metricIds: ['active-addresses'] },
   {
-    key: 'valuationAnchors',
-    metricIds: ['ahr999', 'rainbow-zone', 'mvrv', 'mvrv-zscore', 'nupl', 'mayer-multiple'],
+    key: 'strategy',
+    metricIds: ['mstr-price', 'mstr-btc-beta-90d', 'strategy-btc-holdings', 'strategy-btc-per-share'],
   },
-  {
-    key: 'cycle',
-    metricIds: ['pi-cycle-top', 'sma-200w', 'ma-2y', 'puell-multiple', 'hash-ribbons'],
-  },
-  { key: 'exchangeFlows', metricIds: ['exchange-netflow', 'exchange-balance'] },
-  { key: 'onchainActivity', metricIds: ['active-addresses', 'fees-total'] },
 ]
 
 /** 首页白名单的全部指标 id（去重后的顺序即展示顺序）。 */

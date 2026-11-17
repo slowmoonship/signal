@@ -19,6 +19,7 @@ import {
   deriveStatus,
   FEATURE_SPEC_BY_ID,
   HOME_METRIC_IDS,
+  interpretMetric,
   statusBasis,
   statusReason,
   statusWord,
@@ -301,9 +302,11 @@ describe('整表', () => {
     const features = table({})
     const statuses = deriveAllStatuses(STATUS_SPECS, features)
     for (const id of HOME_METRIC_IDS) {
+      if (!STATUS_SPECS.some((spec) => spec.metricId === id)) {
+        expect(interpretMetric(id, { features, series: {} }), `${id} 没有读法`).not.toBeNull()
+        continue
+      }
       expect(statuses.has(id), `${id} 没有状态`).toBe(true)
-      const status = statuses.get(id)
-      expect(status).toBeDefined()
     }
   })
 

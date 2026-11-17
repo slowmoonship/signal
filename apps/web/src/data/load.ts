@@ -17,6 +17,7 @@ import {
   type Asset,
   type DcaDistribution,
   type DcaWorstCase,
+  type MetricModel,
   type ObservationCoverage,
   type PublishedMetric,
 } from '@slowmoonship/metrics'
@@ -87,8 +88,9 @@ export function parsePublishedMetric(raw: unknown, expectedId: string): LoadResu
   if (raw['metricId'] !== expectedId) {
     return { ok: false, reason: 'invalid', detail: `metricId 为 ${String(raw['metricId'])}` }
   }
-  if (raw['asset'] !== 'btc' && raw['asset'] !== 'eth' && raw['asset'] !== 'sol') {
-    return { ok: false, reason: 'invalid', detail: `未知 asset ${String(raw['asset'])}` }
+  const asset = raw['asset']
+  if (asset !== 'btc' && asset !== 'eth' && asset !== 'sol' && asset !== 'mstr') {
+    return { ok: false, reason: 'invalid', detail: `未知 asset ${String(asset)}` }
   }
   if (!isRecord(raw['contract'])) return { ok: false, reason: 'invalid', detail: '缺少 contract' }
 
@@ -186,11 +188,14 @@ export function parsePublishedMetric(raw: unknown, expectedId: string): LoadResu
     distribution = { count, min, p50, p90, p99, max }
   }
 
+  const model = parseModel(raw['model'])
+  if (model === 'invalid') return { ok: false, reason: 'invalid', detail: 'model 字段无法读取' }
+
   return {
     ok: true,
     value: {
       metricId: expectedId,
-      asset: raw['asset'],
+      asset,
       contract: raw['contract'] as PublishedMetric['contract'],
       points,
       sourceTime,
@@ -201,9 +206,100 @@ export function parsePublishedMetric(raw: unknown, expectedId: string): LoadResu
       ...(coverage ? { coverage } : {}),
       ...(worstCase ? { worstCase } : {}),
       ...(distribution ? { distribution } : {}),
+      ...(model ? { model } : {}),
       ...(raw['fixture'] === true ? { fixture: true as const } : {}),
     },
   }
+}
+
+const MODEL_QUALITIES = ['ok', 'insufficient', 'weak', 'unstable', 'stale'] as const
+const DELTA_CLASSES = ['buy', 'sell', 'adjustment', 'unchanged'] as const
+const QUOTE_TYPES = ['close', 'regular', 'pre', 'post'] as const
+
+function parseModel(raw: unknown): MetricModel | undefined | 'invalid' {
+  if (raw === undefined || raw === null) return undefined
+  if (!isRecord(raw)) return 'invalid'
+  const kind = raw['kind']
+  const version = raw['version']
+  if ((kind !== 'beta' && kind !== 'disclosure') || typeof version !== 'string' || version.length === 0) {
+    return 'invalid'
+  }
+  const quality = optionalEnum(raw['quality'], MODEL_QUALITIES)
+  const deltaClass = optionalEnum(raw['deltaClass'], DELTA_CLASSES)
+  const quoteType = optionalEnum(raw['quoteType'], QUOTE_TYPES)
+  if (quality === false || deltaClass === false || quoteType === false) return 'invalid'
+  const numbers = [
+    'samples',
+    'beta',
+    'correlation',
+    'r2',
+    'intercept',
+    'residualStd',
+    'windowSessions',
+    'btcDelta',
+    'proceedsUsd',
+    'averageUsd',
+    'marketUsd',
+    'holdings',
+  ] as const
+  const strings = ['reason', 'asOf', 'filedOn', 'periodStart', 'periodEnd', 'accession', 'sessionDate', 'briefingUrl'] as const
+  const model: {
+    kind: 'beta' | 'disclosure'
+    version: string
+    quality?: (typeof MODEL_QUALITIES)[number]
+    deltaClass?: (typeof DELTA_CLASSES)[number]
+    quoteType?: (typeof QUOTE_TYPES)[number]
+    samples?: number
+    beta?: number
+    correlation?: number
+    r2?: number
+    intercept?: number
+    residualStd?: number
+    windowSessions?: number
+    btcDelta?: number
+    proceedsUsd?: number
+    averageUsd?: number
+    marketUsd?: number
+    holdings?: number
+    reason?: string
+    asOf?: string
+    filedOn?: string
+    periodStart?: string
+    periodEnd?: string
+    accession?: string
+    sessionDate?: string
+    briefingUrl?: string
+  } = { kind, version }
+  if (quality) model.quality = quality
+  if (deltaClass) model.deltaClass = deltaClass
+  if (quoteType) model.quoteType = quoteType
+  for (const key of numbers) {
+    const value = optionalNumber(raw[key])
+    if (value === false) return 'invalid'
+    if (value !== undefined) model[key] = value
+  }
+  for (const key of strings) {
+    const value = optionalString(raw[key])
+    if (value === false) return 'invalid'
+    if (value !== undefined) model[key] = value
+  }
+  return model
+}
+
+function optionalEnum<T extends string>(value: unknown, allowed: readonly T[]): T | undefined | false {
+  if (value === undefined) return undefined
+  return allowed.includes(value as T) ? (value as T) : false
+}
+
+function optionalNumber(value: unknown): number | undefined | false {
+  if (value === undefined) return undefined
+  const parsed = num(value)
+  return parsed === null ? false : parsed
+}
+
+function optionalString(value: unknown): string | undefined | false {
+  if (value === undefined) return undefined
+  return typeof value === 'string' ? value : false
 }
 
 export function loadMetric(id: string): LoadResult<PublishedMetric> {
@@ -225,6 +321,13 @@ export function loadMetric(id: string): LoadResult<PublishedMetric> {
 export function loadAsset(asset: Asset): Map<string, LoadResult<PublishedMetric>> {
   const out = new Map<string, LoadResult<PublishedMetric>>()
   for (const def of registry.byAsset(asset)) out.set(def.id, loadMetric(def.id))
+  return out
+}
+
+/** 注册表里的每一个指标，不管资产。指标库和首页共用这一次读取。 */
+export function loadAll(): Map<string, LoadResult<PublishedMetric>> {
+  const out = new Map<string, LoadResult<PublishedMetric>>()
+  for (const def of registry.all()) out.set(def.id, loadMetric(def.id))
   return out
 }
 

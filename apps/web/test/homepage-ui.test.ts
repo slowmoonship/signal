@@ -147,7 +147,7 @@ describe('定投绿色区间', () => {
 
 describe('数据时效', () => {
   it('更新时间取自数据自带的时间戳，不是构建时间', () => {
-    expect(PAGE).toMatch(/newestSourceTime\(data\)/)
+    expect(PAGE).toMatch(/newestSourceTime\(btcSnapshots\(data\)\)/)
     expect(PAGE).not.toMatch(/new Date\(\)\.toISOString\(\).*updatedAt/)
   })
 

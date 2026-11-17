@@ -90,6 +90,15 @@ jobs:
         continue-on-error: true
         run: npm run ingest:btc --workspace @slowmoonship/ingest -- --live
 
+      # 和 BTC 同一条发布作业。失败不覆盖已有 JSON；体检仍要求文件都在。
+      # poppler 用来读公司简报 PDF。股价日线没有可再分发的免费源，简报地址写在采集里。
+      - name: 采集 Strategy 披露与美股收盘时刻的 BTC
+        continue-on-error: true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils unzip
+          npm run ingest:strategy --workspace @slowmoonship/ingest -- --live
+
       - name: 发布物体检（每个指标都有有效数据点）
         # 少了任何一个指标、或任何一个指标被清空，这一轮就不该上线。
         run: npm run data:verify
@@ -134,7 +143,7 @@ jobs:
           # 这里的 || true 只吞掉 grep 的"没找到"，wc 的计数仍然是准的。
           STALE=$(grep -l '"stale": true' public/data/*.json 2>/dev/null | wc -l || true)
           git add public/data
-          git commit -m "chore(data): 更新 BTC 指标快照（${INGESTED_AT}）" \
+          git commit -m "chore(data): 更新市场与 Strategy 快照（${INGESTED_AT}）" \
             -m "共 ${TOTAL} 份，其中 ${STALE} 份标记为 stale（沿用上一份有效快照）"
           echo 'changed=true' >> "$GITHUB_OUTPUT"
 

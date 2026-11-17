@@ -16,7 +16,7 @@ import type { MetadataRoute } from 'next'
 
 import { registry } from '@slowmoonship/metrics'
 
-import { loadAsset } from '@/data/load.js'
+import { loadAll } from '@/data/load.js'
 import { BASE_PATH } from '@/lib/base-path.js'
 import { siteUrl } from '@/lib/site-url.js'
 
@@ -24,7 +24,7 @@ export const dynamic = 'force-static'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = siteUrl()
-  const data = loadAsset('btc')
+  const data = loadAll()
 
   // 没有域名就输出空 sitemap：sitemap 规范要求 URL 是绝对的，
   // 产出一份填着相对路径的"看起来有、其实没用"的文件比空文件更糟——
@@ -42,8 +42,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // 详情页一律相同——它们对读者没有先后之分。
     priority: 1,
   })
+  out.push({
+    url: abs(`${BASE_PATH}/metrics/`),
+    changeFrequency: 'daily',
+    priority: 0.8,
+  })
 
-  for (const def of registry.byAsset('btc')) {
+  for (const def of registry.all()) {
     const snapshot = data.get(def.id)
     const sourceTime = snapshot?.ok === true ? Date.parse(snapshot.value.sourceTime) : Number.NaN
     out.push({

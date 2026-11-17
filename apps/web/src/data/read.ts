@@ -9,7 +9,7 @@
 import {
   buildFeatureTable,
   deriveAllStatuses,
-  interpretHome,
+  interpretAll,
   STATUS_SPECS,
   type FeatureTable,
   type HomeReading,
@@ -17,7 +17,7 @@ import {
   type PublishedMetric,
 } from '@slowmoonship/metrics'
 
-import { loadAsset } from './load'
+import { loadAll } from './load'
 
 export type SiteRead = Readonly<{
   features: FeatureTable
@@ -29,18 +29,22 @@ let cached: SiteRead | undefined
 
 export function siteRead(): SiteRead {
   if (cached) return cached
-  const data = loadAsset('btc')
-  const published: PublishedMetric[] = []
-  for (const result of data.values()) {
-    if (result.ok) published.push(result.value)
-  }
-  const { features } = buildFeatureTable(published)
+  const data = loadAll()
+  const btc: PublishedMetric[] = []
   const series: Record<string, PublishedMetric['points']> = {}
-  for (const row of published) series[row.metricId] = row.points
+  const models: Record<string, NonNullable<PublishedMetric['model']>> = {}
+  for (const [id, result] of data) {
+    if (!result.ok) continue
+    series[id] = result.value.points
+    if (result.value.model) models[id] = result.value.model
+    // 美股收盘时刻的 BTC 不进特征表，否则它的时间会把三态用的参考日往后推。
+    if (result.value.asset === 'btc' && id !== 'btc-price-us-close') btc.push(result.value)
+  }
+  const { features } = buildFeatureTable(btc)
   cached = {
     features,
     statuses: deriveAllStatuses(STATUS_SPECS, features),
-    readings: interpretHome({ features, series }),
+    readings: interpretAll({ features, series, models }),
   }
   return cached
 }

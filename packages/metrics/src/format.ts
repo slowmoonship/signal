@@ -137,6 +137,17 @@ export function formatValue(value: number | null, spec: FormatSpec, locale: Loca
       const zone = Math.round(value)
       return locale === 'zh' ? `第${zone}/${spec.of}区` : `${zone}/${spec.of}`
     }
+    case 'multiple':
+      return `${nf(locale, {
+        minimumFractionDigits: spec.decimals,
+        maximumFractionDigits: spec.decimals,
+      }).format(value)}×`
+    case 'sats':
+      return `${nf(locale, { maximumFractionDigits: 0 }).format(value)} sats`
+    case 'shares':
+      return locale === 'zh'
+        ? `${nf(locale, { maximumFractionDigits: 0 }).format(value)} 股`
+        : `${nf(locale, { maximumFractionDigits: 0 }).format(value)} shares`
   }
 }
 

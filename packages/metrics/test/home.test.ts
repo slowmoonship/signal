@@ -15,13 +15,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  CATALOG_METRIC_IDS,
   HERO_METRIC_ID,
   HOME_GROUP_KEYS,
   HOME_GROUPS,
   HOME_METRIC_IDS,
+  interpretMetric,
   registry,
   SPARKLINE_PRICE_METRIC_ID,
   STATUS_SPECS,
+  validateCatalog,
   validateHomeWhitelist,
 } from '../src/index.js'
 
@@ -40,13 +43,14 @@ describe('首页白名单', () => {
     expect(HOME_METRIC_IDS.length).toBeLessThanOrEqual(MAX_ROWS)
   })
 
-  it('五个分组：市场行情 / 估值与定投 / 牛熊周期 / 资金流向 / 链上活动', () => {
+  it('六个分组：市场行情 / 估值 / 牛熊周期 / 资金流向 / 链上活动 / Strategy', () => {
     expect(HOME_GROUPS.map((g) => g.key)).toEqual([
       'marketOverview',
       'valuationAnchors',
       'cycle',
       'exchangeFlows',
       'onchainActivity',
+      'strategy',
     ])
   })
 
@@ -70,23 +74,19 @@ describe('首页白名单', () => {
   it('白名单就是规格里那些指标，逐个点名', () => {
     expect([...HOME_METRIC_IDS]).toEqual([
       'price',
-      'price-change-7d',
       'drawdown-ath',
       'ahr999',
       'rainbow-zone',
-      'mvrv',
       'mvrv-zscore',
-      'nupl',
-      'mayer-multiple',
       'pi-cycle-top',
       'sma-200w',
-      'ma-2y',
       'puell-multiple',
-      'hash-ribbons',
       'exchange-netflow',
-      'exchange-balance',
       'active-addresses',
-      'fees-total',
+      'mstr-price',
+      'mstr-btc-beta-90d',
+      'strategy-btc-holdings',
+      'strategy-btc-per-share',
     ])
   })
 
@@ -100,9 +100,28 @@ describe('首页白名单', () => {
 
   it('每个首页指标都有状态判定，否则状态列会开天窗', () => {
     const withStatus = new Set(STATUS_SPECS.map((s) => s.metricId))
+    const disclosed = new Set([
+      'mstr-price',
+      'mstr-btc-beta-90d',
+      'strategy-btc-holdings',
+      'strategy-btc-per-share',
+    ])
     for (const id of HOME_METRIC_IDS) {
+      if (disclosed.has(id)) {
+        const reading = interpretMetric(id, { features: {}, series: {} })
+        expect(reading, `${id} 没有披露读法`).not.toBeNull()
+        expect(reading?.word.zh.length, id).toBeLessThanOrEqual(4)
+        continue
+      }
       expect(withStatus.has(id), `${id} 没有状态判定`).toBe(true)
     }
+  })
+
+  it('首页精选是 14 行，指标库覆盖全部已注册指标', () => {
+    expect(HOME_METRIC_IDS).toHaveLength(14)
+    expect(validateCatalog()).toEqual([])
+    expect(CATALOG_METRIC_IDS).toHaveLength(registry.all().length)
+    for (const id of HOME_METRIC_IDS) expect(CATALOG_METRIC_IDS).toContain(id)
   })
 
   it('状态判定没有覆盖到不存在的指标（否则是死配置）', () => {

@@ -12,6 +12,7 @@ import { join } from 'node:path'
 
 import { DEFAULT_DB_PATH, SnapshotStore } from './store/db.js'
 import { consoleLogger, runIngest } from './runners/index.js'
+import { runStrategy } from './strategy/run.js'
 import { publishDir } from './paths.js'
 import { DEFAULT_CACHE_PATH, runBackfill } from './backfill/cli.js'
 import {
@@ -29,6 +30,17 @@ const TIMEOUT_MS = 30_000
 function flag(args: readonly string[], name: string): string | undefined {
   const i = args.indexOf(name)
   return i >= 0 ? args[i + 1] : undefined
+}
+
+/** 样本不够的 Beta 允许没有点，但必须写明原因，并且不能带着一个倍数。 */
+function honestEmptyBeta(id: string, parsed: unknown): boolean {
+  if (id !== 'mstr-btc-beta-90d' || typeof parsed !== 'object' || parsed === null) return false
+  const model = (parsed as { model?: unknown }).model
+  if (typeof model !== 'object' || model === null) return false
+  const quality = (model as { quality?: unknown }).quality
+  const reason = (model as { reason?: unknown }).reason
+  const beta = (model as { beta?: unknown }).beta
+  return quality === 'insufficient' && typeof reason === 'string' && reason.trim().length > 0 && (beta === undefined || beta === null)
 }
 
 function makeCtx(): FetchContext {
@@ -63,6 +75,16 @@ async function main(): Promise<number> {
       store.close()
       console.log(`✓ 数据库已重建：${DEFAULT_DB_PATH}`)
       return 0
+    }
+    case 'strategy': {
+      if (!live) {
+        console.log('⚠ dry-run 模式：不发布。加 --live 才会写入 public/data。\n')
+      }
+      return runStrategy({
+        publishDir: publishDir(),
+        dryRun: !live,
+        logger: consoleLogger,
+      })
     }
     case 'btc': {
       if (!live) {
@@ -112,7 +134,7 @@ async function main(): Promise<number> {
       // 与其发上去让读者看到空白，不如在这里挡住。
       const dir = publishDir()
       const problems: string[] = []
-      const ids = registry.byAsset('btc').map((d) => d.id)
+      const ids = registry.all().map((d) => d.id)
       let stale = 0
       for (const id of ids) {
         const file = join(dir, `${id}.json`)
@@ -136,7 +158,7 @@ async function main(): Promise<number> {
             (p as { value?: unknown }).value !== null &&
             typeof (p as { value?: unknown }).value === 'number',
         ).length
-        if (nonNull === 0) problems.push(`${id}: 没有任何有效数据点`)
+        if (nonNull === 0 && !honestEmptyBeta(id, parsed)) problems.push(`${id}: 没有任何有效数据点`)
         // 按 UTC 自然日校验：所有指标都是日频（"每天一个点"），
         // 同一天出现两个采样说明收敛逻辑（collapseToDailySamples）被绕过了。
         // 工作流一天跑两次（cron + push）正是这样的场景，必须在这里拦住。
@@ -202,6 +224,7 @@ async function main(): Promise<number> {
     default: {
       console.log(`用法：
   tsx src/cli.ts btc [--live] [--only id,id]   抓取 BTC 指标（默认 dry-run）
+  tsx src/cli.ts strategy [--live]            抓取 Strategy 披露与美股收盘时刻的 BTC
   tsx src/cli.ts backfill:btc --from D --to D [--live]
                                               历史回填（区块 → 三条日频序列）
   tsx src/cli.ts fixtures:btc [--end D] [--days N] [--out DIR]

@@ -29,7 +29,7 @@ import {
 
 import { HeroMetric, MarketRead } from '@/components/HeroMetric'
 import { MetricTable, type MetricGroup } from '@/components/MetricTable'
-import { loadAsset, type LoadResult } from '@/data/load'
+import { loadAll, type LoadResult } from '@/data/load'
 import { siteRead } from '@/data/read'
 import { getDictionary } from '@/i18n/dictionaries'
 import { formatAge, formatUtcDateTime } from '@/lib/format-time'
@@ -42,13 +42,11 @@ function changeWindowFor(def: MetricDefinition): number | null {
   return def.changeWindowDays === undefined ? CHANGE_WINDOW_DAYS : def.changeWindowDays
 }
 
-const ASSET = 'btc' as const
-
 export function HomeView() {
   const locale = SITE_LOCALE
   const t = getDictionary()
 
-  const data = loadAsset(ASSET)
+  const data = loadAll()
   const groups = homeGroups()
   const heroDef = registry.has(HERO_METRIC_ID) ? registry.get(HERO_METRIC_ID) : null
   const hero = heroDef ? ok(data.get(heroDef.id)) : null
@@ -56,7 +54,7 @@ export function HomeView() {
 
   // 全站更新时间：取所有成功快照里最新的来源时间。
   // 用它一个数字概括整站，比给每一行各写一个时间更接近"每日一个快照"的实际。
-  const newest = newestSourceTime(data)
+  const newest = newestSourceTime(btcSnapshots(data))
 
   // 快照是否过期。判据是**数据自己的时间戳**与构建时刻的差距，
   // 不是构建时间与构建时间的差距（那永远是 0）。
@@ -139,6 +137,7 @@ export function HomeView() {
             statuses={statuses}
             features={features}
             readings={readings}
+            catalogHref="/metrics"
           />
         </div>
       </div>
@@ -166,6 +165,18 @@ function homeGroups(): MetricGroup[] {
 /** 一条成功的结果；失败或缺失一律归一成 null，页面不该处理第三种状态 */
 function ok(result: LoadResult<PublishedMetric> | undefined): PublishedMetric | null {
   return result?.ok === true ? result.value : null
+}
+
+/** 首页「更新于」跟 BTC 日更走。Strategy 的披露日和美股收盘不把这句改成另一套时钟。 */
+function btcSnapshots(
+  data: ReadonlyMap<string, LoadResult<PublishedMetric>>,
+): ReadonlyMap<string, LoadResult<PublishedMetric>> {
+  const out = new Map<string, LoadResult<PublishedMetric>>()
+  for (const [id, result] of data) {
+    if (!result.ok) continue
+    if (result.value.asset === 'btc' && id !== 'btc-price-us-close') out.set(id, result)
+  }
+  return out
 }
 
 function newestSourceTime(data: ReadonlyMap<string, LoadResult<PublishedMetric>>): string | null {

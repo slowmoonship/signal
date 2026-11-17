@@ -74,7 +74,7 @@ export class MetricRegistry {
       if (def.deriveFrom) {
         for (const parent of def.deriveFrom) {
           const parentDef = this.#byId.get(parent)
-          if (parentDef && parentDef.asset !== def.asset) {
+          if (parentDef && parentDef.asset !== def.asset && def.crossAsset !== true) {
             issues.push({
               metricId: def.id,
               level: 'error',

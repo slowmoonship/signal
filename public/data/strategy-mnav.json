@@ -1,0 +1,56 @@
+{
+  "metricId": "strategy-mnav",
+  "asset": "mstr",
+  "contract": {
+    "unit": "index",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "us-equity-close",
+    "labelSemantics": "n/a"
+  },
+  "points": [
+    {
+      "ts": 1791576000,
+      "value": 1.2
+    },
+    {
+      "ts": 1793390400,
+      "value": 1.11
+    },
+    {
+      "ts": 1794603600,
+      "value": 1.09
+    }
+  ],
+  "sourceTime": "2026-11-13T21:00:00.000Z",
+  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "Strategy",
+      "metric": "Investor briefing",
+      "endpoint": "https://www.strategy.com/",
+      "auth": "none",
+      "labelConfidence": "verified",
+      "license": {
+        "name": "Company disclosure",
+        "url": "https://www.strategy.com/",
+        "restriction": {
+          "en": "Figures are the snapshots the company printed in its own briefing. They are not a live quote.",
+          "zh": "数字是公司写在自己简报里的快照，不是实时报价。"
+        }
+      }
+    }
+  ],
+  "warnings": [
+    "这是公司印出来的倍数，不是用市值除以比特币市值重算的。"
+  ],
+  "model": {
+    "kind": "disclosure",
+    "version": "strategy-mnav-disclosed-v1",
+    "quality": "ok",
+    "quoteType": "close",
+    "sessionDate": "2026-11-13",
+    "briefingUrl": "https://assets.contentstack.io/v3/assets/bltf8d808d9b8cebd37/blt36fbde4f9ee6bd70/6afa7fcf5a0d255dea73ad18/MSTR_Investor_Briefing_As_of_2026-11-15.pdf"
+  }
+}

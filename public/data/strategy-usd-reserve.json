@@ -1,0 +1,68 @@
+{
+  "metricId": "strategy-usd-reserve",
+  "asset": "mstr",
+  "contract": {
+    "unit": "usd",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "point",
+    "labelSemantics": "n/a"
+  },
+  "points": [
+    {
+      "ts": 1791072000,
+      "value": 4880000000
+    },
+    {
+      "ts": 1792281600,
+      "value": 4830000000
+    },
+    {
+      "ts": 1793491200,
+      "value": 4790000000
+    },
+    {
+      "ts": 1794096000,
+      "value": 4770000000
+    },
+    {
+      "ts": 1794700800,
+      "value": 4750000000
+    }
+  ],
+  "sourceTime": "2026-11-16T00:00:00.000Z",
+  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "SEC EDGAR",
+      "metric": "Strategy Inc 8-K",
+      "endpoint": "https://data.sec.gov/submissions/CIK0001050446.json",
+      "auth": "none",
+      "labelConfidence": "verified",
+      "license": {
+        "name": "US government work",
+        "url": "https://www.sec.gov/os/accessing-edgar-data",
+        "restriction": {
+          "en": "EDGAR filings are US government works. Keep the accession number with the figure.",
+          "zh": "EDGAR 申报是美国政府作品。引用数字时保留 accession 编号。"
+        }
+      }
+    }
+  ],
+  "warnings": [],
+  "model": {
+    "kind": "disclosure",
+    "version": "strategy-8k-v1",
+    "quality": "ok",
+    "asOf": "2026-11-15",
+    "filedOn": "2026-11-16",
+    "periodStart": "2026-11-09",
+    "periodEnd": "2026-11-15",
+    "accession": "0001193125-26-462151",
+    "deltaClass": "buy",
+    "btcDelta": 485,
+    "holdings": 850849,
+    "averageUsd": 75452
+  }
+}

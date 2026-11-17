@@ -39,6 +39,7 @@ import {
   MISSING,
   readingAsStatus,
   statusBasis,
+  tableName,
   type FeatureTable,
   type HomeGroupKey,
   type HomeReading,
@@ -69,8 +70,10 @@ export type MetricTableProps = {
   readonly statuses: ReadonlyMap<string, MetricStatus>
   /** 判定依据列要用的特征表 */
   readonly features: FeatureTable
-  /** 首页 18 行的状态与依据。有它时不再使用分位缩写。 */
+  /** 首页精选行的状态与依据。有它时不再使用分位缩写。 */
   readonly readings: ReadonlyMap<string, HomeReading>
+  /** 表格底部的「查看全部指标」。指标库自己不再放这一行。 */
+  readonly catalogHref?: string
 }
 
 /**
@@ -94,11 +97,13 @@ const MIN_HISTORY_POINTS = 30
 function statusOf(
   result: LoadResult<PublishedMetric> | undefined,
   metric: PublishedMetric | null,
+  def: MetricDefinition,
 ): Status {
   if (!result) return 'noData'
   if (!result.ok) return result.reason === 'invalid' ? 'invalid' : 'noData'
   if (result.value.stale) return 'pending'
-  if (metric && nonNullCount(metric) < MIN_HISTORY_POINTS) return 'shortHistory'
+  // 披露类指标本来就不是每天一个点。三次简报不是「历史不足」。
+  if (metric && def.category !== 'strategy' && nonNullCount(metric) < MIN_HISTORY_POINTS) return 'shortHistory'
   return 'ok'
 }
 
@@ -116,6 +121,7 @@ export function MetricTable({
   statuses,
   features,
   readings,
+  catalogHref,
 }: MetricTableProps) {
   const t = getDictionary()
 
@@ -182,7 +188,7 @@ export function MetricTable({
             {group.metrics.map((def, index) => {
               const result = data.get(def.id)
               const metric = result?.ok === true ? result.value : null
-              const status = statusOf(result, metric)
+              const status = statusOf(result, metric, def)
               const marketStatus = statuses.get(def.id)
               const reading = readings.get(def.id)
               const shown = reading ? readingAsStatus(reading) : marketStatus
@@ -216,7 +222,7 @@ export function MetricTable({
                       href={`/metrics/${def.id}`}
                       className="text-ink hover:underline"
                     >
-                      {def.name[locale]}
+                      {tableName(def, locale)}
                     </Link>
                   </th>
 
@@ -259,6 +265,13 @@ export function MetricTable({
           </tbody>
         ))}
       </table>
+      {catalogHref ? (
+        <div className="border-t border-rule px-1 py-2">
+          <Link href={catalogHref} className="text-sm text-ink hover:underline">
+            {t.viewAllMetrics}
+          </Link>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -284,7 +297,7 @@ function Basis({
   readonly features: FeatureTable
   readonly locale: SiteLocale
 }) {
-  const obs = features[marketStatus.featureId]
+  const obs = marketStatus.featureId === 'disclosure' ? undefined : features[marketStatus.featureId]
   const short = reading
     ? reading.basis[locale]
     : statusBasis(marketStatus, obs && obs.ok ? obs.value : undefined, locale)

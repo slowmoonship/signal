@@ -21,8 +21,9 @@ import {
 const byId = new Map(btcMetrics.map((d) => [d.id, d]))
 
 describe('注册表', () => {
-  it('BTC 指标共 31 个', () => {
-    expect(registry.byAsset('btc')).toHaveLength(31)
+  it('BTC 指标共 32 个', () => {
+    expect(registry.byAsset('btc')).toHaveLength(32)
+    expect(registry.byAsset('mstr').length).toBeGreaterThan(0)
   })
 
   it('id 唯一且全部为小写连字符', () => {
@@ -36,12 +37,12 @@ describe('注册表', () => {
     expect(errors).toEqual([])
   })
 
-  it('分类分布为 market 4 / onchain 3 / exchange 2 / fees 5 / mining 5 / valuation 12', () => {
+  it('分类分布为 market 5 / onchain 3 / exchange 2 / fees 5 / mining 5 / valuation 12', () => {
     const counts = Object.fromEntries(
       registry.grouped('btc').map((g) => [g.category, g.metrics.length]),
     )
     expect(counts).toEqual({
-      market: 4,
+      market: 5,
       onchain: 3,
       exchange: 2,
       fees: 5,
@@ -51,8 +52,11 @@ describe('注册表', () => {
   })
 
   it('分组顺序由 METRIC_CATEGORIES 决定，不受定义文件排列影响', () => {
-    // 否则新加一个分类，首页分组顺序会变成"谁的文件被 import 得晚"
-    expect(registry.grouped('btc').map((g) => g.category)).toEqual([...METRIC_CATEGORIES])
+    // Strategy 没有 BTC 指标，空组不出现。有指标的分类仍按总表顺序排。
+    const present = METRIC_CATEGORIES.filter((category) =>
+      registry.byAsset('btc').some((def) => def.category === category),
+    )
+    expect(registry.grouped('btc').map((g) => g.category)).toEqual([...present])
   })
 
   it('交易所相关的两条指标独立成组，不再混在链上活动里', () => {

@@ -13,6 +13,7 @@ import type {
   DcaDistribution,
   DcaWorstCase,
   MetricContract,
+  MetricModel,
   ObservationCoverage,
   SeriesPoint,
   SourceRef,
@@ -51,6 +52,8 @@ export type PublishedMetric = Readonly<{
    * 头条数字是最大值，天然极端；分布让读者看到"典型的一天"等了多久。
    */
   distribution?: DcaDistribution
+  /** Beta 诊断或披露附注。旧文件没有这项。 */
+  model?: MetricModel
   /**
    * 仅出现在 fixture 上：标记这份数据是开发/测试用的合成数据。
    *

@@ -79,9 +79,10 @@ export function MetricChart({ def, locale, points }: Props) {
   const y = (v: number): number =>
     PAD.top + (1 - (v - min) / (max - min || 1)) * (VIEW_H - PAD.top - PAD.bottom)
 
-  // 缺失和真正空出来的日期断开。相邻两个有效点隔了超过 1.5 天，
-  // 中间就没有观测，不能连成“那天也有这个数”。
-  const GAP_SECONDS = 86_400 * 1.5
+  // 日频序列超过 1.5 天就是缺口，中间不能连成“那天也有这个数”。
+  // Strategy 的数字按周或按简报到来，7 到 21 天是下一笔披露，不是丢了一天。
+  // 再长的空洞仍然断开，避免把几个月没披露画成一条直线。
+  const gapSeconds = def.category === 'strategy' ? 86_400 * 22 : 86_400 * 1.5
   const segments: string[] = []
   let current: string[] = []
   let prevTs: number | null = null
@@ -95,7 +96,7 @@ export function MetricChart({ def, locale, points }: Props) {
       prevTs = null
       continue
     }
-    if (prevTs !== null && p.ts - prevTs > GAP_SECONDS) flush()
+    if (prevTs !== null && p.ts - prevTs > gapSeconds) flush()
     current.push(`${x(p.ts).toFixed(1)},${y(p.value).toFixed(1)}`)
     prevTs = p.ts
   }

@@ -537,6 +537,12 @@ export async function runIngest(opts: IngestOptions): Promise<IngestReport> {
 
   const outcomes: MetricOutcome[] = []
   for (const def of metrics) {
+    // 美股收盘时刻的 BTC 没有币安以外的适配器。放进这条循环会每天被记成失败，
+    // 再把已经发布的收盘序列标成 stale。它和 Strategy 披露走同一条采集。
+    if (def.ingestGroup === 'strategy') {
+      logger.info(`${def.id}: 不在 BTC 日更循环里`)
+      continue
+    }
     outcomes.push(await ingestMetric(def, opts))
   }
 

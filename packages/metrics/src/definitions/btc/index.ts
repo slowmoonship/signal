@@ -6,6 +6,7 @@
 
 import type { MetricDefinition } from '../../types.js'
 import { drawdownAth, price, priceChange7d, supply } from './market.js'
+import { btcPriceUsClose } from './us-close.js'
 import {
   activeAddresses,
   blockCount,
@@ -43,11 +44,12 @@ import {
  * 算力丝带留在 mining：它的输入是算力。首页把它放进「牛熊周期」只是展示分组。
  */
 export const btcMetrics: readonly MetricDefinition[] = [
-  // 市场 Market（4）
+  // 市场 Market（5）
   price,
   supply,
   priceChange7d,
   drawdownAth,
+  btcPriceUsClose,
   // 链上活动 On-chain（3）
   activeAddresses,
   txCount,
@@ -106,6 +108,7 @@ export {
   nupl,
   piCycleTop,
   poolConcentration,
+  btcPriceUsClose,
   price,
   priceChange7d,
   puellMultiple,

@@ -42,6 +42,7 @@ import {
   SourceList,
   Warnings,
 } from '@/components/MetricDetails'
+import { StrategyNote } from '@/components/StrategyNote'
 import { loadMetric } from '@/data/load'
 import { siteRead } from '@/data/read'
 import { getDictionary } from '@/i18n/dictionaries'
@@ -60,11 +61,12 @@ export function MetricView({ id }: { readonly id: string }) {
   const nowMs = Date.now()
 
   const points = result.ok ? result.value.points : null
-  const latest = points ? latestKnown(points) : null
+  const drawable = points?.some((point) => point.value !== null) ? points : null
+  const latest = drawable ? latestKnown(drawable) : null
   const windowDays = def.changeWindowDays === undefined ? CHANGE_WINDOW_DAYS : def.changeWindowDays
   const change = points && windowDays !== null ? latestChange(points, windowDays) : null
   const value = latest ? formatValue(latest.value, def.format, locale) : null
-  const overlay = detailOverlay(def.id, points, locale)
+  const overlay = detailOverlay(def.id, drawable, locale)
   const { features, statuses, readings } = siteRead()
   const reading = readings.get(def.id)
   const legacy = reading ? undefined : statuses.get(def.id)
@@ -123,6 +125,8 @@ export function MetricView({ id }: { readonly id: string }) {
         ) : null}
       </header>
 
+      <StrategyNote id={def.id} model={result.ok ? result.value.model : undefined} />
+
       {result.ok && result.value.stale ? (
         /* stale 告警必须紧跟在大数值下面：新鲜度说明在页面更靠后的位置，
            而读者多半是只看那个大数字就走了。把提示留在原地才拦得住。 */
@@ -145,8 +149,8 @@ export function MetricView({ id }: { readonly id: string }) {
 
       {overlay ? (
         <OverlayChart chart={overlay} locale={locale} />
-      ) : points ? (
-        <MetricChart def={def} locale={locale} points={points} />
+      ) : drawable ? (
+        <MetricChart def={def} locale={locale} points={drawable} />
       ) : null}
 
       <div className="max-w-prose">
