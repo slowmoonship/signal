@@ -58,14 +58,40 @@ function monthDay(ts: number): string {
 function mstrPrice(input: InterpretInput): HomeReading {
   const points = known(input.series['mstr-price'])
   const last = points.at(-1)
+  // 没有报价，和「有报价但比不出涨跌」不是一件事。
   if (!last || last.value === null) return missing('mstr-price', 'mstr-price-v1', text('没有可再分发的收盘', 'no redistributable close'))
-  const prev = points.at(-2)
-  const lastDay = utcDate(last.ts)
-  const prevDay = prev ? utcDate(prev.ts) : null
-  if (!prev || prev.value === null || !prevDay || !sessionsAreAdjacent(prevDay, lastDay)) {
-    return missing('mstr-price', 'mstr-price-v1', text(`${monthDay(last.ts)}收盘，无上一日`, `${monthDay(last.ts)} close, no prior`))
+  const session = utcDate(last.ts)
+  const tape = known(input.series['btc-price-us-close']).at(-1)
+  const tapeDay = tape ? utcDate(tape.ts) : null
+  // 已发布的美股收盘日比这份简报更晚，说明报价还停在旧交易日。
+  // 抓取失败另由快照的 stale 标在数值旁，不在这里把旧收盘说成没有数据。
+  if (tapeDay !== null && tapeDay > session) {
+    return reading(
+      'mstr-price',
+      'mstr-price-v1',
+      last.ts,
+      true,
+      'void',
+      text('待更新', 'pending'),
+      text(`${monthDay(last.ts)}收盘`, `${monthDay(last.ts)} close`),
+      null,
+    )
   }
-  const delta = last.value - prev.value
+  const prev = points.at(-2)
+  const prevDay = prev ? utcDate(prev.ts) : null
+  if (!prev || prev.value === null || !prevDay || !sessionsAreAdjacent(prevDay, session)) {
+    return reading(
+      'mstr-price',
+      'mstr-price-v1',
+      last.ts,
+      true,
+      'void',
+      text('历史不足', 'short'),
+      text('无法比较涨跌', 'no comparable close'),
+      null,
+    )
+  }
+  const delta = last.value - (prev.value ?? 0)
   const word = delta > 0 ? text('上涨', 'up') : delta < 0 ? text('下跌', 'down') : text('持平', 'flat')
   return reading('mstr-price', 'mstr-price-v1', last.ts, true, 'flat', word, text('较上一收盘', 'vs prior close'), null)
 }

@@ -234,7 +234,7 @@ describe('对数刻度', () => {
     expect(formatLogTick(1, 'zh', 'usd')).toBe('$1')
     expect(formatLogTick(10, 'zh', 'usd')).toBe('$10')
     expect(formatLogTick(1000, 'zh', 'usd')).toBe('$1K')
-    expect(formatLogTick(0.001, 'zh', 'usd')).toBe('$1e-3')
+    expect(formatLogTick(0.001, 'zh', 'usd')).toBe('$0.001')
     expect(formatLogTick(0, 'zh')).toBe('')
     expect(formatLogTick(-5, 'zh')).toBe('')
     for (const value of [1e-8, 0.004, 0.01, 0.1, 1, 10]) {

@@ -73,8 +73,8 @@ export const mstrPrice = defineMetric({
     zh: 'Strategy 在投资者简报里写明的最新 A 类普通股收盘价。',
   },
   methodology: {
-    en: 'The figure is the “MSTR Price” in the briefing, dated by the sentence “Market data as of … close”. It is an official close, not a pre-market, after-hours or in-session quote. Vendor histories from Nasdaq, Stooq, Coinbase and Yahoo were not used: their terms do not allow this site to redistribute the series. A new close appears only when a new briefing states one. The status compares two adjacent sessions; a gap of several weeks is not called a one-day move.',
-    zh: '数字取简报上的 MSTR Price，日期取「Market data as of … close」那一句。这是正式收盘价，不是盘前、盘后或盘中报价。纳斯达克、Stooq、Coinbase、Yahoo 的历史行情没有采用，因为它们的条款不允许本站再分发那条序列。只有新的简报写明了新收盘，这里才会多一个点。状态只比较相邻的两个交易日；隔了几周的两个简报，不叫作一天的涨跌。',
+    en: 'The figure is the “MSTR Price” in the briefing, dated by the sentence “Market data as of … close”. It is an official close, not a pre-market, after-hours or in-session quote. Vendor histories from Nasdaq, Stooq, Coinbase and Yahoo were not used: their terms do not allow this site to redistribute the series. A new close appears only when a new briefing states one. If a later US equity session is already published, the close is labelled pending and keeps its session date. If it is the latest session but the previous session is missing, the label is short history. Neither case is “no data”. A one-day move is named only when the two closes are adjacent sessions. The seven-day column needs a close on the calendar day seven days earlier; otherwise it stays blank rather than spanning the gap.',
+    zh: '数字取简报上的 MSTR Price，日期取「Market data as of … close」那一句。这是正式收盘价，不是盘前、盘后或盘中报价。纳斯达克、Stooq、Coinbase、Yahoo 的历史行情没有采用，因为它们的条款不允许本站再分发那条序列。只有新的简报写明了新收盘，这里才会多一个点。已发布的美股收盘日更晚时，状态是待更新，并写明这份收盘的交易日。收盘已是最新交易日、但没有上一日时，状态是历史不足。这两种都不是缺数据。只有相邻两个交易日才写上涨或下跌。七日变化要求正好七个日历日前有收盘，否则留空，不把中间的缺口当成七天涨跌。',
   },
   limits: {
     en: 'A close from the last briefing can be several sessions old. The page must not present it as a live price.',
@@ -83,7 +83,8 @@ export const mstrPrice = defineMetric({
   unit: 'usd',
   frequency: '1d',
   format: { kind: 'usd' },
-  changeWindowDays: null,
+  // 七日列会去对正好七日前的收盘。对不上就显示横线，不把两份简报的间隔算成七日涨跌。
+  changeWindowDays: 7,
   contract: session,
   sources: [briefing],
   history: history(

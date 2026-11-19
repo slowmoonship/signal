@@ -25,10 +25,28 @@ describe('Strategy 读法', () => {
   it('没有相邻交易日时不把两次简报收盘说成涨跌', () => {
     const reading = read('mstr-price', {
       'mstr-price': [point('2026-10-30', 130.51, true), point('2026-11-13', 111.62, true)],
+      'btc-price-us-close': [point('2026-11-13', 60000, true)],
     })
+    expect(reading?.ok).toBe(true)
+    expect(reading?.word.zh).toBe('历史不足')
+    expect(reading?.basis.zh).toBe('无法比较涨跌')
+  })
+
+  it('收盘落后于已发布的美股交易日时标待更新，不叫缺数据', () => {
+    const reading = read('mstr-price', {
+      'mstr-price': [point('2026-10-30', 130.51, true), point('2026-11-13', 111.62, true)],
+      'btc-price-us-close': [point('2026-11-18', 62555, true)],
+    })
+    expect(reading?.ok).toBe(true)
+    expect(reading?.word.zh).toBe('待更新')
+    expect(reading?.basis.zh).toBe('11-13收盘')
+  })
+
+  it('没有报价才是缺数据', () => {
+    const reading = read('mstr-price', {})
     expect(reading?.ok).toBe(false)
     expect(reading?.word.zh).toBe('缺数据')
-    expect(reading?.basis.zh).toBe('11-13收盘，无上一日')
+    expect(reading?.basis.zh).toBe('没有可再分发的收盘')
   })
 
   it('相邻收盘才标上涨或下跌，而且不上色成好坏', () => {

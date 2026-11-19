@@ -360,6 +360,8 @@ function Change({
 }) {
   // 窗口为 null 表示这个指标本身就是变化量（见 MetricDefinition.changeWindowDays），
   // 或者会取负值——对它算百分比等于回答读者没问的问题。
-  const change = metric && windowDays !== null ? latestChange(metric.points, windowDays) : null
-  return <>{formatSignedPercent(change, locale) ?? ''}</>
+  // 窗口关掉的指标这一格留空。窗口开着但那一天没有可比收盘，写横线，不留白。
+  if (!metric || windowDays === null) return null
+  const change = latestChange(metric.points, windowDays)
+  return <>{formatSignedPercent(change, locale) ?? MISSING}</>
 }

@@ -31,7 +31,7 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
   const quote = model?.quoteType ? t[QUOTE[model.quoteType]] : null
   const beta = id === 'mstr-btc-beta-90d' ? <BetaNote model={model} /> : null
   const dates = model?.filedOn || model?.asOf || model?.periodStart ? <DateNote model={model} /> : null
-  if (!quote && !beta && !dates && id !== 'strategy-btc-per-share' && id !== 'strategy-btc-cost') return null
+  if (!quote && !beta && !dates && id !== 'strategy-btc-per-share' && id !== 'strategy-btc-cost' && id !== 'mstr-price') return null
 
   return (
     <div className="mt-6 max-w-prose space-y-4 text-sm leading-relaxed text-ink-muted">
@@ -41,12 +41,34 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
           {model?.sessionDate ? <span className="ml-2 font-mono text-xs">{model.sessionDate}</span> : null}
         </p>
       ) : null}
+      {id === 'mstr-price' ? <TradingViewLink /> : null}
       {id === 'strategy-btc-per-share' ? (
         <p>每股聪数是公司按假定稀释股数写明的数字。它不是总持仓除以基本股。</p>
       ) : null}
       {id === 'strategy-btc-cost' ? <CostClocks model={model} /> : null}
       {dates}
       {beta}
+    </div>
+  )
+}
+
+function TradingViewLink() {
+  return (
+    <div className="space-y-2">
+      <p className="font-medium text-ink">第三方行情</p>
+      <p>
+        本页价格只保存公司简报里写明的收盘。纳斯达克 MSTR 的行情在 TradingView 查看，报价有延迟，由对方提供。它不是本站的股票行情接口，页面也不从那里取数，弹性计算也不使用它。
+      </p>
+      <p>
+        <a
+          className="text-ink underline"
+          href="https://www.tradingview.com/symbols/NASDAQ-MSTR/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          TradingView 上的 NASDAQ:MSTR
+        </a>
+      </p>
     </div>
   )
 }
