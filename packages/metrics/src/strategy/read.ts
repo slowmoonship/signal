@@ -5,7 +5,9 @@
  * 买入 / 卖出只在披露写明交易方向时使用。
  */
 
-import { sessionsAreAdjacent, utcDate } from '../calendar/nyse.js'
+import { utcDate } from '../calendar/nyse.js'
+import { REALIZED_NEAR_PERCENT } from '../formulas/local.js'
+import { closesToSessions, MSTR_KNOWN_SPLITS, MSTR_SMA_NEAR_PERCENT, sessionSma } from '../formulas/sma.js'
 import type { HomeReading, InterpretInput } from '../interpret.js'
 import type { StatusFailureReason, StatusTone } from '../status.js'
 import type { LocalizedText } from '../status.js'
@@ -57,16 +59,64 @@ function monthDay(ts: number): string {
 function mstrPrice(input: InterpretInput): HomeReading {
   const points = known(input.series['mstr-price'])
   const last = points.at(-1)
+  // 没有报价，和「有报价但比不出涨跌」不是一件事。
   if (!last || last.value === null) return missing('mstr-price', 'mstr-price-v1', text('没有可再分发的收盘', 'no redistributable close'))
-  const prev = points.at(-2)
-  const lastDay = utcDate(last.ts)
-  const prevDay = prev ? utcDate(prev.ts) : null
-  if (!prev || prev.value === null || !prevDay || !sessionsAreAdjacent(prevDay, lastDay)) {
-    return missing('mstr-price', 'mstr-price-v1', text(`${monthDay(last.ts)}收盘，无上一日`, `${monthDay(last.ts)} close, no prior`))
+  const session = utcDate(last.ts)
+  const tape = known(input.series['btc-price-us-close']).at(-1)
+  const tapeDay = tape ? utcDate(tape.ts) : null
+  // 已发布的美股收盘日比这份简报更晚，说明报价还停在旧交易日。
+  // 抓取失败另由快照的 stale 标在数值旁，不在这里把旧收盘说成没有数据。
+  if (tapeDay !== null && tapeDay > session) {
+    return reading(
+      'mstr-price',
+      'mstr-price-v1',
+      last.ts,
+      true,
+      'void',
+      text('待更新', 'pending'),
+      text(`${monthDay(last.ts)}收盘`, `${monthDay(last.ts)} close`),
+      null,
+    )
   }
-  const delta = last.value - prev.value
-  const word = delta > 0 ? text('上涨', 'up') : delta < 0 ? text('下跌', 'down') : text('持平', 'flat')
-  return reading('mstr-price', 'mstr-price-v1', last.ts, true, 'flat', word, text('较上一收盘', 'vs prior close'), null)
+  const sma = sessionSma(closesToSessions(points), MSTR_KNOWN_SPLITS).latest
+  if (!sma || sma.session !== session) {
+    return reading(
+      'mstr-price',
+      'mstr-sma50-v1',
+      last.ts,
+      true,
+      'void',
+      text('历史不足', 'short'),
+      text('不足50个交易日', 'under 50 sessions'),
+      null,
+    )
+  }
+  const shown = Math.abs(sma.deviationPercent).toFixed(1)
+  if (Math.abs(sma.deviationPercent) < MSTR_SMA_NEAR_PERCENT) {
+    return reading('mstr-price', 'mstr-sma50-v1', last.ts, true, 'flat', text('接近', 'near'), text('接近50日均线', 'near the 50-session average'), null)
+  }
+  if (sma.deviationPercent > 0) {
+    return reading(
+      'mstr-price',
+      'mstr-sma50-v1',
+      last.ts,
+      true,
+      'flat',
+      text('均线上', 'above'),
+      text(`高于50日线 ${shown}%`, `${shown}% above the 50-session average`),
+      null,
+    )
+  }
+  return reading(
+    'mstr-price',
+    'mstr-sma50-v1',
+    last.ts,
+    true,
+    'flat',
+    text('均线下', 'below'),
+    text(`低于50日线 ${shown}%`, `${shown}% below the 50-session average`),
+    null,
+  )
 }
 
 function beta(input: InterpretInput): HomeReading {
@@ -175,21 +225,28 @@ function unrealized(input: InterpretInput): HomeReading {
   return reading(id, 'unrealized-v1', last.ts, true, 'flat', text('持平', 'flat'), text('市值等于成本', 'market equals cost'), null)
 }
 
+function costGap(pct: number): string {
+  const abs = Math.abs(pct)
+  return abs >= 10 ? abs.toFixed(0) : abs.toFixed(1)
+}
+
 function cost(input: InterpretInput): HomeReading {
   const id = 'strategy-btc-cost'
   const last = known(input.series[id]).at(-1)
-  if (!last || last.value === null) return missing(id, 'cost-v1', text('没有披露均价', 'no stated average'))
-  const market = input.models?.[id]?.marketUsd
-  if (market === undefined || !Number.isFinite(market)) {
-    return reading(id, 'cost-v1', last.ts, true, 'flat', text('均价', 'average'), text('披露的均价', 'stated average'), null)
+  if (!last || last.value === null || !(last.value > 0)) return missing(id, 'cost-v1', text('没有披露均价', 'no stated average'))
+  const price = known(input.series['price']).at(-1)
+  if (!price || price.value === null || !(price.value > 0)) {
+    return reading(id, 'cost-v1', last.ts, true, 'flat', text('均价', 'average'), text('没有可比现价', 'no market price'), null)
   }
-  if (last.value > market) {
-    return reading(id, 'cost-v1', last.ts, true, 'flat', text('高于', 'above'), text('高于当时市价', 'above the mark'), null)
+  const pct = (price.value / last.value - 1) * 100
+  const shown = costGap(pct)
+  if (Math.abs(pct) < REALIZED_NEAR_PERCENT) {
+    return reading(id, 'cost-v1', last.ts, true, 'flat', text('接近', 'near'), text(`现价相差 ${shown}%`, `${shown}% from cost`), null)
   }
-  if (last.value < market) {
-    return reading(id, 'cost-v1', last.ts, true, 'flat', text('低于', 'below'), text('低于当时市价', 'below the mark'), null)
+  if (pct > 0) {
+    return reading(id, 'cost-v1', last.ts, true, 'flat', text('成本上', 'above'), text(`现价高于成本 ${shown}%`, `${shown}% above cost`), null)
   }
-  return reading(id, 'cost-v1', last.ts, true, 'flat', text('持平', 'flat'), text('等于当时市价', 'equals the mark'), null)
+  return reading(id, 'cost-v1', last.ts, true, 'flat', text('成本下', 'below'), text(`现价低于成本 ${shown}%`, `${shown}% below cost`), null)
 }
 
 function mnav(input: InterpretInput): HomeReading {

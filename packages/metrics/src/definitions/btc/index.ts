@@ -22,7 +22,7 @@ import {
   recommendedFeeRate,
 } from './fees.js'
 import { difficulty, hashrate, minerRevenueUsd, poolConcentration } from './mining.js'
-import { dcaMaxWaitDays, marketCap, mvrv } from './valuation.js'
+import { btcRealizedPremium, btcRealizedPrice, dcaMaxWaitDays, marketCap, mvrv } from './valuation.js'
 import {
   ahr999,
   hashRibbons,
@@ -69,10 +69,12 @@ export const btcMetrics: readonly MetricDefinition[] = [
   poolConcentration,
   minerRevenueUsd,
   hashRibbons,
-  // 估值 / 周期 Valuation（12）
+  // 估值 / 周期 Valuation
   marketCap,
   mvrv,
   dcaMaxWaitDays,
+  btcRealizedPrice,
+  btcRealizedPremium,
   ahr999,
   rainbowZone,
   piCycleTop,
@@ -106,6 +108,8 @@ export {
   mvrv,
   mvrvZscore,
   nupl,
+  btcRealizedPrice,
+  btcRealizedPremium,
   piCycleTop,
   poolConcentration,
   btcPriceUsClose,

@@ -73,8 +73,8 @@ export const mstrPrice = defineMetric({
     zh: 'Strategy 在投资者简报里写明的最新 A 类普通股收盘价。',
   },
   methodology: {
-    en: 'The figure is the “MSTR Price” in the briefing, dated by the sentence “Market data as of … close”. It is an official close, not a pre-market, after-hours or in-session quote. Vendor histories from Nasdaq, Stooq, Coinbase and Yahoo were not used: their terms do not allow this site to redistribute the series. A new close appears only when a new briefing states one. The status compares two adjacent sessions; a gap of several weeks is not called a one-day move.',
-    zh: '数字取简报上的 MSTR Price，日期取「Market data as of … close」那一句。这是正式收盘价，不是盘前、盘后或盘中报价。纳斯达克、Stooq、Coinbase、Yahoo 的历史行情没有采用，因为它们的条款不允许本站再分发那条序列。只有新的简报写明了新收盘，这里才会多一个点。状态只比较相邻的两个交易日；隔了几周的两个简报，不叫作一天的涨跌。',
+    en: 'The figure is the “MSTR Price” in the briefing, dated by the sentence “Market data as of … close”. It is an official close, not a pre-market, after-hours or in-session quote. Vendor histories from Nasdaq, Stooq, Coinbase, Yahoo and TradingView were not used: their terms do not allow this site to redistribute the series or to read a moving average out of a page. A new close appears only when a new briefing states one. Version mstr-sma50-v1 compares that close with the arithmetic mean of the 50 consecutive NYSE sessions ending that day, after the known 10-for-1 split on 2024-08-08. Deviation is (close / same-day average − 1) × 100. Within 1% the label is near; above that, above the average; below that, below the average. The 1% band is only for display. Weekends and closures are not sessions, a missing session blanks the window, and a later price is not used. If a later US equity session is already published, the label stays pending and the old average is not described as the live position. The seven-day column still needs a close on the calendar day seven days earlier. The average’s deviation is not written into that column.',
+    zh: '数字取简报上的 MSTR Price，日期取「Market data as of … close」那一句。这是正式收盘价，不是盘前、盘后或盘中报价。纳斯达克、Stooq、Coinbase、Yahoo 和 TradingView 的行情没有采用，因为它们的条款不允许本站再分发那条序列，也不允许从页面上读一条均线回来。只有新的简报写明了新收盘，这里才会多一个点。版本 mstr-sma50-v1 把这份收盘和截止当天的连续 50 个美股开市日复权收盘的算术平均比较。偏离率是（收盘 / 当日均线 − 1）× 100。相差不到 1% 写成接近，更高写成均线上，更低写成均线下。1% 只是展示带宽。周末和休市日不计入 50 天，中间缺一个开市日就整窗留空，也不使用更晚的价格。2024-08-08 的 10 合 1 拆股，拆股日前的价格先除以 10。已发布的美股收盘日更晚时，状态仍是待更新，不把旧均线说成当前趋势。七日变化仍要求正好七个日历日前有收盘，偏离率不写进这一列。',
   },
   limits: {
     en: 'A close from the last briefing can be several sessions old. The page must not present it as a live price.',
@@ -83,7 +83,8 @@ export const mstrPrice = defineMetric({
   unit: 'usd',
   frequency: '1d',
   format: { kind: 'usd' },
-  changeWindowDays: null,
+  // 七日列会去对正好七日前的收盘。对不上就显示横线，不把两份简报的间隔算成七日涨跌。
+  changeWindowDays: 7,
   contract: session,
   sources: [briefing],
   history: history(

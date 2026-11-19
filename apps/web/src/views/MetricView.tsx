@@ -109,11 +109,9 @@ export function MetricView({ id }: { readonly id: string }) {
 
         <p className="mt-6 font-mono text-2xl tabular-nums break-words sm:text-3xl">
           {value ?? MISSING}
-          {/* 变化为 null 时（窗口被关闭、样本不足、基期缺失）连标签一起不显示：
-              留一个空的"7 日变化"会让读者以为有变化没算出来 */}
-          {change !== null ? (
+          {windowDays !== null ? (
             <span className="ml-4 align-middle font-mono text-sm text-ink-subtle">
-              {formatSignedPercent(change, locale) ?? ''}
+              {change !== null ? (formatSignedPercent(change, locale) ?? MISSING) : MISSING}
               <span className="ml-1 text-xs">{t.changeWindow}</span>
             </span>
           ) : null}

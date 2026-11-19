@@ -432,13 +432,15 @@ describe('市场状态卡片底色', () => {
     // 与分类底色、状态色同款约束：内联色值会让暗色主题在这一处静默失效
     const rootBlocks = [...css.matchAll(/:root\s*\{([^}]*)\}/g)].map((m) => m[1] ?? '')
     expect(rootBlocks.length).toBeGreaterThanOrEqual(2)
-    for (const tone of ['bull', 'bear']) {
+    for (const tone of ['bull', 'bear', 'range', 'fault']) {
       const token = `--market-${tone}`
       expect(rootBlocks[0], `${token} 缺少浅色值`).toMatch(new RegExp(`${token}:\\s*hsl\\(`))
       expect(rootBlocks[1], `${token} 缺少暗色值`).toMatch(new RegExp(`${token}:\\s*hsl\\(`))
     }
-    // 震荡档就是卡片原来的背景，跟着 --surface 走，因此不随主题另设一份
-    expect(css).toMatch(/--market-range:\s*var\(--surface\)/)
+    const rangeHue = /--market-range:\s*hsl\(\s*([\d.]+)/.exec(css)
+    expect(rangeHue).not.toBeNull()
+    const hue = Number(rangeHue?.[1])
+    expect(hue >= 180 && hue <= 230, `震荡色相 ${hue} 不是灰蓝`).toBe(true)
   })
 
   it('底色低饱和（HSL ≤ 50%）且只做背景填充，不改文字颜色', () => {

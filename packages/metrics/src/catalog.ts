@@ -23,7 +23,17 @@ export const CATALOG_GROUPS: readonly CatalogGroup[] = [
   {
     key: 'valuation',
     label: { zh: '估值', en: 'Valuation' },
-    metricIds: ['ahr999', 'rainbow-zone', 'mvrv', 'mvrv-zscore', 'nupl', 'mayer-multiple', 'dca-max-wait-days'],
+    metricIds: [
+      'ahr999',
+      'rainbow-zone',
+      'mvrv',
+      'mvrv-zscore',
+      'nupl',
+      'btc-realized-price',
+      'btc-realized-premium',
+      'mayer-multiple',
+      'dca-max-wait-days',
+    ],
   },
   {
     key: 'cycle',

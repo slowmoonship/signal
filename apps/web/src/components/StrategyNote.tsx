@@ -7,11 +7,16 @@
 
 import {
   betaIllustration,
+  closesToSessions,
   formatSignedPercent,
   formatValue,
+  MSTR_KNOWN_SPLITS,
+  MSTR_SMA_VERSION,
   pathBacktest,
   sessionCloseUtc,
+  sessionSma,
   SITE_LOCALE,
+  utcDate,
   type MetricModel,
   type SeriesPoint,
 } from '@slowmoonship/metrics'
@@ -31,7 +36,7 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
   const quote = model?.quoteType ? t[QUOTE[model.quoteType]] : null
   const beta = id === 'mstr-btc-beta-90d' ? <BetaNote model={model} /> : null
   const dates = model?.filedOn || model?.asOf || model?.periodStart ? <DateNote model={model} /> : null
-  if (!quote && !beta && !dates && id !== 'strategy-btc-per-share' && id !== 'strategy-btc-cost') return null
+  if (!quote && !beta && !dates && id !== 'strategy-btc-per-share' && id !== 'strategy-btc-cost' && id !== 'mstr-price') return null
 
   return (
     <div className="mt-6 max-w-prose space-y-4 text-sm leading-relaxed text-ink-muted">
@@ -41,19 +46,92 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
           {model?.sessionDate ? <span className="ml-2 font-mono text-xs">{model.sessionDate}</span> : null}
         </p>
       ) : null}
+      {id === 'mstr-price' ? <SmaNote /> : null}
+      {id === 'mstr-price' ? <TradingViewLink /> : null}
       {id === 'strategy-btc-per-share' ? (
         <p>每股聪数是公司按假定稀释股数写明的数字。它不是总持仓除以基本股。</p>
       ) : null}
-      {id === 'strategy-btc-cost' && model?.marketUsd !== undefined && model.averageUsd !== undefined ? (
-        <p className="font-mono text-xs text-ink">
-          披露均价 {formatValue(model.averageUsd, { kind: 'usd' }, SITE_LOCALE)}
-          {' · '}
-          收盘市价 {formatValue(model.marketUsd, { kind: 'usd' }, SITE_LOCALE)}
-          {model.sessionDate ? ` · ${model.sessionDate}` : ''}
-        </p>
-      ) : null}
+      {id === 'strategy-btc-cost' ? <CostClocks model={model} /> : null}
       {dates}
       {beta}
+    </div>
+  )
+}
+
+function SmaNote() {
+  const price = loadMetric('mstr-price')
+  const tape = loadMetric('btc-price-us-close')
+  const points = price.ok ? price.value.points : []
+  const latest = sessionSma(closesToSessions(points), MSTR_KNOWN_SPLITS).latest
+  if (!latest) return <p>尚无足够的连续交易日行情计算50日均线</p>
+  const tapePoint = tape.ok ? [...tape.value.points].reverse().find((point) => point.value !== null) : undefined
+  const tapeDay = tapePoint ? utcDate(tapePoint.ts) : null
+  if (tapeDay !== null && tapeDay > latest.session) {
+    return (
+      <p>
+        50日均线可以按 {latest.session} 的收盘计算，但这份行情已经落后于 {tapeDay}。这里不把它写成当前趋势。
+      </p>
+    )
+  }
+  const deviation = formatSignedPercent(latest.deviationPercent, SITE_LOCALE) ?? '—'
+  return (
+    <div className="space-y-2">
+      <p>
+        50日均线 {formatValue(latest.sma, { kind: 'usd' }, SITE_LOCALE)}，偏离 {deviation}。
+      </p>
+      <p className="font-mono text-xs">
+        截至 {latest.session} · {MSTR_SMA_VERSION} · 简报收盘，拆股后
+      </p>
+      <p>算术平均用截止当天的连续 50 个开市日。相差不到 1% 写成接近。这是收盘相对均线的位置，不是买卖建议。</p>
+    </div>
+  )
+}
+
+function TradingViewLink() {
+  return (
+    <div className="space-y-2">
+      <p className="font-medium text-ink">第三方行情</p>
+      <p>
+        本页价格只保存公司简报里写明的收盘。纳斯达克 MSTR 的行情在 TradingView 查看，报价有延迟，由对方提供。它不是本站的股票行情接口，页面也不从那里取数，弹性计算也不使用它。
+      </p>
+      <p>
+        <a
+          className="text-ink underline"
+          href="https://www.tradingview.com/symbols/NASDAQ-MSTR/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          TradingView 上的 NASDAQ:MSTR
+        </a>
+      </p>
+    </div>
+  )
+}
+
+function CostClocks({ model }: { readonly model: MetricModel | undefined }) {
+  const price = loadMetric('price')
+  const cost = loadMetric('strategy-btc-cost')
+  const pricePoint = price.ok ? [...price.value.points].reverse().find((point) => point.value !== null) : undefined
+  const costPoint = cost.ok ? [...cost.value.points].reverse().find((point) => point.value !== null) : undefined
+  const priceDay = pricePoint ? new Date(pricePoint.ts * 1000).toISOString().slice(0, 10) : null
+  const costDay = costPoint ? new Date(costPoint.ts * 1000).toISOString().slice(0, 10) : null
+  return (
+    <div className="space-y-2">
+      <p>
+        持仓均价只在新的 SEC 披露里变化。下面的比较用最新 UTC 日均价对最新披露均价，两个日期不必是同一天。
+      </p>
+      <p className="font-mono text-xs text-ink">
+        {costPoint ? `披露均价 ${formatValue(costPoint.value, { kind: 'usd' }, SITE_LOCALE)}` : '没有披露均价'}
+        {costDay ? ` · 截至 ${costDay}` : ''}
+        {pricePoint ? ` · 日均价 ${formatValue(pricePoint.value, { kind: 'usd' }, SITE_LOCALE)}` : ''}
+        {priceDay ? ` · 截至 ${priceDay}` : ''}
+      </p>
+      {model?.marketUsd !== undefined && model.sessionDate ? (
+        <p className="font-mono text-xs">
+          美股收盘时刻的 BTC {formatValue(model.marketUsd, { kind: 'usd' }, SITE_LOCALE)} · {model.sessionDate}
+          。这是持仓截止日当天或之前的收盘，不是上面的日均价。
+        </p>
+      ) : null}
     </div>
   )
 }

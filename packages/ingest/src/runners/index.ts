@@ -298,7 +298,14 @@ function fetchLocal(
     inputs[parentId] = merged
     const meta = opts.store.readMeta(parentId)
     if (published?.sourceTime) times.push(published.sourceTime)
-    if (meta?.sourceTime) times.push(meta.sourceTime)
+    // 本地库里留下的更早 sourceTime 不能把已经发布的父序列时钟拨回去。
+    if (meta?.sourceTime) {
+      const publishedMs = published?.sourceTime ? Date.parse(published.sourceTime) : Number.NaN
+      const metaMs = Date.parse(meta.sourceTime)
+      if (!Number.isFinite(publishedMs) || (Number.isFinite(metaMs) && metaMs >= publishedMs)) {
+        times.push(meta.sourceTime)
+      }
+    }
   }
 
   const result = runLocalFormula(d.formula, inputs)

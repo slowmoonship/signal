@@ -178,6 +178,7 @@ export function formatAxisTick(value: number, locale: Locale): string {
   if (abs >= 1e9) return `${nf(locale, { maximumFractionDigits: 2 }).format(value / 1e9)}B`
   if (abs >= 1e6) return `${nf(locale, { maximumFractionDigits: 2 }).format(value / 1e6)}M`
   if (abs >= 1e3) return `${nf(locale, { maximumFractionDigits: 1 }).format(value / 1e3)}K`
+  if (abs > 0 && abs < 0.01) return value.toExponential(0)
   return nf(locale, { maximumFractionDigits: 2 }).format(value)
 }
 
@@ -223,6 +224,8 @@ export function formatLogTick(value: number, locale: Locale, style: 'plain' | 'u
   else if (value >= 1e3) body = `${nf(locale, { maximumFractionDigits: value >= 1e4 ? 0 : 1 }).format(value / 1e3)}K`
   else if (value >= 1) body = nf(locale, { maximumFractionDigits: 0 }).format(value)
   else if (value >= 0.01) body = value.toFixed(2)
+  else if (value >= 0.001) body = value.toFixed(3)
+  else if (value >= 0.0001) body = value.toFixed(4)
   else body = value.toExponential(0)
   if (body === '0' || body === '0.00' || body === '-0') body = value.toExponential(0)
   return style === 'usd' ? `$${body}` : body

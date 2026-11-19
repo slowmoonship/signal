@@ -16,6 +16,8 @@ import {
   type SiteLocale,
 } from '@slowmoonship/metrics'
 
+import { TimeAxis } from './TimeAxis'
+
 const VIEW_W = 760
 const VIEW_H = 280
 const PAD = { top: 16, right: 64, bottom: 28, left: 8 }
@@ -201,11 +203,12 @@ export function OverlayChart({
             key={marker.ts}
             cx={x(marker.ts)}
             cy={y(marker.y)}
-            r="2.6"
+            r={chart.markerRadius ?? 2.6}
             className="fill-ink"
           />
         ))}
       </svg>
+      <TimeAxis firstTs={firstTs} lastTs={lastTs} />
       <figcaption className="mt-3 space-y-2">
         <ul className="flex flex-wrap gap-x-3 gap-y-1">
           {chart.legend.map((item) => (
