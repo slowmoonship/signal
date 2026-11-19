@@ -2896,10 +2896,18 @@
     {
       "ts": 1794862800,
       "value": 65024.63
+    },
+    {
+      "ts": 1794949200,
+      "value": 63933.02
+    },
+    {
+      "ts": 1795035600,
+      "value": 62555.74
     }
   ],
-  "sourceTime": "2026-11-16T21:00:00.000Z",
-  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "sourceTime": "2026-11-18T21:00:00.000Z",
+  "ingestedAt": "2026-11-19T08:39:00.606Z",
   "stale": false,
   "sources": [
     {
@@ -2924,7 +2932,7 @@
     "version": "binance-vision-1h-v1",
     "quality": "ok",
     "quoteType": "close",
-    "sessionDate": "2026-11-16",
-    "asOf": "2026-11-16"
+    "sessionDate": "2026-11-18",
+    "asOf": "2026-11-18"
   }
 }
