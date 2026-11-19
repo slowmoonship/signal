@@ -5,7 +5,10 @@
  * 避免详情页再实现一遍窗口。下采样只影响绘制密度，发布序列仍是日频。
  */
 
+import { sessionCloseUtc, sessionsAreAdjacent, utcDate } from '../calendar/nyse.js'
 import type { Locale, SeriesPoint } from '../types.js'
+import { applySplits } from './beta.js'
+import { closesToSessions, MSTR_KNOWN_SPLITS, MSTR_SMA_NEAR_PERCENT, MSTR_SMA_VERSION, sessionSma } from './sma.js'
 import { downsampleRuns } from './paths.js'
 import {
   AHR999_REFERENCE_HIGH,
@@ -141,6 +144,8 @@ export function detailChartParents(metricId: string): readonly string[] {
       return ['price']
     case 'strategy-btc-cost':
       return ['price', 'strategy-btc-holdings']
+    case 'mstr-price':
+      return ['btc-price-us-close']
     default:
       return []
   }
@@ -190,6 +195,8 @@ export function buildDetailChart(
       return realizedChart(series['price'], series[metricId], locale)
     case 'strategy-btc-cost':
       return strategyCostChart(series['price'], series[metricId], series['strategy-btc-holdings'], locale)
+    case 'mstr-price':
+      return mstrPriceChart(series[metricId], series['btc-price-us-close'], locale)
     default:
       return null
   }
@@ -488,6 +495,65 @@ function strategyCostChart(
     legend: [
       { label: text(locale, '日均价', 'daily price'), paint: 'faint', swatch: 'line' },
       { label: text(locale, '持仓均价', 'average cost'), paint: 'ink', swatch: 'line' },
+    ],
+  }
+}
+
+function adjacentRuns(points: readonly { session: string; ts: number; value: number }[]): ChartPoint[][] {
+  const runs: ChartPoint[][] = []
+  let current: ChartPoint[] = []
+  for (const point of points) {
+    const previous = current[current.length - 1]
+    if (previous) {
+      const previousSession = utcDate(previous.ts)
+      if (!sessionsAreAdjacent(previousSession, point.session)) {
+        if (current.length > 0) runs.push(current)
+        current = []
+      }
+    }
+    current.push({ ts: point.ts, value: point.value })
+  }
+  if (current.length > 0) runs.push(current)
+  return runs
+}
+
+function mstrPriceChart(
+  prices: readonly SeriesPoint[] | undefined,
+  tape: readonly SeriesPoint[] | undefined,
+  locale: Locale,
+): DetailChart | null {
+  if (!prices) return null
+  const built = sessionSma(closesToSessions(prices), MSTR_KNOWN_SPLITS)
+  if (!built.latest || built.points.length < 2) return null
+  const tapePoint = [...(tape ?? [])].reverse().find((point) => point.value !== null && Number.isFinite(point.value))
+  const tapeDay = tapePoint ? utcDate(tapePoint.ts) : null
+  if (tapeDay !== null && tapeDay > built.latest.session) return null
+  const adjusted = applySplits(closesToSessions(prices), MSTR_KNOWN_SPLITS)
+  const priceLine = adjacentRuns(
+    adjusted.flatMap((point) => {
+      const ts = sessionCloseUtc(point.session)
+      if (ts === null || point.price === null || !(point.price > 0)) return []
+      return [{ session: point.session, ts, value: point.price }]
+    }),
+  )
+  const averageLine = adjacentRuns(built.points.map((point) => ({ session: point.session, ts: point.ts, value: point.sma })))
+  if (!drawable(priceLine) || !drawable(averageLine)) return null
+  return {
+    yScale: 'linear',
+    floorAtZero: true,
+    tick: 'usd',
+    caption: text(
+      locale,
+      `${MSTR_SMA_VERSION}。收盘与截止当天的连续 50 个开市日均线。相差不到 ${MSTR_SMA_NEAR_PERCENT}% 写成接近。缺一个开市日就断开，周末不断开。`,
+      `${MSTR_SMA_VERSION}. Close against the 50 consecutive sessions ending that day. Within ${MSTR_SMA_NEAR_PERCENT}% the label is near. A missing session breaks the line; a weekend does not.`,
+    ),
+    bands: [],
+    lines: [line(priceLine, 'faint', 1, true), line(averageLine, 'ink', 1.25)],
+    rules: [],
+    markers: [],
+    legend: [
+      { label: text(locale, '收盘', 'close'), paint: 'faint', swatch: 'line' },
+      { label: 'SMA50', paint: 'ink', swatch: 'line' },
     ],
   }
 }

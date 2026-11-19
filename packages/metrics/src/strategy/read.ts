@@ -5,8 +5,9 @@
  * 买入 / 卖出只在披露写明交易方向时使用。
  */
 
-import { sessionsAreAdjacent, utcDate } from '../calendar/nyse.js'
+import { utcDate } from '../calendar/nyse.js'
 import { REALIZED_NEAR_PERCENT } from '../formulas/local.js'
+import { closesToSessions, MSTR_KNOWN_SPLITS, MSTR_SMA_NEAR_PERCENT, sessionSma } from '../formulas/sma.js'
 import type { HomeReading, InterpretInput } from '../interpret.js'
 import type { StatusFailureReason, StatusTone } from '../status.js'
 import type { LocalizedText } from '../status.js'
@@ -77,23 +78,45 @@ function mstrPrice(input: InterpretInput): HomeReading {
       null,
     )
   }
-  const prev = points.at(-2)
-  const prevDay = prev ? utcDate(prev.ts) : null
-  if (!prev || prev.value === null || !prevDay || !sessionsAreAdjacent(prevDay, session)) {
+  const sma = sessionSma(closesToSessions(points), MSTR_KNOWN_SPLITS).latest
+  if (!sma || sma.session !== session) {
     return reading(
       'mstr-price',
-      'mstr-price-v1',
+      'mstr-sma50-v1',
       last.ts,
       true,
       'void',
       text('历史不足', 'short'),
-      text('无法比较涨跌', 'no comparable close'),
+      text('不足50个交易日', 'under 50 sessions'),
       null,
     )
   }
-  const delta = last.value - (prev.value ?? 0)
-  const word = delta > 0 ? text('上涨', 'up') : delta < 0 ? text('下跌', 'down') : text('持平', 'flat')
-  return reading('mstr-price', 'mstr-price-v1', last.ts, true, 'flat', word, text('较上一收盘', 'vs prior close'), null)
+  const shown = Math.abs(sma.deviationPercent).toFixed(1)
+  if (Math.abs(sma.deviationPercent) < MSTR_SMA_NEAR_PERCENT) {
+    return reading('mstr-price', 'mstr-sma50-v1', last.ts, true, 'flat', text('接近', 'near'), text('接近50日均线', 'near the 50-session average'), null)
+  }
+  if (sma.deviationPercent > 0) {
+    return reading(
+      'mstr-price',
+      'mstr-sma50-v1',
+      last.ts,
+      true,
+      'flat',
+      text('均线上', 'above'),
+      text(`高于50日线 ${shown}%`, `${shown}% above the 50-session average`),
+      null,
+    )
+  }
+  return reading(
+    'mstr-price',
+    'mstr-sma50-v1',
+    last.ts,
+    true,
+    'flat',
+    text('均线下', 'below'),
+    text(`低于50日线 ${shown}%`, `${shown}% below the 50-session average`),
+    null,
+  )
 }
 
 function beta(input: InterpretInput): HomeReading {

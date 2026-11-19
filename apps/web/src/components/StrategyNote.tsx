@@ -7,11 +7,16 @@
 
 import {
   betaIllustration,
+  closesToSessions,
   formatSignedPercent,
   formatValue,
+  MSTR_KNOWN_SPLITS,
+  MSTR_SMA_VERSION,
   pathBacktest,
   sessionCloseUtc,
+  sessionSma,
   SITE_LOCALE,
+  utcDate,
   type MetricModel,
   type SeriesPoint,
 } from '@slowmoonship/metrics'
@@ -41,6 +46,7 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
           {model?.sessionDate ? <span className="ml-2 font-mono text-xs">{model.sessionDate}</span> : null}
         </p>
       ) : null}
+      {id === 'mstr-price' ? <SmaNote /> : null}
       {id === 'mstr-price' ? <TradingViewLink /> : null}
       {id === 'strategy-btc-per-share' ? (
         <p>每股聪数是公司按假定稀释股数写明的数字。它不是总持仓除以基本股。</p>
@@ -48,6 +54,35 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
       {id === 'strategy-btc-cost' ? <CostClocks model={model} /> : null}
       {dates}
       {beta}
+    </div>
+  )
+}
+
+function SmaNote() {
+  const price = loadMetric('mstr-price')
+  const tape = loadMetric('btc-price-us-close')
+  const points = price.ok ? price.value.points : []
+  const latest = sessionSma(closesToSessions(points), MSTR_KNOWN_SPLITS).latest
+  if (!latest) return <p>尚无足够的连续交易日行情计算50日均线</p>
+  const tapePoint = tape.ok ? [...tape.value.points].reverse().find((point) => point.value !== null) : undefined
+  const tapeDay = tapePoint ? utcDate(tapePoint.ts) : null
+  if (tapeDay !== null && tapeDay > latest.session) {
+    return (
+      <p>
+        50日均线可以按 {latest.session} 的收盘计算，但这份行情已经落后于 {tapeDay}。这里不把它写成当前趋势。
+      </p>
+    )
+  }
+  const deviation = formatSignedPercent(latest.deviationPercent, SITE_LOCALE) ?? '—'
+  return (
+    <div className="space-y-2">
+      <p>
+        50日均线 {formatValue(latest.sma, { kind: 'usd' }, SITE_LOCALE)}，偏离 {deviation}。
+      </p>
+      <p className="font-mono text-xs">
+        截至 {latest.session} · {MSTR_SMA_VERSION} · 简报收盘，拆股后
+      </p>
+      <p>算术平均用截止当天的连续 50 个开市日。相差不到 1% 写成接近。这是收盘相对均线的位置，不是买卖建议。</p>
     </div>
   )
 }

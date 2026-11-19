@@ -38,7 +38,8 @@ export default tseslint.config(
           // 测试文件一多就会撞上（这些文件本来就都不在任何 build 产物里，
           // 提高上限不会拖慢常规检查）。
           // 图表路径和首页解释各加了一个测试文件，33 个默认工程文件超过了 32。
-          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 40,
+          // MSTR 的 50 日均线再加了一个测试文件，41 个超过了 40。
+          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING: 41,
         },
         tsconfigRootDir: import.meta.dirname,
       },

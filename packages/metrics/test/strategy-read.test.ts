@@ -5,7 +5,24 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { interpretMetric, sessionCloseUtc, type MetricModel, type SeriesPoint } from '../src/index.js'
+import {
+  addCalendarDays,
+  interpretMetric,
+  sessionCloseUtc,
+  type MetricModel,
+  type SeriesPoint,
+} from '../src/index.js'
+
+function sessionsEnding(end: string, count: number): string[] {
+  const out: string[] = []
+  let cursor: string | null = end
+  while (cursor && out.length < count) {
+    if (sessionCloseUtc(cursor) !== null) out.push(cursor)
+    cursor = addCalendarDays(cursor, -1)
+  }
+  if (out.length !== count || out[0] !== end) throw new Error(end)
+  return out.reverse()
+}
 
 function point(iso: string, value: number, atClose = false): SeriesPoint {
   const ts = atClose ? sessionCloseUtc(iso) : Math.floor(Date.parse(`${iso}T00:00:00.000Z`) / 1000)
@@ -29,7 +46,7 @@ describe('Strategy 读法', () => {
     })
     expect(reading?.ok).toBe(true)
     expect(reading?.word.zh).toBe('历史不足')
-    expect(reading?.basis.zh).toBe('无法比较涨跌')
+    expect(reading?.basis.zh).toBe('不足50个交易日')
   })
 
   it('收盘落后于已发布的美股交易日时标待更新，不叫缺数据', () => {
@@ -49,11 +66,51 @@ describe('Strategy 读法', () => {
     expect(reading?.basis.zh).toBe('没有可再分发的收盘')
   })
 
-  it('相邻收盘才标上涨或下跌，而且不上色成好坏', () => {
+  it('相邻两个收盘仍不足以做50日均线', () => {
     const reading = read('mstr-price', {
       'mstr-price': [point('2026-11-12', 100, true), point('2026-11-13', 111.62, true)],
     })
-    expect(reading).toMatchObject({ ok: true, tone: 'flat', word: { zh: '上涨' }, basis: { zh: '较上一收盘' } })
+    expect(reading).toMatchObject({ ok: true, tone: 'void', word: { zh: '历史不足' }, basis: { zh: '不足50个交易日' } })
+  })
+
+  it('连续50个开市日且收盘仍新鲜时，高于均线写成均线上', () => {
+    const days = sessionsEnding('2026-11-13', 50)
+    const reading = read('mstr-price', {
+      'mstr-price': days.map((day, index) => point(day, index === days.length - 1 ? 110 : 100, true)),
+      'btc-price-us-close': [point('2026-11-13', 60000, true)],
+    })
+    expect(reading).toMatchObject({ ok: true, tone: 'flat', word: { zh: '均线上' }, basis: { zh: '高于50日线 9.8%' } })
+  })
+
+  it('低于均线写成均线下，相差不到 1% 写成接近', () => {
+    const days = sessionsEnding('2026-11-13', 50)
+    const below = read('mstr-price', {
+      'mstr-price': days.map((day, index) => point(day, index === days.length - 1 ? 80 : 100, true)),
+    })
+    expect(below).toMatchObject({ tone: 'flat', word: { zh: '均线下' }, basis: { zh: '低于50日线 19.7%' } })
+    const near = read('mstr-price', {
+      'mstr-price': days.map((day) => point(day, 100, true)),
+    })
+    expect(near).toMatchObject({ tone: 'flat', word: { zh: '接近' }, basis: { zh: '接近50日均线' } })
+  })
+
+  it('均线已经能算，但收盘过期时仍写待更新', () => {
+    const days = sessionsEnding('2026-11-13', 50)
+    const reading = read('mstr-price', {
+      'mstr-price': days.map((day) => point(day, 100, true)),
+      'btc-price-us-close': [point('2026-11-18', 62555, true)],
+    })
+    expect(reading).toMatchObject({ ok: true, word: { zh: '待更新' }, basis: { zh: '11-13收盘' } })
+  })
+
+  it('拆股日前的价格先回推，不把 10 合 1 当成暴跌', () => {
+    const days = sessionsEnding('2024-08-20', 50)
+    expect(days.some((day) => day < '2024-08-08')).toBe(true)
+    expect(days.some((day) => day >= '2024-08-08')).toBe(true)
+    const reading = read('mstr-price', {
+      'mstr-price': days.map((day) => point(day, day < '2024-08-08' ? 1000 : 100, true)),
+    })
+    expect(reading).toMatchObject({ tone: 'flat', word: { zh: '接近' }, basis: { zh: '接近50日均线' } })
   })
 
   it('持仓增加写成买入，并带上本期数量', () => {
