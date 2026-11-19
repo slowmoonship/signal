@@ -14,6 +14,10 @@
       "value": 4880000000
     },
     {
+      "ts": 1791676800,
+      "value": 4880000000
+    },
+    {
       "ts": 1792281600,
       "value": 4830000000
     },
@@ -31,21 +35,21 @@
     }
   ],
   "sourceTime": "2026-11-16T00:00:00.000Z",
-  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "ingestedAt": "2026-11-17T07:44:40.919Z",
   "stale": false,
   "sources": [
     {
       "provider": "SEC EDGAR",
-      "metric": "Strategy Inc 8-K",
+      "metric": "Strategy Inc 8-K, 10-Q and 10-K",
       "endpoint": "https://data.sec.gov/submissions/CIK0001050446.json",
       "auth": "none",
       "labelConfidence": "verified",
       "license": {
-        "name": "US government work",
+        "name": "SEC EDGAR access",
         "url": "https://www.sec.gov/os/accessing-edgar-data",
         "restriction": {
-          "en": "EDGAR filings are US government works. Keep the accession number with the figure.",
-          "zh": "EDGAR 申报是美国政府作品。引用数字时保留 accession 编号。"
+          "en": "Figures are facts the company stated in its filing. Keep the accession with the number. Hosting on EDGAR does not make the filing a US government work.",
+          "zh": "数字是公司在申报里写明的事实，并保留 accession。文件放在 EDGAR 上，并不因此变成美国政府作品。"
         }
       }
     }

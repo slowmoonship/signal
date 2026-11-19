@@ -11,16 +11,16 @@ import type { MetricContract, MetricDefinition, SourceRef } from '../../types.js
 
 const sec: SourceRef = {
   provider: 'SEC EDGAR',
-  metric: 'Strategy Inc 8-K',
+  metric: 'Strategy Inc 8-K, 10-Q and 10-K',
   endpoint: 'https://data.sec.gov/submissions/CIK0001050446.json',
   auth: 'none',
   labelConfidence: 'verified',
   license: {
-    name: 'US government work',
+    name: 'SEC EDGAR access',
     url: 'https://www.sec.gov/os/accessing-edgar-data',
     restriction: {
-      en: 'EDGAR filings are US government works. Keep the accession number with the figure.',
-      zh: 'EDGAR 申报是美国政府作品。引用数字时保留 accession 编号。',
+      en: 'Figures are facts the company stated in its filing. Keep the accession with the number. Hosting on EDGAR does not make the filing a US government work.',
+      zh: '数字是公司在申报里写明的事实，并保留 accession。文件放在 EDGAR 上，并不因此变成美国政府作品。',
     },
   },
 }
@@ -148,8 +148,8 @@ export const strategyBtcHoldings = defineMetric({
     zh: 'Strategy 在 8-K 里披露的、截至该日的比特币持仓。',
   },
   methodology: {
-    en: 'The point is the “Aggregate BTC Holdings” row. Its timestamp is the “As of” date, not the filing date and not the purchase-window start. “BTC Purchased” is a buy. “BTC Sold”, including sales whose proceeds funded preferred-stock repurchases, is a sale. A decrease that the filing does not call a sale is an adjustment. A later 8-K/A for the same as-of date replaces the earlier number. Weeks with no matching table add no point.',
-    zh: '点的值是表格里的 Aggregate BTC Holdings。时间是 As of 那天，不是申报日，也不是购买区间的第一天。表头写 BTC Purchased 记为买入。表头写 BTC Sold 记为卖出，包括用卖出所得回购优先股的情形。持仓减少但文件没有把它称为卖出的，记为调整。同一截止日若有更晚的 8-K/A，以后一份为准。对不上这张表的那一周不加点。',
+    en: 'The point is the total holdings the filing states: the “Aggregate BTC Holdings” row, or, in earlier 8-Ks and Exhibit 99.1, the sentence that states the balance and its aggregate cost. The timestamp is the “As of” date. When the sentence gives no as-of date, the date in that paragraph is used, otherwise the filing date. It is not a trade date, and the change between two filings is not spread across the days in between. “BTC Purchased” is a buy. “BTC Sold”, including sales whose proceeds funded preferred-stock repurchases, is a sale. A decrease that the filing does not call a sale is an adjustment. A later filing for the same as-of date replaces the earlier number. A week with no stated balance adds no point.',
+    zh: '点的值是文件写明的总持仓：后来的表格用 Aggregate BTC Holdings；更早的 8-K 和附件 99.1 用写明余额和合计成本的那一句。时间是 As of 那天。句子没有截止日时，用这段话里的日期，再没有才用申报日。这不是成交日，两次披露之间的差额也不摊到中间每一天。「BTC Purchased」记为买入。「BTC Sold」记为卖出，包括用卖出所得回购优先股的情形。持仓减少但文件没有把它称为卖出的，记为调整。同一截止日以后来的那份为准。没有写明总持仓的那一周不加点。',
   },
   limits: {
     en: 'The filing date is when the public could read the number. It is not the trade date. A purchase window of several days is not a single trade on the as-of date.',
@@ -162,9 +162,9 @@ export const strategyBtcHoldings = defineMetric({
   contract: point('btc'),
   sources: [sec],
   history: history(
-    '2024-01-01',
-    '从 2024 年起能对上这张表的 8-K 才会进入序列。更早的购买仍在公司账上，但不在这条曲线里逐笔展开。',
-    '8-Ks from 2024 onward enter the series when the table matches. Earlier purchases remain on the books but are not plotted trade by trade.',
+    '2020-08-11',
+    '从 2020 年 8 月第一次写明购买开始。中间没有申报的星期留空，不把差额摊平。',
+    'Starts at the August 2020 purchase the company stated. Weeks with no filing stay empty. The difference is not spread across them.',
   ),
   missingPolicy: 'null',
   betterWhen: null,
@@ -212,8 +212,8 @@ export const strategyBtcCost = defineMetric({
     zh: 'Strategy 为其剩余比特币写明的平均购买价格。',
   },
   methodology: {
-    en: 'Each 8-K states an average purchase price inclusive of fees and expenses. After a sale, the next filing states a new average. Signal stores that stated average and does not re-average the increments. The billions figure in the same row is rounded; the average times the holdings is the finer total, and the page says which one it is showing. The detail page also shows the BTC price at the last US equity close on or before the as-of date.',
-    zh: '每份 8-K 会写一个含费用的平均购买价格。发生卖出后，下一份文件会给出新的均价。本站保存文件写明的均价，不用前后增量再平均一次。同一行里的十亿美元是四舍五入后的合计数；均价乘以持仓是更细的一笔，页面会说明展示的是哪一个。详情页同时给出持仓截止日当天或之前最后一个美股收盘时刻的 BTC 价格。',
+    en: 'Each filing states an average purchase price inclusive of fees and expenses. After a sale, the next filing states a new average. Signal stores that stated average and does not re-average the increments. When a filing states the aggregate cost and the holdings but not the per-coin average, the average is those two stated numbers divided. The billions figure in the same row is rounded; the average times the holdings is the finer total, and the page says which one it is showing. The detail page also shows the BTC price at the last US equity close on or before the as-of date.',
+    zh: '每份申报会写一个含费用的平均购买价格。发生卖出后，下一份文件会给出新的均价。本站保存文件写明的均价，不用前后增量再平均一次。文件写了合计成本和总枚数、但没有写每股均价时，均价用这两个写明的数相除。同一行里的十亿美元是四舍五入后的合计数；均价乘以持仓是更细的一笔，页面会说明展示的是哪一个。详情页同时给出持仓截止日当天或之前最后一个美股收盘时刻的 BTC 价格。',
   },
   limits: {
     en: 'A lower average after a sale is an accounting result of which coins left, not evidence that the remaining coins were bought more cheaply in the market that week.',
@@ -226,9 +226,9 @@ export const strategyBtcCost = defineMetric({
   contract: point('usd'),
   sources: [sec],
   history: history(
-    '2024-01-01',
-    '均价跟着能解析的 8-K 走。卖出前后的两个均价都保留，不合并成一条增量成本。',
-    'The average follows the 8-Ks that parse. Averages before and after a sale are both kept.',
+    '2020-08-11',
+    '均价跟着能解析的申报走。卖出前后的两个均价都保留，不合并成一条增量成本。',
+    'The average follows the filings that parse. Averages before and after a sale are both kept.',
   ),
   missingPolicy: 'null',
   betterWhen: null,

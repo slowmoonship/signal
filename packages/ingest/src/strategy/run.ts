@@ -31,6 +31,7 @@ import { parseBriefing, type BriefingExtract } from './briefing.js'
 import {
   collapseEvents,
   dateToUtcMidnight,
+  disclosureRecords,
   parseFilingEvents,
   seriesFromEvents,
   type DisclosureEvent,
@@ -44,6 +45,7 @@ const CIK = '0001050446'
 const CIK_PATH = '1050446'
 const SEC_SUBMISSIONS = `https://data.sec.gov/submissions/CIK${CIK}.json`
 const TAPE_FROM = '2024-01-02'
+const FILING_FROM = '2020-08-01'
 
 /** 简报 PDF 的地址不是可枚举的目录。只刷新已经核对过的这几份。 */
 const BRIEFINGS = [
@@ -207,14 +209,80 @@ function filingUrl(ref: FilingRef): string {
   return `https://www.sec.gov/Archives/edgar/data/${CIK_PATH}/${accession}/${ref.primaryDocument}`
 }
 
+function exhibitNames(raw: unknown): string[] {
+  if (typeof raw !== 'object' || raw === null) return []
+  const directory = (raw as { directory?: unknown }).directory
+  if (typeof directory !== 'object' || directory === null) return []
+  const items = (directory as { item?: unknown }).item
+  if (!Array.isArray(items)) return []
+  const names: string[] = []
+  for (const item of items) {
+    if (typeof item !== 'object' || item === null) continue
+    const name = (item as { name?: unknown }).name
+    if (typeof name !== 'string' || !name.toLowerCase().endsWith('.htm')) continue
+    if (!/ex99/i.test(name)) continue
+    names.push(name)
+  }
+  return names
+    .sort((a, b) => Number(/ex99[^0-9]*1/i.test(b)) - Number(/ex99[^0-9]*1/i.test(a)))
+    .slice(0, 3)
+}
+
+/** 正文没有持仓时，再读附件 99。购买有时只写在新闻稿里。 */
+async function parseExhibits(
+  ref: FilingRef,
+  meta: { readonly accession: string; readonly filedOn: string },
+  fetchImpl: FetchImpl,
+): Promise<DisclosureEvent[]> {
+  const accession = ref.accession.replaceAll('-', '')
+  await sleep(120)
+  const index = await getBuffer(
+    `https://www.sec.gov/Archives/edgar/data/${CIK_PATH}/${accession}/index.json`,
+    fetchImpl,
+    60_000,
+  )
+  if (index.status !== 200) return []
+  let names: string[] = []
+  try {
+    names = exhibitNames(JSON.parse(index.body.toString('utf8')) as unknown)
+  } catch {
+    return []
+  }
+  const found: DisclosureEvent[] = []
+  for (const name of names) {
+    if (name === ref.primaryDocument) continue
+    await sleep(120)
+    const extra = await getBuffer(
+      `https://www.sec.gov/Archives/edgar/data/${CIK_PATH}/${accession}/${name}`,
+      fetchImpl,
+      60_000,
+    )
+    if (extra.status !== 200) continue
+    found.push(...parseFilingEvents(extra.body.toString('utf8'), meta))
+  }
+  return found
+}
+
 function unknownList(value: unknown): readonly unknown[] | null {
   if (!Array.isArray(value)) return null
   return Array.from(value as readonly unknown[])
 }
 
+const FILING_FORMS = new Set(['8-K', '8-K/A', '10-Q', '10-Q/A', '10-K', '10-K/A'])
+
+function recentOf(raw: unknown): Record<string, unknown> | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const record = raw as Record<string, unknown>
+  if (Array.isArray(record['form'])) return record
+  const filings = record['filings']
+  if (typeof filings !== 'object' || filings === null) return null
+  const recent = (filings as { recent?: unknown }).recent
+  if (typeof recent !== 'object' || recent === null) return null
+  return recent as Record<string, unknown>
+}
+
 function readRecent(raw: unknown): FilingRef[] {
-  if (typeof raw !== 'object' || raw === null) return []
-  const filings = (raw as { filings?: { recent?: Record<string, unknown> } }).filings?.recent
+  const filings = recentOf(raw)
   if (!filings) return []
   const forms = unknownList(filings['form'])
   const dates = unknownList(filings['filingDate'])
@@ -229,8 +297,8 @@ function readRecent(raw: unknown): FilingRef[] {
     const primaryDocument = documents[i]
     if (typeof form !== 'string' || typeof filedOn !== 'string' || typeof accession !== 'string') continue
     if (typeof primaryDocument !== 'string' || primaryDocument.length === 0) continue
-    if (form !== '8-K' && form !== '8-K/A') continue
-    if (filedOn < '2024-01-01') continue
+    if (!FILING_FORMS.has(form)) continue
+    if (filedOn < FILING_FROM) continue
     out.push({ form, filedOn, accession, primaryDocument })
   }
   return out
@@ -267,7 +335,7 @@ async function loadFilings(fetchImpl: FetchImpl, logger: Logger): Promise<Disclo
     seen.add(ref.accession)
     return true
   })
-  logger.info(`SEC 8-K ${unique.length} 份，自 2024-01-01 起`)
+  logger.info(`SEC 申报 ${unique.length} 份，自 ${FILING_FROM} 起`)
 
   const events: DisclosureEvent[] = []
   let cursor = 0
@@ -284,10 +352,9 @@ async function loadFilings(fetchImpl: FetchImpl, logger: Logger): Promise<Disclo
           logger.warn(`${ref.accession} 返回 ${response.status}`)
           continue
         }
-        const found = parseFilingEvents(response.body.toString('utf8'), {
-          accession: ref.accession,
-          filedOn: ref.filedOn,
-        })
+        const meta = { accession: ref.accession, filedOn: ref.filedOn }
+        let found = parseFilingEvents(response.body.toString('utf8'), meta)
+        if (found.length === 0) found = await parseExhibits(ref, meta, fetchImpl)
         events.push(...found)
       } catch (error) {
         logger.warn(`${ref.accession} 读取失败：${error instanceof Error ? error.message : String(error)}`)
@@ -362,6 +429,7 @@ function publishIfAny(
   warnings: readonly string[],
   dryRun: boolean,
   logger: Logger,
+  extra: Record<string, unknown> = {},
 ): boolean {
   const previous = readPublished(dir, metricId, (message) => logger.warn(message))
   const points = mergedPoints(previous?.points ?? null, fresh)
@@ -373,7 +441,7 @@ function publishIfAny(
     logger.info(`${metricId}: dry-run，${points.length} 个点`)
     return true
   }
-  const file = snapshotFile(metricId, points, sourceTime, ingestedAt, model, warnings, false)
+  const file = { ...snapshotFile(metricId, points, sourceTime, ingestedAt, model, warnings, false), ...extra }
   publishJson(dir, `${metricId}.json`, file)
   logger.info(`${metricId}: 发布 ${points.length} 个点`)
   return true
@@ -553,6 +621,7 @@ export async function runStrategy(opts: StrategyRunOptions): Promise<number> {
         [],
         opts.dryRun === true,
         logger,
+        { disclosures: disclosureRecords(events) },
       )
       const mark = sessionOnOrBefore(latest.holdingsAsOf)
       const marked = mark ? tapeBySession.get(mark) : undefined

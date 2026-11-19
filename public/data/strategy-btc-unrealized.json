@@ -10,6 +10,10 @@
   },
   "points": [
     {
+      "ts": 1707091200,
+      "value": 2117029400
+    },
+    {
       "ts": 1708819200,
       "value": 3771324220
     },
@@ -22,8 +26,16 @@
       "value": 6808354379.66
     },
     {
+      "ts": 1714089600,
+      "value": 6119833600
+    },
+    {
       "ts": 1718841600,
       "value": 6384792983.38
+    },
+    {
+      "ts": 1722384000,
+      "value": 6434640765
     },
     {
       "ts": 1726099200,
@@ -36,6 +48,10 @@
     {
       "ts": 1731196800,
       "value": 9497538889.8
+    },
+    {
+      "ts": 1731801600,
+      "value": 13789064880
     },
     {
       "ts": 1732406400,
@@ -114,6 +130,10 @@
       "value": 14903361265
     },
     {
+      "ts": 1745798400,
+      "value": 14591909079.8
+    },
+    {
       "ts": 1746316800,
       "value": 15787011009
     },
@@ -124,6 +144,10 @@
     {
       "ts": 1747526400,
       "value": 19792307703.9
+    },
+    {
+      "ts": 1748131200,
+      "value": 22491546055
     },
     {
       "ts": 1748736000,
@@ -192,6 +216,10 @@
     {
       "ts": 1759190400,
       "value": 25883839287.74
+    },
+    {
+      "ts": 1760227200,
+      "value": 27332266097.5
     },
     {
       "ts": 1760832000,
@@ -394,6 +422,10 @@
       "value": 7512593120
     },
     {
+      "ts": 1791676800,
+      "value": 5795006490
+    },
+    {
       "ts": 1792281600,
       "value": 5122751684.1
     },
@@ -411,21 +443,21 @@
     }
   ],
   "sourceTime": "2026-11-15T00:00:00.000Z",
-  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "ingestedAt": "2026-11-17T07:44:40.919Z",
   "stale": false,
   "sources": [
     {
       "provider": "SEC EDGAR",
-      "metric": "Strategy Inc 8-K",
+      "metric": "Strategy Inc 8-K, 10-Q and 10-K",
       "endpoint": "https://data.sec.gov/submissions/CIK0001050446.json",
       "auth": "none",
       "labelConfidence": "verified",
       "license": {
-        "name": "US government work",
+        "name": "SEC EDGAR access",
         "url": "https://www.sec.gov/os/accessing-edgar-data",
         "restriction": {
-          "en": "EDGAR filings are US government works. Keep the accession number with the figure.",
-          "zh": "EDGAR 申报是美国政府作品。引用数字时保留 accession 编号。"
+          "en": "Figures are facts the company stated in its filing. Keep the accession with the number. Hosting on EDGAR does not make the filing a US government work.",
+          "zh": "数字是公司在申报里写明的事实，并保留 accession。文件放在 EDGAR 上，并不因此变成美国政府作品。"
         }
       }
     }

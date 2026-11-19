@@ -10,6 +10,106 @@
   },
   "points": [
     {
+      "ts": 1597104000,
+      "value": 11653
+    },
+    {
+      "ts": 1600041600,
+      "value": 11111
+    },
+    {
+      "ts": 1607040000,
+      "value": 11635
+    },
+    {
+      "ts": 1611273600,
+      "value": 16035
+    },
+    {
+      "ts": 1612224000,
+      "value": 16109
+    },
+    {
+      "ts": 1614556800,
+      "value": 24063
+    },
+    {
+      "ts": 1614902400,
+      "value": 24119
+    },
+    {
+      "ts": 1615507200,
+      "value": 24214
+    },
+    {
+      "ts": 1617580800,
+      "value": 24311
+    },
+    {
+      "ts": 1620864000,
+      "value": 24403
+    },
+    {
+      "ts": 1621296000,
+      "value": 24450
+    },
+    {
+      "ts": 1629676800,
+      "value": 26769
+    },
+    {
+      "ts": 1638144000,
+      "value": 29534
+    },
+    {
+      "ts": 1649030400,
+      "value": 30700
+    },
+    {
+      "ts": 1656374400,
+      "value": 30664
+    },
+    {
+      "ts": 1663545600,
+      "value": 30639
+    },
+    {
+      "ts": 1672099200,
+      "value": 30397
+    },
+    {
+      "ts": 1679529600,
+      "value": 29817
+    },
+    {
+      "ts": 1680566400,
+      "value": 29803
+    },
+    {
+      "ts": 1687824000,
+      "value": 29668
+    },
+    {
+      "ts": 1695513600,
+      "value": 29582
+    },
+    {
+      "ts": 1698710400,
+      "value": 29586
+    },
+    {
+      "ts": 1701216000,
+      "value": 30252
+    },
+    {
+      "ts": 1703548800,
+      "value": 31168
+    },
+    {
+      "ts": 1707091200,
+      "value": 31224
+    },
+    {
       "ts": 1708819200,
       "value": 31544
     },
@@ -22,8 +122,16 @@
       "value": 35160
     },
     {
+      "ts": 1714089600,
+      "value": 35180
+    },
+    {
       "ts": 1718841600,
       "value": 36798
+    },
+    {
+      "ts": 1722384000,
+      "value": 36821
     },
     {
       "ts": 1726099200,
@@ -36,6 +144,10 @@
     {
       "ts": 1731196800,
       "value": 42692
+    },
+    {
+      "ts": 1731801600,
+      "value": 49874
     },
     {
       "ts": 1732406400,
@@ -114,6 +226,10 @@
       "value": 68459
     },
     {
+      "ts": 1745798400,
+      "value": 68459
+    },
+    {
       "ts": 1746316800,
       "value": 68550
     },
@@ -124,6 +240,10 @@
     {
       "ts": 1747526400,
       "value": 69726
+    },
+    {
+      "ts": 1748131200,
+      "value": 69979
     },
     {
       "ts": 1748736000,
@@ -192,6 +312,10 @@
     {
       "ts": 1759190400,
       "value": 73983
+    },
+    {
+      "ts": 1760227200,
+      "value": 74000
     },
     {
       "ts": 1760832000,
@@ -394,6 +518,10 @@
       "value": 75440.7
     },
     {
+      "ts": 1791676800,
+      "value": 75444
+    },
+    {
       "ts": 1792281600,
       "value": 75446
     },
@@ -411,21 +539,21 @@
     }
   ],
   "sourceTime": "2026-11-15T00:00:00.000Z",
-  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "ingestedAt": "2026-11-17T07:44:40.919Z",
   "stale": false,
   "sources": [
     {
       "provider": "SEC EDGAR",
-      "metric": "Strategy Inc 8-K",
+      "metric": "Strategy Inc 8-K, 10-Q and 10-K",
       "endpoint": "https://data.sec.gov/submissions/CIK0001050446.json",
       "auth": "none",
       "labelConfidence": "verified",
       "license": {
-        "name": "US government work",
+        "name": "SEC EDGAR access",
         "url": "https://www.sec.gov/os/accessing-edgar-data",
         "restriction": {
-          "en": "EDGAR filings are US government works. Keep the accession number with the figure.",
-          "zh": "EDGAR 申报是美国政府作品。引用数字时保留 accession 编号。"
+          "en": "Figures are facts the company stated in its filing. Keep the accession with the number. Hosting on EDGAR does not make the filing a US government work.",
+          "zh": "数字是公司在申报里写明的事实，并保留 accession。文件放在 EDGAR 上，并不因此变成美国政府作品。"
         }
       }
     }

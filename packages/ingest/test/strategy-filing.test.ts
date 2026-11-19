@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { collapseEvents, parseFiling, parseFilingEvents, seriesFromEvents } from '../src/strategy/filing.js'
+import { collapseEvents, disclosureRecords, parseFiling, parseFilingEvents, seriesFromEvents } from '../src/strategy/filing.js'
 import { parseBriefing } from '../src/strategy/briefing.js'
 
 const BUY = `
@@ -207,6 +207,89 @@ describe('8-K 表格', () => {
     expect(event?.periodEnd).toBe('2024-02-25')
     expect(event?.holdingsAsOf).toBe('2024-02-25')
     expect(event?.filedOn).not.toBe(event?.holdingsAsOf)
+  })
+
+  it('美元符号和数字被空标签拆开时仍然读出 2024-11-17 的持仓', () => {
+    const html = `
+      during the period between November 11, 2024 and November 17, 2024, the Company
+      acquired approximately 51,780 bitcoins for approximately $4.6 billion in cash,
+      at an average price of approximately $<span style="text-decoration:underline"></span>88,627 per bitcoin.
+      As of November 17, 2024, the Company held an aggregate of approximately 331,200 bitcoins,
+      which were acquired at an aggregate purchase price of approximately $16.5 billion
+      and an average purchase price of approximately $49,874 per bitcoin.
+    `
+    const event = parseFiling(html, { accession: '0001193125-24-260452', filedOn: '2024-11-18' })
+    expect(event?.btcDelta).toBe(51780)
+    expect(event?.holdings).toBe(331200)
+    expect(event?.holdingsAsOf).toBe('2024-11-17')
+    expect(event?.averageUsd).toBe(49874)
+    expect(279420 + 51780).toBe(331200)
+    expect(331200 + 55500).toBe(386700)
+    const record = disclosureRecords(event ? [event] : [])[0]
+    expect(record?.sourceUrl).toBe(
+      'https://www.sec.gov/Archives/edgar/data/1050446/000119312524260452/0001193125-24-260452-index.html',
+    )
+  })
+
+  it('2020 年 9 月只保留合计持仓，不把重述的第一笔再记一次', () => {
+    const html = `
+      On August 11, 2020, the Company announced that it had purchased 21,454 bitcoins at an aggregate purchase price of $250 million.
+      On September 14, 2020, the Company completed its acquisition of 16,796 additional bitcoins at an aggregate purchase price of $175 million.
+      To date, the Company has purchased a total of 38,250 bitcoins at an aggregate purchase price of $425 million.
+    `
+    const events = parseFilingEvents(html, { accession: '0001193125-20-245835', filedOn: '2020-09-15' })
+    expect(events.map((event) => [event.holdingsAsOf, event.holdings])).toEqual([['2020-09-14', 38250]])
+  })
+
+  it('2020 年 8 月第一次购买用正文里的日期', () => {
+    const html = `
+      On August 11, 2020, the Company has purchased 21,454 bitcoins at an aggregate purchase price of $250.0 million, inclusive of fees and expenses.
+    `
+    const event = parseFiling(html, { accession: '0001193125-20-215604', filedOn: '2020-08-11' })
+    expect(event?.holdings).toBe(21454)
+    expect(event?.holdingsAsOf).toBe('2020-08-11')
+    expect(event?.averageUsd).toBe(Math.round(250_000_000 / 21454))
+    expect(event?.btcDelta).toBeNull()
+  })
+
+  it('2021 年按截止日读总持仓，不把本期购买当成总持仓', () => {
+    const html = `
+      On February 2, 2021, the Company announced that it had purchased approximately 295 bitcoins for $10.0 million in cash,
+      at an average price of approximately $33,810 per bitcoin.
+      As of February 2, 2021, the Company holds approximately 71,079 bitcoins that were acquired at an aggregate purchase price of $1.145 billion
+      and an average purchase price of approximately $16,109 per bitcoin.
+    `
+    const event = parseFiling(html, { accession: '0001193125-21-025369', filedOn: '2021-02-02' })
+    expect(event?.holdings).toBe(71079)
+    expect(event?.holdingsAsOf).toBe('2021-02-02')
+    expect(event?.averageUsd).toBe(16109)
+    expect(event?.aggregateBillions).toBeCloseTo(1.145)
+  })
+
+  it('2022 年同一段里的买入和卖出只留下截止日总持仓', () => {
+    const html = `
+      acquired approximately 2,395 bitcoins for approximately $42.8 million.
+      sold approximately 704 bitcoins for cash proceeds of approximately $11.8 million.
+      The approximately 132,500 bitcoins held by the Company as of December 27, 2022 were acquired at an aggregate purchase price of approximately $4.03 billion
+      and an average purchase price of approximately $30,397 per bitcoin.
+    `
+    const event = parseFiling(html, { accession: '0001193125-22-313098', filedOn: '2022-12-28' })
+    expect(event?.holdings).toBe(132500)
+    expect(event?.holdingsAsOf).toBe('2022-12-27')
+    expect(event?.averageUsd).toBe(30397)
+  })
+
+  it('抵押账户里的枚数不是总持仓', () => {
+    const html = `As of March 24, 2023, approximately 34,619 bitcoins were held in a collateral account.`
+    expect(parseFiling(html, { accession: '0001193125-23-079839', filedOn: '2023-03-27' })).toBeNull()
+  })
+
+  it('业绩稿里写明的总持仓和均价可以收录', () => {
+    const html = `190,000 bitcoin holdings at a total cost of $5.93 billion, or $31,224 per bitcoin, as of February 5, 2024`
+    const event = parseFiling(html, { accession: '0000950170-24-011709', filedOn: '2024-02-06' })
+    expect(event?.holdings).toBe(190000)
+    expect(event?.averageUsd).toBe(31224)
+    expect(event?.holdingsAsOf).toBe('2024-02-05')
   })
 
   it('均价用披露写明的数字，不拿前后两笔重新平均', () => {

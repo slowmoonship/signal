@@ -37,6 +37,7 @@ export function flattenHtml(html: string): string {
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;|&#160;/gi, ' ')
     .replace(/&amp;/gi, '&')
+    .replace(/&#x[0-9a-f]+;/gi, ' ')
     .replace(/&#\d+;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -61,8 +62,24 @@ const LEAD = /([\d,]+|-)\s*(?:\(\d+\))?\s+\$\s*([\d,.]+|-)(?:\s+(billion|million
 const TAIL =
   /Aggregate BTC Holdings[\s\S]{0,240}?([\d,]+)\s+\$\s*([\d,.]+)(?:\s+(billion|million))?\s+\$\s*([\d,.]+)/g
 const DASHES = /-\s+-\s+-[\s\S]{0,280}?([\d,]+)\s+\$\s*([\d,.]+)(?:\s+(billion|million))?\s+\$\s*([\d,.]+)/
+// 美元符号和数字经常被空的下划线标签拆开，压平后变成「$ 88,627」。
 const PROSE =
-  /during the period between ([A-Za-z]+\.?\s+\d{1,2}, \d{4}) and ([A-Za-z]+\.?\s+\d{1,2}, \d{4}),?\s+[\s\S]{0,160}?acquired approximately ([\d,]+) bitcoins? for approximately \$([\d,.]+) (billion|million)[\s\S]{0,700}?average price of approximately \$([\d,]+)[\s\S]{0,700}?As of ([A-Za-z]+\.?\s+\d{1,2}, \d{4})[\s\S]{0,500}?aggregate of approximately ([\d,]+) bitcoins?[\s\S]{0,400}?aggregate purchase price of approximately \$([\d,.]+) (billion|million)[\s\S]{0,250}?average purchase price of approximately \$([\d,]+)/gi
+  /during the period between ([A-Za-z]+\.?\s+\d{1,2}, \d{4}) and ([A-Za-z]+\.?\s+\d{1,2}, \d{4}),?\s+[\s\S]{0,160}?acquired approximately ([\d,]+) bitcoins? for approximately \$\s*([\d,.]+) (billion|million)[\s\S]{0,700}?average price of approximately \$\s*([\d,]+)[\s\S]{0,700}?As of ([A-Za-z]+\.?\s+\d{1,2}, \d{4})[\s\S]{0,500}?aggregate of approximately ([\d,]+) bitcoins?[\s\S]{0,400}?aggregate purchase price of approximately \$\s*([\d,.]+) (billion|million)[\s\S]{0,250}?average purchase price of approximately \$\s*([\d,]+)/gi
+
+const AS_OF_HOLDS =
+  /As of\s+([A-Za-z]+\.?\s+\d{1,2},\s*\d{4}),[\s\S]{0,180}?holds approximately\s+([\d,]+)\s+bitcoins[\s\S]{0,220}?aggregate purchase price of\s+(?:approximately\s+)?\$\s*([\d,.]+)\s*(billion|million)(?:[\s\S]{0,160}?average purchase price of\s+(?:approximately\s+)?\$\s*([\d,.]+))?/gi
+
+const HELD_AS_OF =
+  /approximately\s+([\d,]+)\s+bitcoins\s+held\b[\s\S]{0,120}?as of\s+([A-Za-z]+\.?\s+\d{1,2},\s*\d{4})[\s\S]{0,180}?aggregate purchase price of\s+(?:approximately\s+)?\$\s*([\d,.]+)\s*(billion|million)(?:[\s\S]{0,140}?average purchase price of\s+(?:approximately\s+)?\$\s*([\d,.]+))?/gi
+
+const STATED_COST =
+  /([\d,]+)\s+bitcoins?\s+holdings at a total cost of\s+\$\s*([\d,.]+)\s*(billion|million),\s+or\s+\$\s*([\d,.]+)\s+per bitcoin,\s+as of\s+([A-Za-z]+\.?\s+\d{1,2},\s*\d{4})/gi
+
+const TOTAL_BOUGHT =
+  /has purchased\s+a total of\s+(?:approximately\s+)?([\d,]+)\s+bitcoins[\s\S]{0,120}?aggregate purchase price of\s+(?:approximately\s+)?\$\s*([\d,.]+)\s*(million|billion)/gi
+
+const HAS_PURCHASED =
+  /(?<!had )has purchased\s+(?:approximately\s+)?([\d,]+)\s+bitcoins\s+at an aggregate purchase price of\s+\$\s*([\d,.]+)\s*(million|billion)/gi
 
 type ParsedRow = Readonly<{
   header: string
@@ -81,7 +98,8 @@ function asBillions(amount: number, unit: string | undefined): number {
 function plausible(holdings: number, averageUsd: number, aggregateBillions: number, count: number | null): boolean {
   if (holdings < 10_000 || holdings > 2_000_000) return false
   if (averageUsd < 1_000 || averageUsd > 500_000) return false
-  if (aggregateBillions < 0.5 || aggregateBillions > 500) return false
+  // 2020 年 8 月第一笔合计是 2.5 亿美元，不到后来表格里常见的十亿。
+  if (aggregateBillions < 0.2 || aggregateBillions > 500) return false
   return count === null || (count > 0 && count < holdings)
 }
 
@@ -263,6 +281,126 @@ function fromProse(
   }
 }
 
+function statedAverage(amount: number, unit: string, holdings: number, stated: string | undefined): number | null {
+  const aggregateBillions = asBillions(amount, unit)
+  const average = stated ? parseNumber(stated) : Math.round((aggregateBillions * 1_000_000_000) / holdings)
+  if (average === null || !plausible(holdings, average, aggregateBillions, null)) return null
+  return average
+}
+
+function balanceEvent(
+  meta: { readonly accession: string; readonly filedOn: string },
+  holdings: number,
+  aggregateBillions: number,
+  averageUsd: number,
+  asOf: string,
+): DisclosureEvent | null {
+  if (asOf < '2020-08-01' || asOf > meta.filedOn) return null
+  if (!plausible(holdings, averageUsd, aggregateBillions, null)) return null
+  return {
+    accession: meta.accession,
+    filedOn: meta.filedOn,
+    periodStart: null,
+    periodEnd: null,
+    holdingsAsOf: asOf,
+    btcDelta: null,
+    flowClass: null,
+    holdings,
+    averageUsd,
+    aggregateBillions,
+    ...blankFinance(),
+  }
+}
+
+function dateNear(text: string, index: number, filedOn: string): string {
+  const window = text.slice(Math.max(0, index - 500), index)
+  const found = [...window.matchAll(/([A-Za-z]+\.?\s+\d{1,2},\s*\d{4})/g)]
+  const dates = found
+    .map((match) => (match[1] ? dateIn(match[1]) : null))
+    .filter((iso): iso is string => iso !== null && iso <= filedOn && iso >= '2020-08-01')
+  return dates.at(-1) ?? filedOn
+}
+
+/**
+ * 2020–2023 的 8-K 没有后来那张周表。
+ * 只收正文里写明的总持仓。同一段里顺带重述的旧购买不另记一笔。
+ * 文件没写每股均价、但写了合计成本和总枚数时，均价用这两个数相除。
+ */
+function legacyEvents(
+  text: string,
+  meta: { readonly accession: string; readonly filedOn: string },
+): DisclosureEvent[] {
+  const events: DisclosureEvent[] = []
+  const seen = new Set<string>()
+  const push = (event: DisclosureEvent | null): void => {
+    if (!event?.holdingsAsOf || seen.has(event.holdingsAsOf)) return
+    seen.add(event.holdingsAsOf)
+    events.push(event)
+  }
+
+  AS_OF_HOLDS.lastIndex = 0
+  for (const match of text.matchAll(AS_OF_HOLDS)) {
+    const asOf = match[1] ? dateIn(match[1]) : null
+    const holdings = parseNumber(match[2])
+    const amount = parseNumber(match[3])
+    if (!asOf || holdings === null || amount === null || !match[4]) continue
+    const aggregateBillions = asBillions(amount, match[4])
+    const average = statedAverage(amount, match[4], holdings, match[5])
+    if (average === null) continue
+    push(balanceEvent(meta, holdings, aggregateBillions, average, asOf))
+  }
+
+  HELD_AS_OF.lastIndex = 0
+  for (const match of text.matchAll(HELD_AS_OF)) {
+    const holdings = parseNumber(match[1])
+    const asOf = match[2] ? dateIn(match[2]) : null
+    const amount = parseNumber(match[3])
+    if (!asOf || holdings === null || amount === null || !match[4]) continue
+    const aggregateBillions = asBillions(amount, match[4])
+    const average = statedAverage(amount, match[4], holdings, match[5])
+    if (average === null) continue
+    push(balanceEvent(meta, holdings, aggregateBillions, average, asOf))
+  }
+
+  STATED_COST.lastIndex = 0
+  for (const match of text.matchAll(STATED_COST)) {
+    const holdings = parseNumber(match[1])
+    const amount = parseNumber(match[2])
+    const average = parseNumber(match[4])
+    const asOf = match[5] ? dateIn(match[5]) : null
+    if (!asOf || holdings === null || amount === null || average === null || !match[3]) continue
+    push(balanceEvent(meta, holdings, asBillions(amount, match[3]), average, asOf))
+  }
+  if (events.length > 0) return events
+
+  TOTAL_BOUGHT.lastIndex = 0
+  const totals = [...text.matchAll(TOTAL_BOUGHT)]
+  const total = totals.at(-1)
+  if (total?.[1] && total[2] && total[3] && total.index !== undefined) {
+    const holdings = parseNumber(total[1])
+    const amount = parseNumber(total[2])
+    if (holdings !== null && amount !== null) {
+      const aggregateBillions = asBillions(amount, total[3])
+      const average = statedAverage(amount, total[3], holdings, undefined)
+      const event = average === null ? null : balanceEvent(meta, holdings, aggregateBillions, average, dateNear(text, total.index, meta.filedOn))
+      if (event) return [event]
+    }
+  }
+
+  HAS_PURCHASED.lastIndex = 0
+  const bought = [...text.matchAll(HAS_PURCHASED)]
+  if (bought.length !== 1) return []
+  const only = bought[0]
+  if (!only?.[1] || !only[2] || !only[3] || only.index === undefined) return []
+  const holdings = parseNumber(only[1])
+  const amount = parseNumber(only[2])
+  if (holdings === null || amount === null) return []
+  const aggregateBillions = asBillions(amount, only[3])
+  const average = statedAverage(amount, only[3], holdings, undefined)
+  const event = average === null ? null : balanceEvent(meta, holdings, aggregateBillions, average, dateNear(text, only.index, meta.filedOn))
+  return event ? [event] : []
+}
+
 /**
  * 一份 8-K 里可以有两张表：先重述上一周，再给本周。
  * 两张都留下，按持仓截止日分开，避免把两周的变动压成一笔。
@@ -282,6 +420,7 @@ export function parseFilingEvents(
       if (event) events.push(event)
     }
   }
+  if (events.length === 0) events.push(...legacyEvents(text, meta))
   const last = events.at(-1)
   if (!last) return []
   events[events.length - 1] = { ...last, ...readFinance(text) }
@@ -307,6 +446,43 @@ export function collapseEvents(events: readonly DisclosureEvent[]): DisclosureEv
     if (!prev || event.filedOn >= prev.filedOn) byAsOf.set(key, event)
   }
   return [...byAsOf.values()].sort((a, b) => (a.holdingsAsOf ?? '').localeCompare(b.holdingsAsOf ?? ''))
+}
+
+export type DisclosureRecord = Readonly<{
+  holdingsAsOf: string
+  filedOn: string
+  periodStart: string | null
+  periodEnd: string | null
+  btcDelta: number | null
+  flowClass: FlowClass | null
+  holdings: number
+  averageUsd: number | null
+  aggregateBillions: number | null
+  accession: string
+  sourceUrl: string
+}>
+
+/** 每个持仓点对应胜出的那份申报。同一截止日只留最后提交的一份。 */
+export function disclosureRecords(events: readonly DisclosureEvent[]): DisclosureRecord[] {
+  return collapseEvents(events).flatMap((event) => {
+    if (!event.holdingsAsOf || event.holdings === null) return []
+    const nodash = event.accession.replaceAll('-', '')
+    return [
+      {
+        holdingsAsOf: event.holdingsAsOf,
+        filedOn: event.filedOn,
+        periodStart: event.periodStart,
+        periodEnd: event.periodEnd,
+        btcDelta: event.btcDelta,
+        flowClass: event.flowClass,
+        holdings: event.holdings,
+        averageUsd: event.averageUsd,
+        aggregateBillions: event.aggregateBillions,
+        accession: event.accession,
+        sourceUrl: `https://www.sec.gov/Archives/edgar/data/1050446/${nodash}/${event.accession}-index.html`,
+      },
+    ]
+  })
 }
 
 export function dateToUtcMidnight(iso: string): number | null {
