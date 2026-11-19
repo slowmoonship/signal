@@ -13,6 +13,7 @@ import {
   MVRV_Z_REFERENCE_HIGH,
   PUELL_REFERENCE_HIGH,
   PUELL_REFERENCE_LOW,
+  REALIZED_NEAR_PERCENT,
 } from './formulas/local.js'
 import { latestChange } from './derive.js'
 import { HOME_METRIC_IDS } from './home.js'
@@ -482,6 +483,44 @@ function fees(input: InterpretInput): HomeReading {
   })
 }
 
+function gapText(pct: number): string {
+  const abs = Math.abs(pct)
+  return abs >= 10 ? abs.toFixed(0) : abs.toFixed(1)
+}
+
+function realizedPrice(input: InterpretInput): HomeReading {
+  const id = 'btc-realized-price'
+  const cost = lastPoint(input.series[id])
+  if (!cost || cost.value === null || !(cost.value > 0)) return fail(id, 'realized-price-v1', 'missing', 'threshold')
+  const price = lastPoint(input.series['price'])
+  if (!price || price.value === null || !(price.value > 0)) {
+    return done(id, 'realized-price-v1', 'threshold', cost.ts, 'mid', { en: 'no price to compare', zh: '没有可比现价' }, 'flat', { en: 'cost', zh: '成本' })
+  }
+  const pct = (price.value / cost.value - 1) * 100
+  const shown = gapText(pct)
+  if (Math.abs(pct) < REALIZED_NEAR_PERCENT) {
+    return done(id, 'realized-price-v1', 'threshold', cost.ts, 'mid', { en: `${shown}% from cost`, zh: `与成本相差 ${shown}%` }, 'flat', { en: 'near', zh: '接近' })
+  }
+  if (pct > 0) {
+    return done(id, 'realized-price-v1', 'threshold', cost.ts, 'mid', { en: `${shown}% above cost`, zh: `高于链上成本 ${shown}%` }, 'flat', { en: 'above', zh: '成本上' })
+  }
+  return done(id, 'realized-price-v1', 'threshold', cost.ts, 'mid', { en: `${shown}% below cost`, zh: `低于链上成本 ${shown}%` }, 'flat', { en: 'below', zh: '成本下' })
+}
+
+function realizedPremium(input: InterpretInput): HomeReading {
+  const id = 'btc-realized-premium'
+  const point = lastPoint(input.series[id])
+  if (!point || point.value === null) return fail(id, 'realized-premium-v1', 'missing', 'threshold')
+  const shown = gapText(point.value)
+  if (Math.abs(point.value) < REALIZED_NEAR_PERCENT) {
+    return done(id, 'realized-premium-v1', 'threshold', point.ts, 'mid', { en: `${shown}% from cost`, zh: `与成本相差 ${shown}%` }, 'flat', { en: 'near', zh: '接近' })
+  }
+  if (point.value > 0) {
+    return done(id, 'realized-premium-v1', 'threshold', point.ts, 'mid', { en: `${shown}% above cost`, zh: `高于链上成本 ${shown}%` }, 'flat', { en: 'above', zh: '成本上' })
+  }
+  return done(id, 'realized-premium-v1', 'threshold', point.ts, 'mid', { en: `${shown}% below cost`, zh: `低于链上成本 ${shown}%` }, 'flat', { en: 'below', zh: '成本下' })
+}
+
 /** 首页指标的展示解释。不是首页指标时返回 null。 */
 export function interpretMetric(metricId: string, input: InterpretInput): HomeReading | null {
   switch (metricId) {
@@ -521,6 +560,10 @@ export function interpretMetric(metricId: string, input: InterpretInput): HomeRe
       return addresses(input)
     case 'fees-total':
       return fees(input)
+    case 'btc-realized-price':
+      return realizedPrice(input)
+    case 'btc-realized-premium':
+      return realizedPremium(input)
     default:
       return strategyReading(metricId, input)
   }

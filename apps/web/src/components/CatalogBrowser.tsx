@@ -99,23 +99,23 @@ export function CatalogBrowser({ rows }: { readonly rows: readonly CatalogRow[] 
       {visible.length === 0 ? (
         <p className="mt-8 text-sm text-ink-muted">{t.noSearchHits}</p>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-lg border border-rule">
+        <div className="mt-6 overflow-hidden border border-rule">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-rule-strong">
-                <th scope="col" className="hidden py-2 pr-3 text-left font-medium text-ink-subtle lg:table-cell">
+                <th scope="col" className="hidden border-r border-rule px-2 py-2 text-center align-middle font-medium text-ink-subtle lg:table-cell">
                   {t.colCategory}
                 </th>
-                <th scope="col" className="py-2 pr-3 text-left font-medium text-ink-subtle">
+                <th scope="col" className="border-r border-rule px-2 py-2 text-center align-middle font-medium text-ink-subtle">
                   {t.colMetric}
                 </th>
-                <th scope="col" className="py-2 pr-3 text-right font-medium text-ink-subtle">
+                <th scope="col" className="border-r border-rule px-2 py-2 text-center align-middle font-medium text-ink-subtle">
                   {t.colValue}
                 </th>
-                <th scope="col" className="py-2 pr-3 text-left font-medium text-ink-subtle">
+                <th scope="col" className="px-2 py-2 text-center align-middle font-medium text-ink-subtle xl:border-r xl:border-rule">
                   {t.colStatus}
                 </th>
-                <th scope="col" className="hidden py-2 text-left font-medium text-ink-subtle xl:table-cell">
+                <th scope="col" className="hidden px-2 py-2 text-center align-middle font-medium text-ink-subtle xl:table-cell">
                   {t.colBasis}
                 </th>
               </tr>
@@ -125,10 +125,10 @@ export function CatalogBrowser({ rows }: { readonly rows: readonly CatalogRow[] 
                 const showGroup = index === 0 || visible[index - 1]?.group !== row.group
                 return (
                   <tr key={row.id} className="border-b border-rule last:border-b-0" data-catalog-row={row.asset}>
-                    <th scope="row" className="hidden py-1.5 pr-3 text-left align-baseline font-mono text-xs font-medium text-ink-muted lg:table-cell">
+                    <th scope="row" className="hidden border-r border-rule py-1.5 pr-3 text-center align-middle font-mono text-xs font-medium text-ink-muted lg:table-cell">
                       {showGroup ? row.groupLabel : ''}
                     </th>
-                    <td className="py-1.5 pr-3 align-baseline">
+                    <td className="border-r border-rule py-1.5 pr-3 align-baseline">
                       <Link href={`/metrics/${row.id}`} className="text-ink hover:underline">
                         {row.name}
                       </Link>
@@ -136,11 +136,11 @@ export function CatalogBrowser({ rows }: { readonly rows: readonly CatalogRow[] 
                         <span className="mt-0.5 block font-mono text-[10px] text-ink-subtle sm:hidden">{row.time}</span>
                       ) : null}
                     </td>
-                    <td className="py-1.5 pr-3 text-right align-baseline font-mono text-sm tabular-nums wrap-anywhere sm:wrap-normal">
+                    <td className="border-r border-rule py-1.5 pr-3 text-right align-baseline font-mono text-sm tabular-nums wrap-anywhere sm:wrap-normal">
                       {row.missing ? <span className="text-ink-subtle">{t.dataNoValue}</span> : row.value}
                       {row.stale ? <span className="ml-1.5 text-[10px] text-ink-subtle">{t.statusPending}</span> : null}
                     </td>
-                    <td className="py-1.5 pr-3 align-baseline">
+                    <td className="py-1.5 pr-3 align-baseline xl:border-r xl:border-rule">
                       <StatusPill status={row.status} locale={locale} />
                     </td>
                     <td className="hidden py-1.5 align-baseline font-mono text-xs text-ink-subtle xl:table-cell">

@@ -237,6 +237,8 @@ export const LOCAL_FORMULA_IDS = [
   'ma-2y',
   'hash-ribbons',
   'mstr-btc-beta-90d',
+  'btc-realized-price',
+  'btc-realized-premium',
 ] as const
 export type LocalFormulaId = (typeof LOCAL_FORMULA_IDS)[number]
 
@@ -254,6 +256,8 @@ export const LOCAL_FORMULA_PARENTS: Readonly<Record<LocalFormulaId, readonly str
   'ma-2y': ['price'],
   'hash-ribbons': ['hashrate'],
   'mstr-btc-beta-90d': ['mstr-price', 'btc-price-us-close'],
+  'btc-realized-price': ['market-cap', 'mvrv', 'supply'],
+  'btc-realized-premium': ['price', 'btc-realized-price'],
 }
 
 export type Derivation =

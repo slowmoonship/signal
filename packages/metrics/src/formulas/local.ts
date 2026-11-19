@@ -381,6 +381,66 @@ export function mayerSeries(prices: readonly SeriesPoint[]): SeriesPoint[] {
 
 // ── NUPL ────────────────────────────────────────────────
 
+/**
+ * 链上平均成本与现价相差不到这一百分比时，状态写成「接近」。
+ * 5% 是展示带宽，不是买卖阈值：它只避免把 1% 的出入说成方向。
+ */
+export const REALIZED_NEAR_PERCENT = 5
+
+export const REALIZED_PRICE_VERSION = 'realized-price-from-capmvrvcur-v1'
+export const REALIZED_PREMIUM_VERSION = 'realized-premium-v1'
+
+/**
+ * 已实现价格 = 流通市值 / (CapMVRVCur × 流通量)。
+ *
+ * Coin Metrics 把 CapMVRVCur 定义为流通市值 / 已实现市值，
+ * 所以这个式子就是已实现市值 / 流通量。免 key 接口不返回 CapRealUSD 本身。
+ * 同一日的市值、比值、供应量对不齐，或分母不是正数时，这一天是 null，不填 0。
+ * 不与「价格 / MVRV」取平均：两条路径不一致时以市值口径为准。
+ */
+export function realizedPriceSeries(
+  marketCap: readonly SeriesPoint[],
+  mvrv: readonly SeriesPoint[],
+  supply: readonly SeriesPoint[],
+): SeriesPoint[] {
+  const ratio = new Map<number, number | null>()
+  const coins = new Map<number, number | null>()
+  for (const point of mvrv) ratio.set(point.ts, point.value)
+  for (const point of supply) coins.set(point.ts, point.value)
+  return sorted(marketCap).map((point) => {
+    const cap = point.value
+    const m = ratio.get(point.ts)
+    const s = coins.get(point.ts)
+    if (cap === null || cap === undefined || m === null || m === undefined || s === null || s === undefined) {
+      return { ts: point.ts, value: null }
+    }
+    if (!(cap > 0) || !(m > 0) || !(s > 0)) return { ts: point.ts, value: null }
+    const value = cap / (m * s)
+    return { ts: point.ts, value: Number.isFinite(value) && value > 0 ? value : null }
+  })
+}
+
+/**
+ * (价格 / 已实现价格 − 1) × 100。
+ * 当流通市值等于价格 × 流通量时，它与 (MVRV − 1) × 100 是同一个数。
+ */
+export function realizedPremiumSeries(
+  price: readonly SeriesPoint[],
+  realized: readonly SeriesPoint[],
+): SeriesPoint[] {
+  const cost = new Map<number, number | null>()
+  for (const point of realized) cost.set(point.ts, point.value)
+  return sorted(price).map((point) => {
+    const px = point.value
+    const rp = cost.get(point.ts)
+    if (px === null || px === undefined || rp === null || rp === undefined || !(rp > 0) || !(px > 0)) {
+      return { ts: point.ts, value: null }
+    }
+    const value = (px / rp - 1) * 100
+    return { ts: point.ts, value: Number.isFinite(value) ? value : null }
+  })
+}
+
 export const NUPL_VERSION = 'nupl-from-capmvrvcur-v1'
 
 /**
@@ -639,6 +699,24 @@ export function runLocalFormula(id: LocalFormulaId, inputs: FormulaInputs): Loca
         points: hashRibbonLines(must(inputs, 'hashrate')).ratio,
         warnings: [
           `由本地公式 ${HASH_RIBBON_VERSION} 计算，父序列 hashrate。只含算力均线交叉，不含价格动量确认。`,
+        ],
+      }
+    case 'btc-realized-price':
+      return {
+        points: realizedPriceSeries(
+          must(inputs, 'market-cap'),
+          must(inputs, 'mvrv'),
+          must(inputs, 'supply'),
+        ),
+        warnings: [
+          `由本地公式 ${REALIZED_PRICE_VERSION} 计算，父序列 market-cap、mvrv、supply。等于流通市值 / (CapMVRVCur × 流通量)。不是价格均线。`,
+        ],
+      }
+    case 'btc-realized-premium':
+      return {
+        points: realizedPremiumSeries(must(inputs, 'price'), must(inputs, 'btc-realized-price')),
+        warnings: [
+          `由本地公式 ${REALIZED_PREMIUM_VERSION} 计算，父序列 price 与 btc-realized-price。流通市值等于价格乘流通量时，它与 MVRV − 1 是同一个百分比，不是第二条独立信号。`,
         ],
       }
     case 'mstr-btc-beta-90d': {

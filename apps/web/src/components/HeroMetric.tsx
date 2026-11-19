@@ -28,7 +28,6 @@ import {
   type DcaDistribution,
   type DcaWorstCase,
   type FeatureTable,
-  type MarketRegime,
   type SiteLocale,
   type MarketRead as MarketReadResult,
   type MetricDefinition,
@@ -38,6 +37,7 @@ import {
 } from '@slowmoonship/metrics'
 
 import { getDictionary } from '@/i18n/dictionaries'
+import { BASE_PATH } from '@/lib/base-path'
 import { formatUtcDateTime } from '@/lib/format-time'
 
 import { PriceSparkline } from './PriceSparkline'
@@ -188,9 +188,29 @@ export function MarketRead({
 }) {
   const t = getDictionary()
   const faulted = regime.status === 'unknown'
+  const scene = faulted ? 'fault' : (regime.regime ?? 'range')
+  const sceneClass =
+    scene === 'bull'
+      ? 'bg-market-bull'
+      : scene === 'bear'
+        ? 'bg-market-bear'
+        : scene === 'range'
+          ? 'bg-market-range'
+          : 'bg-market-fault'
 
   return (
-    <section className={`mt-4 rounded-lg border border-rule p-5 ${REGIME_CLASS[regime.regime ?? 'range']}`}>
+    <section
+      data-regime={scene}
+      className={`relative mt-4 overflow-hidden rounded-lg border border-rule p-5 pb-16 ${sceneClass}`}
+    >
+      {faulted ? null : (
+        <img
+          src={`${BASE_PATH}/market/ridge.svg`}
+          alt=""
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 w-full"
+        />
+      )}
+      <div className="relative">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm font-medium text-ink-muted">{t.marketRead}</p>
         {/* 状态词用等宽字体：它是这一张卡片的结论，
@@ -224,22 +244,7 @@ export function MarketRead({
       {read.status === 'unknown' && !faulted ? (
         <p className="mt-1.5 font-mono text-xs text-ink-subtle">{t.marketReadUnknown}</p>
       ) : null}
+      </div>
     </section>
   )
-}
-
-/**
- * 方向三态 → 卡片底色。
- *
- * 三个 token 住在 `globals.css`（CLAUDE.md §视觉红线）：组件只认类名，
- * 不知道背后是哪个明度的绿或红。`range` 就是卡片原来的背景，
- * 它被写成一个 token 只是为了让"三档"在代码里是同一个形状。
- *
- * 注意这里**没有**第四档：判不了的时候页面走 `range` 底色，
- * 但底色上写的是"数据故障"而不是"震荡"——颜色不承载"判不了"这个意思。
- */
-const REGIME_CLASS: Readonly<Record<MarketRegime, string>> = {
-  bull: 'bg-market-bull',
-  bear: 'bg-market-bear',
-  range: 'bg-market-range',
 }

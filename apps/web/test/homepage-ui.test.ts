@@ -187,3 +187,21 @@ describe('页脚品牌与社交入口', () => {
   })
 })
 
+describe('表格结构', () => {
+  const CATALOG = stripComments(readFileSync(join(WEB_SRC, 'components/CatalogBrowser.tsx'), 'utf8'))
+
+  it('首页和指标库都是直角外框，列间有竖线，表头居中', () => {
+    for (const src of [TABLE, CATALOG]) {
+      expect(src).not.toMatch(/rounded-lg/)
+      expect(src).toMatch(/border-r border-rule/)
+      expect(src).toMatch(/text-center align-middle/)
+      expect(src).toMatch(/<table/)
+    }
+  })
+
+  it('隐藏列的右边线不留在窄屏上', () => {
+    expect(TABLE).toMatch(/xl:border-r xl:border-rule/)
+    expect(CATALOG).toMatch(/xl:border-r xl:border-rule/)
+  })
+})
+

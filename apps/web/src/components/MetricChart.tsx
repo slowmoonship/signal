@@ -21,6 +21,8 @@ import {
 import { getDictionary } from '@/i18n/dictionaries'
 import { formatUtcDay } from '@/lib/format-time'
 
+import { TimeAxis } from './TimeAxis'
+
 const VIEW_W = 760
 const VIEW_H = 220
 const PAD = { top: 12, right: 56, bottom: 24, left: 8 }
@@ -151,19 +153,8 @@ export function MetricChart({ def, locale, points }: Props) {
         ))}
 
         {last ? <circle cx={x(last.ts)} cy={y(last.value ?? 0)} r="2" className="fill-ink" /> : null}
-
-        <text x={PAD.left} y={VIEW_H - 6} className="fill-ink-subtle font-mono text-[10px]">
-          {firstDate}
-        </text>
-        <text
-          x={VIEW_W - PAD.right}
-          y={VIEW_H - 6}
-          textAnchor="end"
-          className="fill-ink-subtle font-mono text-[10px]"
-        >
-          {lastDate}
-        </text>
       </svg>
+      <TimeAxis firstTs={firstTs} lastTs={lastTs} />
       <figcaption className="mt-2 flex flex-wrap justify-between gap-x-4 text-xs text-ink-muted">
         <span>
           {t.chartWindow}: {firstDate} – {lastDate}

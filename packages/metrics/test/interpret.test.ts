@@ -243,7 +243,7 @@ describe('已发布快照', () => {
   const readings = interpretHome({ features, series })
 
   it('精选行都有依据，且状态和这句话一致', () => {
-    expect(HOME_METRIC_IDS).toHaveLength(14)
+    expect(HOME_METRIC_IDS).toHaveLength(15)
     for (const id of HOME_METRIC_IDS) {
       const reading = readings.get(id)
       expect(reading, id).toBeDefined()

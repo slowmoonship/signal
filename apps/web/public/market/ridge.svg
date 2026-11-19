@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 180" fill="none">
+  <style>
+    .far { fill: #7f8c88; }
+    .mid { fill: #6d7b77; }
+    .near { fill: #5e6c68; }
+    .line { stroke: #667470; }
+    @media (prefers-color-scheme: dark) {
+      .far { fill: #b7c4bf; }
+      .mid { fill: #c5d0cb; }
+      .near { fill: #d5deda; }
+      .line { stroke: #d5deda; }
+    }
+  </style>
+  <path class="far" fill-opacity="0.28" d="M0 108C90 96 130 52 214 64C298 76 330 34 412 44C494 54 530 18 612 36C694 54 742 86 800 74V180H0Z"/>
+  <path class="mid" fill-opacity="0.34" d="M0 128C120 112 190 86 286 98C382 110 430 72 526 84C622 96 690 118 800 108V180H0Z"/>
+  <path class="near" fill-opacity="0.22" d="M0 150C150 140 230 126 360 134C490 142 560 122 680 130C740 134 770 140 800 136V180H0Z"/>
+  <path class="line" stroke-opacity="0.45" stroke-width="1" d="M0 156H800"/>
+  <path class="line" stroke-opacity="0.28" stroke-width="1" d="M36 164H168M248 166H410M492 163H760"/>
+</svg>

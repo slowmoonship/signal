@@ -95,10 +95,13 @@
    * 明度仍然压得很浅（≥92%），仍然是极浅的底，不是色块。
    * 文字色不受此约束——文字仍是 --ink，不改。
    */
-  --market-bull: hsl(150 48% 92.5%);
-  --market-bear: hsl(4 50% 94%);
-  /* 震荡 = 卡片原来的背景。写成 token 只是为了让"三档"在代码里形状一致。 */
-  --market-range: var(--surface);
+  --market-bull: hsl(140 40% 94%);
+  --market-bear: hsl(0 46% 95%);
+  /* 震荡是灰蓝雾面，不是黄，也不是卡片原来的纸色。 */
+  --market-range: hsl(207 36% 95%);
+  /* 数据故障单独用中性暖灰，不能借震荡的蓝。 */
+  --market-fault: hsl(30 8% 96%);
+  --ridge: hsl(168 8% 42%);
 
   /*
    * 状态色。首页"当前状态"列的三个色档（CLAUDE.md §视觉红线 §状态色）。
@@ -180,8 +183,11 @@
      * 深底上底色稍亮一点就会盖过文字，而这里要的是"一眼看出方向"，
      * 不是"抢走注意力"。
      */
-    --market-bull: hsl(150 45% 16%);
-    --market-bear: hsl(4 50% 17%);
+    --market-bull: hsl(140 28% 15%);
+    --market-bear: hsl(0 24% 16%);
+    --market-range: hsl(207 18% 16%);
+    --market-fault: hsl(30 6% 15%);
+    --ridge: hsl(168 10% 62%);
 
     /*
      * 暗色下的状态色：胶囊底压到 16–18% 明度（深底上要比浅色态更沉，
@@ -239,6 +245,8 @@
   --color-market-bull: var(--market-bull);
   --color-market-bear: var(--market-bear);
   --color-market-range: var(--market-range);
+  --color-market-fault: var(--market-fault);
+  --color-ridge: var(--ridge);
 
   /* 状态色同理：组件只认 `bg-status-hot` / `text-status-hot-ink` 这类类名。 */
   --color-status-hot: var(--status-hot);

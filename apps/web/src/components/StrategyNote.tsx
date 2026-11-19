@@ -44,16 +44,37 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
       {id === 'strategy-btc-per-share' ? (
         <p>每股聪数是公司按假定稀释股数写明的数字。它不是总持仓除以基本股。</p>
       ) : null}
-      {id === 'strategy-btc-cost' && model?.marketUsd !== undefined && model.averageUsd !== undefined ? (
-        <p className="font-mono text-xs text-ink">
-          披露均价 {formatValue(model.averageUsd, { kind: 'usd' }, SITE_LOCALE)}
-          {' · '}
-          收盘市价 {formatValue(model.marketUsd, { kind: 'usd' }, SITE_LOCALE)}
-          {model.sessionDate ? ` · ${model.sessionDate}` : ''}
-        </p>
-      ) : null}
+      {id === 'strategy-btc-cost' ? <CostClocks model={model} /> : null}
       {dates}
       {beta}
+    </div>
+  )
+}
+
+function CostClocks({ model }: { readonly model: MetricModel | undefined }) {
+  const price = loadMetric('price')
+  const cost = loadMetric('strategy-btc-cost')
+  const pricePoint = price.ok ? [...price.value.points].reverse().find((point) => point.value !== null) : undefined
+  const costPoint = cost.ok ? [...cost.value.points].reverse().find((point) => point.value !== null) : undefined
+  const priceDay = pricePoint ? new Date(pricePoint.ts * 1000).toISOString().slice(0, 10) : null
+  const costDay = costPoint ? new Date(costPoint.ts * 1000).toISOString().slice(0, 10) : null
+  return (
+    <div className="space-y-2">
+      <p>
+        持仓均价只在新的 SEC 披露里变化。下面的比较用最新 UTC 日均价对最新披露均价，两个日期不必是同一天。
+      </p>
+      <p className="font-mono text-xs text-ink">
+        {costPoint ? `披露均价 ${formatValue(costPoint.value, { kind: 'usd' }, SITE_LOCALE)}` : '没有披露均价'}
+        {costDay ? ` · 截至 ${costDay}` : ''}
+        {pricePoint ? ` · 日均价 ${formatValue(pricePoint.value, { kind: 'usd' }, SITE_LOCALE)}` : ''}
+        {priceDay ? ` · 截至 ${priceDay}` : ''}
+      </p>
+      {model?.marketUsd !== undefined && model.sessionDate ? (
+        <p className="font-mono text-xs">
+          美股收盘时刻的 BTC {formatValue(model.marketUsd, { kind: 'usd' }, SITE_LOCALE)} · {model.sessionDate}
+          。这是持仓截止日当天或之前的收盘，不是上面的日均价。
+        </p>
+      ) : null}
     </div>
   )
 }

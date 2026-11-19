@@ -45,13 +45,13 @@ export type HomeGroup = Readonly<{
  */
 export const HOME_GROUPS: readonly HomeGroup[] = [
   { key: 'marketOverview', metricIds: ['price', 'drawdown-ath'] },
-  { key: 'valuationAnchors', metricIds: ['ahr999', 'rainbow-zone', 'mvrv-zscore'] },
+  { key: 'valuationAnchors', metricIds: ['ahr999', 'rainbow-zone', 'mvrv-zscore', 'btc-realized-price'] },
   { key: 'cycle', metricIds: ['pi-cycle-top', 'sma-200w', 'puell-multiple'] },
   { key: 'exchangeFlows', metricIds: ['exchange-netflow'] },
   { key: 'onchainActivity', metricIds: ['active-addresses'] },
   {
     key: 'strategy',
-    metricIds: ['mstr-price', 'mstr-btc-beta-90d', 'strategy-btc-holdings', 'strategy-btc-per-share'],
+    metricIds: ['mstr-price', 'strategy-btc-holdings', 'strategy-btc-cost', 'strategy-btc-per-share'],
   },
 ]
 

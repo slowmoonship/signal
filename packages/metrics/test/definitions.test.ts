@@ -22,7 +22,7 @@ const byId = new Map(btcMetrics.map((d) => [d.id, d]))
 
 describe('注册表', () => {
   it('BTC 指标共 32 个', () => {
-    expect(registry.byAsset('btc')).toHaveLength(32)
+    expect(registry.byAsset('btc')).toHaveLength(34)
     expect(registry.byAsset('mstr').length).toBeGreaterThan(0)
   })
 
@@ -47,7 +47,7 @@ describe('注册表', () => {
       exchange: 2,
       fees: 5,
       mining: 5,
-      valuation: 12,
+      valuation: 14,
     })
   })
 

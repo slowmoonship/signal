@@ -23,6 +23,7 @@ import {
   rainbowBoundaryPrice,
   RAINBOW_EDGES,
   sma200wSeries,
+  downwardCrosses,
   upwardCrosses,
 } from './local.js'
 
@@ -66,6 +67,7 @@ export type DetailChart = Readonly<{
   }[]
   rules: readonly { value: number; label: string }[]
   markers: readonly { ts: number; y: number }[]
+  markerRadius?: number
   legend: readonly { label: string; paint: ChartPaint; swatch: 'fill' | 'line' }[]
 }>
 
@@ -135,6 +137,10 @@ export function detailChartParents(metricId: string): readonly string[] {
       return ['price']
     case 'hash-ribbons':
       return ['hashrate']
+    case 'btc-realized-price':
+      return ['price']
+    case 'strategy-btc-cost':
+      return ['price', 'strategy-btc-holdings']
     default:
       return []
   }
@@ -180,6 +186,10 @@ export function buildDetailChart(
       return maChart(series['price'], locale, '2y')
     case 'hash-ribbons':
       return hashChart(series['hashrate'], locale)
+    case 'btc-realized-price':
+      return realizedChart(series['price'], series[metricId], locale)
+    case 'strategy-btc-cost':
+      return strategyCostChart(series['price'], series[metricId], series['strategy-btc-holdings'], locale)
     default:
       return null
   }
@@ -367,6 +377,117 @@ function maChart(
       { label: text(locale, '价格', 'price'), paint: 'faint', swatch: 'line' },
       { label: text(locale, '730日均线', '730-day average'), paint: 'ink', swatch: 'line' },
       { label: text(locale, '5倍上轨', '5x line'), paint: 'muted', swatch: 'line' },
+    ],
+  }
+}
+
+const DISCLOSURE_GAP = 86_400 * 22
+
+function stepSegments(points: readonly SeriesPoint[] | undefined): ChartPoint[][] {
+  if (!points) return []
+  const known = points.filter((point) => point.value !== null && point.value > 0)
+  const segments: ChartPoint[][] = []
+  let current: ChartPoint[] = []
+  for (let i = 0; i < known.length; i += 1) {
+    const point = known[i]
+    const next = known[i + 1]
+    if (!point || point.value === null) continue
+    current.push({ ts: point.ts, value: point.value })
+    if (!next || next.value === null) continue
+    if (next.ts - point.ts > DISCLOSURE_GAP) {
+      if (current.length >= 2) segments.push(current)
+      current = []
+      continue
+    }
+    current.push({ ts: next.ts, value: point.value })
+  }
+  if (current.length >= 2) segments.push(current)
+  return segments
+}
+
+function realizedChart(
+  price: readonly SeriesPoint[] | undefined,
+  realized: readonly SeriesPoint[] | undefined,
+  locale: Locale,
+): DetailChart | null {
+  if (!price || !realized) return null
+  const ratio: SeriesPoint[] = []
+  const cost = new Map<number, number>()
+  for (const point of realized) {
+    if (point.value !== null && point.value > 0) cost.set(point.ts, point.value)
+  }
+  for (const point of price) {
+    const rp = cost.get(point.ts)
+    if (point.value === null || rp === undefined) {
+      ratio.push({ ts: point.ts, value: null })
+      continue
+    }
+    ratio.push({ ts: point.ts, value: point.value / rp })
+  }
+  const crosses = [...upwardCrosses(ratio, 1), ...downwardCrosses(ratio, 1)]
+  const px = runsOf(price, 'positive', crosses)
+  const rp = runsOf(realized, 'positive', crosses)
+  if (!drawable(px) || !drawable(rp)) return null
+  return {
+    yScale: 'log',
+    floorAtZero: true,
+    tick: 'usd',
+    caption: text(
+      locale,
+      '对数坐标。实线是链上平均成本，淡线是 UTC 日均价。圆点是价格穿过成本的日子。成本不是价格均线。偏离百分比与 MVRV − 1 是同一个口径。',
+      'Log scale. The solid line is realized price. The pale line is the UTC daily price. Dots are crossings. This is not a moving average. The percent gap is the same ratio as MVRV minus one.',
+    ),
+    bands: [],
+    lines: [line(px, 'faint', 1, true), line(rp, 'ink', 1.5)],
+    rules: [],
+    markers: markersOn(flatten(rp), crosses),
+    legend: [
+      { label: text(locale, '日均价', 'daily price'), paint: 'faint', swatch: 'line' },
+      { label: text(locale, '链上平均成本', 'realized price'), paint: 'ink', swatch: 'line' },
+    ],
+  }
+}
+
+function strategyCostChart(
+  price: readonly SeriesPoint[] | undefined,
+  cost: readonly SeriesPoint[] | undefined,
+  holdings: readonly SeriesPoint[] | undefined,
+  locale: Locale,
+): DetailChart | null {
+  if (!price || !cost) return null
+  const firstCost = cost.find((point) => point.value !== null && point.value > 0)
+  if (!firstCost) return null
+  const px = runsOf(
+    price.filter((point) => point.ts >= firstCost.ts),
+    'positive',
+  )
+  const steps = stepSegments(cost)
+  if (!drawable(px) || !drawable(steps)) return null
+  const events: number[] = []
+  const known = (holdings ?? []).filter((point) => point.value !== null)
+  for (let i = 1; i < known.length; i += 1) {
+    const prev = known[i - 1]
+    const point = known[i]
+    if (!prev || !point || prev.value === null || point.value === null) continue
+    if (point.value !== prev.value) events.push(point.ts)
+  }
+  return {
+    yScale: 'log',
+    floorAtZero: true,
+    tick: 'usd',
+    caption: text(
+      locale,
+      '对数坐标。实线是披露的持仓均价，横段表示下一次披露之前沿用上一笔，超过 22 天没有新披露就断开。淡线是同期 UTC 日均价。圆点是持仓数量发生变化的披露日。成本不是每天发布的。',
+      'Log scale. The solid line is the disclosed average. It holds until the next filing and breaks after 22 days without one. The pale line is the UTC daily price. Dots are filings where the bitcoin count changed. Cost is not published every day.',
+    ),
+    bands: [],
+    lines: [line(px, 'faint', 1, true), line(steps, 'ink', 1.5)],
+    rules: [],
+    markers: markersOn(steps.flat(), events),
+    markerRadius: 1.5,
+    legend: [
+      { label: text(locale, '日均价', 'daily price'), paint: 'faint', swatch: 'line' },
+      { label: text(locale, '持仓均价', 'average cost'), paint: 'ink', swatch: 'line' },
     ],
   }
 }

@@ -138,29 +138,31 @@ export function MetricTable({
      * 裁剪的代价：焦点环画在外侧的那一圈会被裁掉，因此窄屏下
      * 指标名列留了 4px 左边距（`pl-1 lg:pl-0`），刚好容下那圈焦点环。
      */
-    <div className="overflow-hidden rounded-lg border border-rule">
+    <div className="overflow-hidden border border-rule">
       <table className="w-full border-collapse text-sm">
         <caption className="sr-only">{t.index}</caption>
         <thead>
           <tr className="border-b border-rule-strong">
             {/* 列在窄屏收起时表头必须跟着一起收：表头数量与列数对不上时，
-                读屏软件会把第 3 个表头念到第 2 列上。 */}
-            <th scope="col" className="hidden w-24 py-2 pr-3 text-left align-bottom font-medium text-ink-subtle lg:table-cell">
+                读屏软件会把第 3 个表头念到第 2 列上。
+                表头全部居中。竖线只画在列与列之间，最后一列不画，避免和外框叠成双线。
+                判定依据列在 xl 以下隐藏，所以状态列的右边线也要到 xl 才出现。 */}
+            <th scope="col" className="hidden w-24 border-r border-rule px-2 py-2 text-center align-middle font-medium text-ink-subtle lg:table-cell">
               {t.colCategory}
             </th>
-            <th scope="col" className="py-2 pr-3 pl-1 text-left align-bottom font-medium text-ink-subtle lg:pl-0">
+            <th scope="col" className="border-r border-rule px-2 py-2 text-center align-middle font-medium text-ink-subtle">
               {t.colMetric}
             </th>
-            <th scope="col" className="w-28 py-2 pr-3 text-right align-bottom font-medium text-ink-subtle sm:w-36">
+            <th scope="col" className="w-28 border-r border-rule px-2 py-2 text-center align-middle font-medium text-ink-subtle sm:w-36">
               {t.colValue}
             </th>
-            <th scope="col" className="w-16 py-2 pr-3 text-right align-bottom font-medium text-ink-subtle sm:w-20">
+            <th scope="col" className="w-16 border-r border-rule px-2 py-2 text-center align-middle font-medium text-ink-subtle sm:w-20">
               {t.colChange}
             </th>
-            <th scope="col" className="w-20 py-2 pr-3 text-left align-bottom font-medium text-ink-subtle">
+            <th scope="col" className="w-20 px-2 py-2 text-center align-middle font-medium text-ink-subtle xl:border-r xl:border-rule">
               {t.colStatus}
             </th>
-            <th scope="col" className="hidden w-28 py-2 text-left align-bottom font-medium text-ink-subtle xl:table-cell">
+            <th scope="col" className="hidden w-28 px-2 py-2 text-center align-middle font-medium text-ink-subtle xl:table-cell">
               {t.colBasis}
             </th>
           </tr>
@@ -211,13 +213,13 @@ export function MetricTable({
                       rowSpan={group.metrics.length}
                       // 分类列在整段合并区里水平 + 垂直居中：
                       // 用真正的单元格对齐（align-middle），不用绝对定位模拟。
-                      className="hidden w-24 border-b border-rule py-1.5 pr-3 text-center align-middle font-mono text-xs font-medium text-ink-muted uppercase tracking-widest lg:table-cell"
+                      className="hidden w-24 border-r border-b border-rule px-2 py-1.5 text-center align-middle font-mono text-xs font-medium text-ink-muted uppercase tracking-widest lg:table-cell"
                     >
                       {t.homeGroups[group.key]}
                     </th>
                   ) : null}
 
-                  <th scope="row" className="py-1.5 pr-3 pl-1 text-left font-normal align-baseline lg:pl-0">
+                  <th scope="row" className="border-r border-rule py-1.5 pr-3 pl-1 text-left font-normal align-baseline lg:pl-2">
                     <Link
                       href={`/metrics/${def.id}`}
                       className="text-ink hover:underline"
@@ -233,15 +235,15 @@ export function MetricTable({
                       `overflow-wrap: anywhere` 会把最小宽度降到 1 个字符，
                       表格于是能收进视口。宽屏（sm 以上）恢复默认，
                       长数字在桌面端仍然完整显示在一行里。 */}
-                  <td className="py-1.5 pr-3 text-right font-mono text-sm text-ink tabular-nums wrap-anywhere sm:wrap-normal">
+                  <td className="border-r border-rule py-1.5 pr-3 text-right font-mono text-sm text-ink tabular-nums wrap-anywhere sm:wrap-normal">
                     <Value metric={metric} def={def} locale={locale} status={status} />
                   </td>
 
-                  <td className="py-1.5 pr-3 text-right font-mono text-sm text-ink-subtle tabular-nums">
+                  <td className="border-r border-rule py-1.5 pr-3 text-right font-mono text-sm text-ink-subtle tabular-nums">
                     <Change metric={metric} locale={locale} windowDays={changeWindowFor(def)} />
                   </td>
 
-                  <td className="py-1.5 pr-3 text-left align-baseline">
+                  <td className="py-1.5 pr-3 pl-2 text-left align-baseline xl:border-r xl:border-rule">
                     {shown ? (
                       <StatusPill status={shown} locale={locale} />
                     ) : (

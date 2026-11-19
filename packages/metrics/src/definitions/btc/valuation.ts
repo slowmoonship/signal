@@ -80,8 +80,8 @@ export const mvrv = defineMetric({
     zh: '流通市值除以已实现市值。大于 1 表示当前价格高于现存这批币平均的取得成本，小于 1 表示低于。这是个估值比值，不是收益预测。',
   },
   methodology: {
-    en: 'Published by Coin Metrics as CapMVRVCur: circulating supply × current price, divided by realised cap. Realised cap is accumulated as supply times price at the time each coin is last moved, so the ratio answers "how far is today’s price from what holders actually paid", not "how high can price go". Only the current-cap numerator is available on the free tier — the realised-cap series itself (CapRealUSD) and the floor-price variant (CapMVRVFF) are behind a paid key — so the realised price cannot be recovered from this figure.',
-    zh: '由 Coin Metrics 以 CapMVRVCur 给出：流通量 × 当前价格，除以已实现市值。已实现市值按"每枚币最后一次移动时的价格"逐枚累加，因此这个比值回答的是"今天的价格离持有者实际付出的成本有多远"，而不是"价格还能涨到多高"。免 key 层只有分子：已实现市值序列（CapRealUSD）与地板价口径（CapMVRVFF）都在付费墙之后，因此无法由这个数反推已实现价格。',
+    en: 'Published by Coin Metrics as CapMVRVCur: circulating supply × current price, divided by realised cap. Realised cap is accumulated as supply times price at the time each coin is last moved, so the ratio answers "how far is today’s price from what holders actually paid", not "how high can price go". The free API does not return CapRealUSD itself. The dollar cost published as btc-realized-price is circulating market cap divided by CapMVRVCur and by circulating supply, which is that definition. It is not a moving average of the market price.',
+    zh: '由 Coin Metrics 以 CapMVRVCur 给出：流通量 × 当前价格，除以已实现市值。已实现市值按每枚币最后一次移动时的价格逐枚累加，因此这个比值回答的是今天的价格离持有者实际付出的成本有多远，而不是价格还能涨到多高。免 key 接口不返回 CapRealUSD 本身。链上平均成本用流通市值除以 CapMVRVCur 再除以流通量，就是这个定义，不是市场价格的均线。',
   },
   unit: 'index',
   frequency: '1d',
@@ -179,6 +179,106 @@ export const dcaMaxWaitDays = defineMetric({
     },
     // 窗口每日前移一格，最坏起点可能整体换人：同一根柱子下
     // "哪一天开始投"这个答案会被后加入的数据改写。
+    mayBeRevised: true,
+  },
+  missingPolicy: 'null',
+  betterWhen: null,
+})
+
+const cmSource = (metric: 'CapMrktCurUSD' | 'CapMVRVCur' | 'SplyCur' | 'PriceUSD') => ({
+  provider: 'Coin Metrics' as const,
+  metric,
+  endpoint: cmEndpoint(metric),
+  auth: 'none' as const,
+  labelConfidence: 'verified' as const,
+})
+
+/** 链上平均成本。与 MVRV 同一口径，写成美元而不是比值。 */
+export const btcRealizedPrice = defineMetric({
+  id: 'btc-realized-price',
+  asset: 'btc',
+  category: 'valuation',
+  name: { en: 'BTC Realized Price', zh: 'BTC Realized Price / 已实现价格' },
+  shortName: { en: 'Realized price', zh: '链上平均成本' },
+  description: {
+    en: 'Realised cap divided by circulating supply: the average USD price at which the coins now in circulation last moved.',
+    zh: '已实现市值除以流通量。表示当前流通中的币，最后一次移动时的平均美元价格。',
+  },
+  methodology: {
+    en: 'Version realized-price-from-capmvrvcur-v1. Realized price = CapMrktCurUSD / (CapMVRVCur × SplyCur), on the same UTC day. Coin Metrics defines CapMVRVCur as circulating market cap divided by realised cap, so the expression is realised cap / circulating supply. CapRealUSD is not on the free API. A second path, PriceUSD / CapMVRVCur, is checked and not averaged in: on this site’s published series the two paths differ only by floating-point noise, because market cap matches price × supply. A missing or non-positive input makes that day null. This is not a moving average of the market price.',
+    zh: '版本 realized-price-from-capmvrvcur-v1。链上平均成本 = 流通市值 /（CapMVRVCur × 流通量），三个数必须是同一个 UTC 日。Coin Metrics 的 CapMVRVCur 是流通市值除以已实现市值，因此上式等于已实现市值除以流通量。免 key 接口没有 CapRealUSD。另一条路径是日均价除以 CapMVRVCur，只用于核对，不与这条路径取平均。本站已发布序列上两条路径只差浮点误差，因为市值与价格乘流通量一致。任一输入缺失或不是正数时，这一天为 null。这不是市场价格的均线。',
+  },
+  limits: {
+    en: 'Early readings are unstable because realised cap has little history behind it. The figure says what coins last moved at. It does not say what the next buyer should pay.',
+    zh: '序列开头已实现市值背后的历史很短，早期读数会很飘。这个数说的是币上次移动时的价格，不是下一笔该付多少。',
+  },
+  unit: 'usd',
+  frequency: '1d',
+  format: { kind: 'usd' },
+  contract: {
+    unit: 'usd',
+    scale: 1,
+    aggregation: 'last',
+    window: 'calendar-day-utc',
+    labelSemantics: LABEL_SEMANTICS.none,
+  },
+  sources: [cmSource('CapMrktCurUSD'), cmSource('CapMVRVCur'), cmSource('SplyCur')],
+  deriveFrom: ['market-cap', 'mvrv', 'supply'],
+  derivation: { kind: 'local', formula: 'btc-realized-price' },
+  computedLocally: true,
+  history: {
+    availableFrom: '2010-07-18',
+    note: {
+      en: 'Same start as the free CapMVRVCur, market-cap and supply series.',
+      zh: '与免费层的 CapMVRVCur、市值和流通量同一天开始。',
+    },
+    mayBeRevised: true,
+  },
+  missingPolicy: 'null',
+  betterWhen: null,
+})
+
+/** 现价相对链上成本的百分比。与 MVRV − 1 同口径时不是独立信号。 */
+export const btcRealizedPremium = defineMetric({
+  id: 'btc-realized-premium',
+  asset: 'btc',
+  category: 'valuation',
+  name: { en: 'Distance from realized price', zh: '链上成本偏离' },
+  shortName: { en: 'Cost distance', zh: '链上成本偏离' },
+  description: {
+    en: 'How far the daily BTC price sits above or below realized price, in percent. When market cap equals price times supply, this is the same number as MVRV minus one, written as a percent. It is not a second market signal.',
+    zh: '日均价比链上平均成本高多少或低多少，以百分比表示。市值等于价格乘流通量时，它与 MVRV 减 1 是同一个数。它不是第二条独立的市场信号。',
+  },
+  methodology: {
+    en: 'Version realized-premium-v1. (PriceUSD / realized price − 1) × 100 on the same UTC day. The band within ±5% is labelled near. Above that the price is above cost; below, it is under cost. Five percent is a display band so a one-percent gap is not called a direction. It is not a trading rule. A missing price or realized price leaves the day null.',
+    zh: '版本 realized-premium-v1。同一 UTC 日的（日均价 / 链上平均成本 − 1）× 100。相差不到 5% 标成接近，高于标成成本上，低于标成成本下。5% 只是展示带宽，避免把 1% 的出入说成方向，不是交易规则。价格或成本缺失时这一天为 null。',
+  },
+  limits: {
+    en: 'Do not read this beside MVRV as two votes. They describe one ratio.',
+    zh: '不要把这个百分比和 MVRV 当成两张选票。它们描述的是同一个比值。',
+  },
+  unit: 'percent',
+  frequency: '1d',
+  format: { kind: 'percent', maxDecimals: 1 },
+  contract: {
+    unit: 'percent',
+    scale: 1,
+    aggregation: 'last',
+    window: 'calendar-day-utc',
+    labelSemantics: LABEL_SEMANTICS.none,
+  },
+  sources: [cmSource('PriceUSD'), cmSource('CapMVRVCur')],
+  deriveFrom: ['price', 'btc-realized-price'],
+  derivation: { kind: 'local', formula: 'btc-realized-premium' },
+  computedLocally: true,
+  canBeNegative: true,
+  changeWindowDays: null,
+  history: {
+    availableFrom: '2010-07-18',
+    note: {
+      en: 'Present on days when both the daily price and realized price are positive.',
+      zh: '日均价和链上平均成本都为正的日子有数。',
+    },
     mayBeRevised: true,
   },
   missingPolicy: 'null',

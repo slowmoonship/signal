@@ -81,6 +81,26 @@ describe('Strategy 读法', () => {
     expect(reading?.basis.zh).toContain('不是公开市场卖出')
   })
 
+  it('持仓均价用最新日均价比较，相差 5% 以内算接近', () => {
+    const above = read('strategy-btc-cost', {
+      'strategy-btc-cost': [point('2026-11-15', 50000)],
+      price: [point('2026-11-18', 60000)],
+    })
+    expect(above?.word.zh).toBe('成本上')
+    expect(above?.basis.zh).toBe('现价高于成本 20%')
+    const near = read('strategy-btc-cost', {
+      'strategy-btc-cost': [point('2026-11-15', 100)],
+      price: [point('2026-11-18', 103)],
+    })
+    expect(near?.word.zh).toBe('接近')
+    const below = read('strategy-btc-cost', {
+      'strategy-btc-cost': [point('2026-11-15', 75452)],
+      price: [point('2026-11-18', 62897)],
+    })
+    expect(below?.word.zh).toBe('成本下')
+    expect(below?.basis.zh.startsWith('现价低于成本')).toBe(true)
+  })
+
   it('样本不够时不给弹性倍数', () => {
     const reading = read(
       'mstr-btc-beta-90d',
