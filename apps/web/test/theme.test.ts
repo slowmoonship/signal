@@ -252,7 +252,7 @@ describe('主题 token 的接线', () => {
 
 describe('状态色', () => {
   const css = readFileSync(join(WEB_SRC, 'app/globals.css'), 'utf8')
-  const TONES = ['hot', 'flat', 'cold', 'void'] as const
+  const TONES = ['hot', 'flat', 'cold', 'void', 'buy', 'sell'] as const
 
   it('色值只写在 globals.css，明暗两态各一份', () => {
     // 与分类底色同款约束：内联色值会让暗色主题在这一处静默失效
@@ -295,8 +295,10 @@ describe('状态色', () => {
   it('全站没有第二个绿色 token，状态色与高亮绿不会混淆', () => {
     // 绿色如果同时表示"最长等待期"和"偏强"，读者会以为绿色=好。
     for (const m of css.matchAll(/--status-[a-z-]+:\s*hsl\(\s*([\d.]+)\s+([\d.]+)%/g)) {
+      const token = m[0].split(':')[0] ?? ''
+      if (token === '--status-buy' || token === '--status-buy-ink') continue
       const hue = Number(m[1])
-      // 绿色在 HSL 环上大约落在 90–150
+      // 绿色在 HSL 环上大约落在 90–150。买入是唯一允许进这个区间的状态色。
       const inGreen = (hue >= 90 && hue <= 150) || (hue >= 330 && hue <= 360)
       expect(inGreen, `${m[0]} 落在了绿色区间，会与 --highlight 混淆`).toBe(false)
     }
@@ -321,13 +323,17 @@ describe('状态色', () => {
     // 四个色档，每个各一条底色 + 一条文字色，缺一不可
     const classes = [...body.matchAll(/\b(?:bg|text)-status-[a-z-]+\b/g)].map((m) => m[0] as string)
     expect([...new Set(classes)].sort()).toEqual([
+      'bg-status-buy',
       'bg-status-cold',
       'bg-status-flat',
       'bg-status-hot',
+      'bg-status-sell',
       'bg-status-void',
+      'text-status-buy-ink',
       'text-status-cold-ink',
       'text-status-flat-ink',
       'text-status-hot-ink',
+      'text-status-sell-ink',
       'text-status-void-ink',
     ])
     // 每个色档键都必须有值，否则渲染出来是一个没有底色的裸文字
@@ -363,9 +369,23 @@ describe('高亮绿', () => {
     expect(hue >= 90 && hue <= 150, `--market-bull 的色相 ${hue} 不在绿色区间`).toBe(true)
 
     for (const m of css.matchAll(/--status-[a-z-]+:\s*hsl\(\s*([\d.]+)\s+([\d.]+)%/g)) {
+      const token = m[0].split(':')[0] ?? ''
+      if (token === '--status-buy' || token === '--status-buy-ink') continue
       const statusHue = Number(m[1])
       const inGreen = (statusHue >= 90 && statusHue <= 150) || (statusHue >= 330 && statusHue <= 360)
       expect(inGreen, `${m[0]} 落在了绿色区间，会与市场状态底色混淆`).toBe(false)
+    }
+    const blocks: string[] = []
+    for (const match of css.matchAll(/:root\s*\{([^}]*)\}/g)) {
+      if (typeof match[1] === 'string') blocks.push(match[1])
+    }
+    const pick = (block: string, name: string): string | undefined =>
+      new RegExp(`${name}:\\s*(hsl\\([^)]*\\))`).exec(block)?.[1]
+    for (const block of blocks.slice(0, 2)) {
+      const buy = pick(block, '--status-buy')
+      expect(buy, '买入色必须单独定义').toBeTruthy()
+      expect(buy).not.toBe(pick(block, '--highlight'))
+      expect(buy).not.toBe(pick(block, '--market-bull'))
     }
   })
 

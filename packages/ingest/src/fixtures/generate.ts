@@ -244,6 +244,8 @@ export function generateFixtures(opts: FixtureOptions): Map<string, PublishedMet
 
   const series: Record<string, (number | null)[]> = {
     price,
+    // fixture 没有盘中成交，只能借用合成日价。文件带 fixture 标记，不能拿去当收盘。
+    'btc-price-us-close': price,
     'market-cap': marketCap,
     supply,
     'price-change-7d': percentChangeSeries(points(price, dayStartMs), 7).map((p) =>

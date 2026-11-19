@@ -116,6 +116,23 @@ export type Dictionary = Readonly<{
   daysUnit: string
   /** 未计入的成本 */
   excludedCosts: string
+  navOverview: string
+  navCatalog: string
+  viewAllMetrics: string
+  catalogTitle: string
+  catalogCount: string
+  catalogShown: string
+  searchPlaceholder: string
+  filterAll: string
+  noSearchHits: string
+  quoteClose: string
+  quoteRegular: string
+  quotePre: string
+  quotePost: string
+  betaDemoTitle: string
+  betaPathTitle: string
+  alignedCloses: string
+  betaBlocked: string
 }>
 
 const zh: Dictionary = {
@@ -129,13 +146,15 @@ const zh: Dictionary = {
     fees: '费用与区块',
     mining: '矿工与安全',
     valuation: '估值与周期',
+    strategy: 'Strategy',
   },
   homeGroups: {
     marketOverview: '市场行情',
-    valuationAnchors: '估值与定投',
+    valuationAnchors: '估值',
     cycle: '牛熊周期',
     exchangeFlows: '资金流向',
     onchainActivity: '链上活动',
+    strategy: 'Strategy',
   },
   updatedAt: '更新于',
   sourceTime: '来源时间',
@@ -229,6 +248,23 @@ const zh: Dictionary = {
   distributionMax: '最长',
   daysUnit: '天',
   excludedCosts: '未计入手续费、滑点与税。',
+  navOverview: '市场概览',
+  navCatalog: '指标库',
+  viewAllMetrics: '查看全部指标 →',
+  catalogTitle: '完整指标库',
+  catalogCount: '共 {n} 项',
+  catalogShown: '显示 {shown} / {total} 项',
+  searchPlaceholder: '搜索指标',
+  filterAll: '全部',
+  noSearchHits: '没有匹配的指标',
+  quoteClose: '最新收盘价',
+  quoteRegular: '交易时间内报价',
+  quotePre: '盘前报价',
+  quotePost: '盘后报价',
+  betaDemoTitle: '相同金额对比',
+  betaPathTitle: '同期价格路径',
+  alignedCloses: '已对齐的收盘',
+  betaBlocked: '窗口不够，不发布弹性倍数。',
 }
 
 /**

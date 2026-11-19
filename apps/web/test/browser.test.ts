@@ -156,6 +156,7 @@ describe.skipIf(!available)('真实浏览器：首页导航', () => {
     const browser = await launch()
     try {
       const page = await openHome(browser)
+      await clickAndWait(page, `a[href="${BASE_PATH}/metrics/"]`, '**/metrics/')
       await clickAndWait(page, `a[href="${BASE_PATH}/metrics/mvrv/"]`, '**/metrics/mvrv/')
       expect(page.url()).toContain('/metrics/mvrv')
     } finally {
@@ -281,7 +282,7 @@ describe.skipIf(!available)('真实浏览器：排版', () => {
       const bases = (await page.evaluate(`(() => {
         return Array.from(document.querySelectorAll('[data-basis]')).map((c) => (c.textContent || '').trim())
       })()`)) as string[]
-      expect(bases.length).toBe(18)
+      expect(bases.length).toBe(14)
       for (const text of bases) expect(text).not.toMatch(/P\d+/)
       const body = (await page.evaluate(`document.body.innerText`)) as string
       expect(body, '首页仍出现分位缩写').not.toMatch(/P\d+/)
@@ -514,7 +515,8 @@ describe.skipIf(!available)('真实浏览器：估值与周期详情页', () => 
       const text = (await page.evaluate(`document.body.innerText`)) as string
       expect(text).toContain('AHR999')
       expect(text).toContain('彩虹图')
-      expect(text).toContain('估值与定投')
+      expect(text).toContain('估值')
+      expect(text).not.toContain('估值与定投')
       expect(text).toContain('牛熊周期')
     } finally {
       await browser.close()

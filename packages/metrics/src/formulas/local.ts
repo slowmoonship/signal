@@ -9,6 +9,7 @@
 
 import { byUtcDay } from '../derive.js'
 import type { LocalFormulaId, SeriesPoint } from '../types.js'
+import { BETA_VERSION, betaFromCloses } from './beta.js'
 
 const DAY_SECONDS = 86_400
 
@@ -640,6 +641,18 @@ export function runLocalFormula(id: LocalFormulaId, inputs: FormulaInputs): Loca
           `由本地公式 ${HASH_RIBBON_VERSION} 计算，父序列 hashrate。只含算力均线交叉，不含价格动量确认。`,
         ],
       }
+    case 'mstr-btc-beta-90d': {
+      // 公式不读时钟。调用方若要判断「过期」，应再拿今天的日期评估一次。
+      const latestTs = Math.max(
+        ...[...must(inputs, 'mstr-price'), ...must(inputs, 'btc-price-us-close')].map((point) => point.ts),
+      )
+      const today = Number.isFinite(latestTs) ? new Date(latestTs * 1000).toISOString().slice(0, 10) : '1970-01-01'
+      const computed = betaFromCloses(must(inputs, 'mstr-price'), must(inputs, 'btc-price-us-close'), today)
+      return {
+        points: computed.points,
+        warnings: [`由本地公式 ${BETA_VERSION} 计算。${computed.assessment.reason}`],
+      }
+    }
     default: {
       const unreachable: never = id
       throw new Error(`未知本地公式 ${String(unreachable)}`)

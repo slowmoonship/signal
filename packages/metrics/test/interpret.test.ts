@@ -1,5 +1,5 @@
 /**
- * 首页 18 行的状态和依据必须出自同一条规则。
+ * 首页精选行的状态和依据必须出自同一条规则。
  * 分位仍然算，但不许以 Pxx 出现在这一列。
  */
 
@@ -242,8 +242,8 @@ describe('已发布快照', () => {
   const { features } = buildFeatureTable(published)
   const readings = interpretHome({ features, series })
 
-  it('18 行都有依据，且状态和这句话一致', () => {
-    expect(HOME_METRIC_IDS).toHaveLength(18)
+  it('精选行都有依据，且状态和这句话一致', () => {
+    expect(HOME_METRIC_IDS).toHaveLength(14)
     for (const id of HOME_METRIC_IDS) {
       const reading = readings.get(id)
       expect(reading, id).toBeDefined()
@@ -278,36 +278,38 @@ describe('已发布快照', () => {
     }))
     const frozenSeries: Record<string, readonly SeriesPoint[]> = {}
     for (const row of frozen) frozenSeries[row.metricId] = row.points
-    const snapshot = interpretHome({
+    const frozenInput = {
       features: buildFeatureTable(frozen).features,
       series: frozenSeries,
-    })
-    expect(snapshot.get('ahr999')).toMatchObject({
+    }
+    const snapshot = interpretHome(frozenInput)
+    const read = (id: string) => snapshot.get(id) ?? interpretMetric(id, frozenInput)
+    expect(read('ahr999')).toMatchObject({
       word: { zh: '低位' },
       basis: { zh: '低于0.45参考线' },
     })
-    expect(snapshot.get('rainbow-zone')).toMatchObject({
+    expect(read('rainbow-zone')).toMatchObject({
       word: { zh: '中位' },
       basis: { zh: '处于第4/9区' },
     })
-    expect(snapshot.get('pi-cycle-top')?.word.zh).toBe('未触发')
-    expect(snapshot.get('pi-cycle-top')?.basis.zh).toContain('尚未上穿')
-    expect(snapshot.get('puell-multiple')).toMatchObject({
+    expect(read('pi-cycle-top')?.word.zh).toBe('未触发')
+    expect(read('pi-cycle-top')?.basis.zh).toContain('尚未上穿')
+    expect(read('puell-multiple')).toMatchObject({
       word: { zh: '偏低' },
       basis: { zh: '低于年度均值' },
     })
-    expect(snapshot.get('mvrv')?.word.zh).toBe('溢价')
-    expect(snapshot.get('mvrv-zscore')?.basis.zh).toBe('零线与7之间')
-    expect(snapshot.get('nupl')?.basis.zh).toMatch(/高出已实现 \d+%/)
-    expect(snapshot.get('nupl')?.basis.zh).not.toMatch(/持币人/)
-    expect(snapshot.get('mayer-multiple')?.basis.zh).toBe('接近200日均线')
-    expect(snapshot.get('drawdown-ath')?.word.zh).toBe('深回撤')
-    expect(snapshot.get('price-change-7d')?.word.zh).toBe('回落')
-    expect(snapshot.get('hash-ribbons')).toMatchObject({
+    expect(read('mvrv')?.word.zh).toBe('溢价')
+    expect(read('mvrv-zscore')?.basis.zh).toBe('零线与7之间')
+    expect(read('nupl')?.basis.zh).toMatch(/高出已实现 \d+%/)
+    expect(read('nupl')?.basis.zh).not.toMatch(/持币人/)
+    expect(read('mayer-multiple')?.basis.zh).toBe('接近200日均线')
+    expect(read('drawdown-ath')?.word.zh).toBe('深回撤')
+    expect(read('price-change-7d')?.word.zh).toBe('回落')
+    expect(read('hash-ribbons')).toMatchObject({
       word: { zh: '恢复' },
       basis: { zh: '30日高于60日' },
     })
-    expect(snapshot.get('sma-200w')?.basis.zh).toContain('200周线')
-    expect(snapshot.get('ma-2y')?.basis.zh).toContain('730日线')
+    expect(read('sma-200w')?.basis.zh).toContain('200周线')
+    expect(read('ma-2y')?.basis.zh).toContain('730日线')
   })
 })

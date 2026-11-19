@@ -52,8 +52,8 @@ describe('sitemap', () => {
   it('配置域名后覆盖首页与全部指标，且每条 URL 都是绝对的', () => {
     process.env[ENV_KEY] = 'https://signal.example'
     const entries = sitemap()
-    // 18 个指标 + 1 个首页（V0.1 只有中文，不再有第二个语言版本）
-    expect(entries).toHaveLength(registry.byAsset('btc').length + 1)
+    // 全部指标 + 首页 + 指标库（只有中文，不再有第二个语言版本）
+    expect(entries).toHaveLength(registry.all().length + 2)
 
     for (const entry of entries) {
       expect(entry.url.startsWith('https://signal.example/')).toBe(true)
@@ -77,6 +77,7 @@ describe('sitemap', () => {
     }
     const urls = sitemap().map((e) => e.url)
     expect(urls).toContain('https://signal.example/signal/')
+    expect(urls).toContain('https://signal.example/signal/metrics/')
     expect(urls).toContain('https://signal.example/signal/metrics/price/')
   })
 })

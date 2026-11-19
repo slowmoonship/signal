@@ -5,10 +5,10 @@
  */
 
 import { MetricView } from '@/views/MetricView'
-import { btcMetricParams, metricMetadata } from '@/views/routes'
+import { metricMetadata, metricParams } from '@/views/routes'
 
 export function generateStaticParams(): { id: string }[] {
-  return btcMetricParams()
+  return metricParams()
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {

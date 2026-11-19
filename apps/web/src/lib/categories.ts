@@ -19,6 +19,7 @@ export const CATEGORY_TINT: Readonly<Record<MetricCategory, string>> = {
   fees: 'bg-cat-fees',
   mining: 'bg-cat-mining',
   valuation: 'bg-cat-valuation',
+  strategy: 'bg-cat-strategy',
 }
 
 /**
@@ -38,6 +39,7 @@ export const HOME_GROUP_TINT: Readonly<Record<HomeGroupKey, string>> = {
   cycle: 'bg-cat-fees',
   exchangeFlows: 'bg-cat-exchange',
   onchainActivity: 'bg-cat-onchain',
+  strategy: 'bg-cat-strategy',
 }
 
 /** 分组底色之外还要用的类：组标题的左侧色条与分组之间的留白节奏 */

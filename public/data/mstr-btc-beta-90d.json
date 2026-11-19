@@ -1,0 +1,42 @@
+{
+  "metricId": "mstr-btc-beta-90d",
+  "asset": "mstr",
+  "contract": {
+    "unit": "index",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "us-equity-close",
+    "labelSemantics": "n/a"
+  },
+  "points": [],
+  "sourceTime": "2026-11-13T21:00:00.000Z",
+  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "Strategy",
+      "metric": "Investor briefing",
+      "endpoint": "https://www.strategy.com/",
+      "auth": "none",
+      "labelConfidence": "verified",
+      "license": {
+        "name": "Company disclosure",
+        "url": "https://www.strategy.com/",
+        "restriction": {
+          "en": "Figures are the snapshots the company printed in its own briefing. They are not a live quote.",
+          "zh": "数字是公司写在自己简报里的快照，不是实时报价。"
+        }
+      }
+    }
+  ],
+  "warnings": [],
+  "model": {
+    "kind": "beta",
+    "version": "mstr-btc-beta-v1",
+    "quality": "insufficient",
+    "reason": "可再分发的简报收盘只有 3 个，凑不满 90 个美股交易日收益率。免费行情源不允许本站再分发完整日线，因此不发布弹性倍数。",
+    "samples": 0,
+    "windowSessions": 90,
+    "asOf": "2026-11-13"
+  }
+}

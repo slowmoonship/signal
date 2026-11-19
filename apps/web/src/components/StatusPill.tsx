@@ -18,6 +18,8 @@ const TONE_CLASS: Readonly<Record<StatusTone, string>> = {
   flat: 'bg-status-flat text-status-flat-ink',
   cold: 'bg-status-cold text-status-cold-ink',
   void: 'bg-status-void text-status-void-ink',
+  buy: 'bg-status-buy text-status-buy-ink',
+  sell: 'bg-status-sell text-status-sell-ink',
 }
 
 export function StatusPill({

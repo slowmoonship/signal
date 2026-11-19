@@ -15,6 +15,7 @@
 
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 
 import { SiteFooter } from '@/components/SiteFooter'
 import { getDictionary } from '@/i18n/dictionaries'
@@ -82,10 +83,26 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {/* 字标放大、副标题退居其次：品牌是这一站的名字，说明性标题只是注解。
               上下留白收紧——页头到正文之间不需要一段"空白页边距"，
               读者往下滚一屏才开始读内容，而首屏能放下多少内容才是关键。 */}
-          <header className="flex items-center pt-6 pb-3">
+          <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 pt-6 pb-3">
             <span className="text-2xl font-semibold tracking-tight sm:text-[28px]">
               {t.siteTitle}
             </span>
+            <nav className="flex items-center gap-4 text-sm">
+              <Link href="/" className="text-ink hover:underline">
+                {t.navOverview}
+              </Link>
+              <Link href="/metrics" className="text-ink hover:underline">
+                {t.navCatalog}
+              </Link>
+              <a
+                href="https://github.com/slowmoonship/signal"
+                className="text-ink-muted hover:text-ink hover:underline"
+                target="_blank"
+                rel="noreferrer noopener"
+              >
+                GitHub
+              </a>
+            </nav>
           </header>
           <main id="content" className="flex-1 pb-16">
             {children}

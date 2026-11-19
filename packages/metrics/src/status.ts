@@ -21,10 +21,19 @@
  */
 
 import type { FeatureBand, FeatureId, FeatureObservation, FeatureTable } from './market/features.js'
+
+/** 披露类状态没有分位特征。不能回退到价格分位，否则股票事件会被说成 BTC 的位置。 */
+export type StatusFeatureId = FeatureId | 'disclosure'
 import type { Locale } from './types.js'
 
-/** 状态胶囊的三个色档。外加一个"判不了"。 */
-export type StatusTone = 'hot' | 'flat' | 'cold' | 'void'
+/**
+ * 状态胶囊的色档。
+ *
+ * `hot` / `flat` / `cold` 是相对自身历史的位置。
+ * `buy` / `sell` 只用于披露里写明的比特币买入和卖出，不拿来给涨跌上色。
+ * `void` 是判不了。
+ */
+export type StatusTone = 'hot' | 'flat' | 'cold' | 'void' | 'buy' | 'sell'
 
 export type LocalizedText = Readonly<{ en: string; zh: string }>
 
@@ -89,16 +98,16 @@ export type MetricStatus =
       /** 分位（0–1），说明这个词是怎么来的；`flow` 分支下是 \|值\| 的分位 */
       percentile: number | null
       /** 所依据的特征 id，页面用它回链到判定依据 */
-      featureId: FeatureId
+      featureId: StatusFeatureId
       /** 数据时间（UTC 纪元秒） */
       asOf: number
       /** 走了哪条分支，用于审计与测试 */
-      via: 'band' | 'flow' | 'divergence'
+      via: 'band' | 'flow' | 'divergence' | 'disclosure'
     }>
   | Readonly<{
       ok: false
       metricId: string
-      featureId: FeatureId
+      featureId: StatusFeatureId
       reason: StatusFailureReason
       detail: string
     }>

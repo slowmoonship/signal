@@ -1,0 +1,217 @@
+{
+  "metricId": "mstr-common-issuance",
+  "asset": "mstr",
+  "contract": {
+    "unit": "count",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "point",
+    "labelSemantics": "n/a"
+  },
+  "points": [
+    {
+      "ts": 1764460800,
+      "value": 8214000
+    },
+    {
+      "ts": 1765065600,
+      "value": 5127684
+    },
+    {
+      "ts": 1765670400,
+      "value": 4789664
+    },
+    {
+      "ts": 1766275200,
+      "value": 4535000
+    },
+    {
+      "ts": 1766880000,
+      "value": 663450
+    },
+    {
+      "ts": 1767484800,
+      "value": 1255911
+    },
+    {
+      "ts": 1768089600,
+      "value": 6827695
+    },
+    {
+      "ts": 1768780800,
+      "value": 10399650
+    },
+    {
+      "ts": 1769299200,
+      "value": 1569770
+    },
+    {
+      "ts": 1769904000,
+      "value": 673527
+    },
+    {
+      "ts": 1770508800,
+      "value": 616715
+    },
+    {
+      "ts": 1771200000,
+      "value": 660000
+    },
+    {
+      "ts": 1771718400,
+      "value": 297940
+    },
+    {
+      "ts": 1772323200,
+      "value": 1730563
+    },
+    {
+      "ts": 1773532800,
+      "value": 2833668
+    },
+    {
+      "ts": 1774137600,
+      "value": 509111
+    },
+    {
+      "ts": 1775347200,
+      "value": 582550
+    },
+    {
+      "ts": 1776556800,
+      "value": 2165000
+    },
+    {
+      "ts": 1777161600,
+      "value": 1451601
+    },
+    {
+      "ts": 1777766400,
+      "value": 492210
+    },
+    {
+      "ts": 1778371200,
+      "value": 231324
+    },
+    {
+      "ts": 1778976000,
+      "value": 430344
+    },
+    {
+      "ts": 1780185600,
+      "value": 801994
+    },
+    {
+      "ts": 1780790400,
+      "value": 1409600
+    },
+    {
+      "ts": 1781395200,
+      "value": 1732553
+    },
+    {
+      "ts": 1782000000,
+      "value": 2714839
+    },
+    {
+      "ts": 1782604800,
+      "value": 12669017
+    },
+    {
+      "ts": 1783814400,
+      "value": 4818781
+    },
+    {
+      "ts": 1784419200,
+      "value": 2732318
+    },
+    {
+      "ts": 1785024000,
+      "value": 5429160
+    },
+    {
+      "ts": 1785628800,
+      "value": 3011361
+    },
+    {
+      "ts": 1786233600,
+      "value": 6585682
+    },
+    {
+      "ts": 1786838400,
+      "value": 3458866
+    },
+    {
+      "ts": 1787443200,
+      "value": 18261118
+    },
+    {
+      "ts": 1788048000,
+      "value": 4531421
+    },
+    {
+      "ts": 1790467200,
+      "value": 1469165
+    },
+    {
+      "ts": 1791072000,
+      "value": 92894
+    },
+    {
+      "ts": 1791676800,
+      "value": 125183
+    },
+    {
+      "ts": 1792281600,
+      "value": 140872
+    },
+    {
+      "ts": 1793491200,
+      "value": 1178552
+    },
+    {
+      "ts": 1794096000,
+      "value": 2051348
+    },
+    {
+      "ts": 1794700800,
+      "value": 2087040
+    }
+  ],
+  "sourceTime": "2026-11-16T00:00:00.000Z",
+  "ingestedAt": "2026-11-17T07:44:40.919Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "SEC EDGAR",
+      "metric": "Strategy Inc 8-K, 10-Q and 10-K",
+      "endpoint": "https://data.sec.gov/submissions/CIK0001050446.json",
+      "auth": "none",
+      "labelConfidence": "verified",
+      "license": {
+        "name": "SEC EDGAR access",
+        "url": "https://www.sec.gov/os/accessing-edgar-data",
+        "restriction": {
+          "en": "Figures are facts the company stated in its filing. Keep the accession with the number. Hosting on EDGAR does not make the filing a US government work.",
+          "zh": "数字是公司在申报里写明的事实，并保留 accession。文件放在 EDGAR 上，并不因此变成美国政府作品。"
+        }
+      }
+    }
+  ],
+  "warnings": [],
+  "model": {
+    "kind": "disclosure",
+    "version": "strategy-8k-v1",
+    "quality": "ok",
+    "asOf": "2026-11-15",
+    "filedOn": "2026-11-16",
+    "periodStart": "2026-11-09",
+    "periodEnd": "2026-11-15",
+    "accession": "0001193125-26-462151",
+    "deltaClass": "buy",
+    "btcDelta": 485,
+    "holdings": 850849,
+    "averageUsd": 75452,
+    "proceedsUsd": 244700000
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "metricId": "strategy-btc-per-share",
+  "asset": "mstr",
+  "contract": {
+    "unit": "count",
+    "scale": 1,
+    "aggregation": "last",
+    "window": "point",
+    "labelSemantics": "n/a"
+  },
+  "points": [
+    {
+      "ts": 1791676800,
+      "value": 187750
+    },
+    {
+      "ts": 1793491200,
+      "value": 187443
+    },
+    {
+      "ts": 1794700800,
+      "value": 186082
+    }
+  ],
+  "sourceTime": "2026-11-15T00:00:00.000Z",
+  "ingestedAt": "2026-11-17T05:04:11.355Z",
+  "stale": false,
+  "sources": [
+    {
+      "provider": "Strategy",
+      "metric": "Investor briefing",
+      "endpoint": "https://www.strategy.com/",
+      "auth": "none",
+      "labelConfidence": "verified",
+      "license": {
+        "name": "Company disclosure",
+        "url": "https://www.strategy.com/",
+        "restriction": {
+          "en": "Figures are the snapshots the company printed in its own briefing. They are not a live quote.",
+          "zh": "数字是公司写在自己简报里的快照，不是实时报价。"
+        }
+      }
+    }
+  ],
+  "warnings": [
+    "分母是公司写明的假定稀释股数，不是基本股，也不是本站用旧股数重算的。"
+  ],
+  "model": {
+    "kind": "disclosure",
+    "version": "strategy-bps-stated-v1",
+    "quality": "ok",
+    "asOf": "2026-11-15",
+    "briefingUrl": "https://assets.contentstack.io/v3/assets/bltf8d808d9b8cebd37/blt36fbde4f9ee6bd70/6afa7fcf5a0d255dea73ad18/MSTR_Investor_Briefing_As_of_2026-11-15.pdf",
+    "holdings": 186082
+  }
+}

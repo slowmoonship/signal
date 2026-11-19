@@ -14,13 +14,16 @@ import {
   PUELL_REFERENCE_HIGH,
   PUELL_REFERENCE_LOW,
 } from './formulas/local.js'
+import { latestChange } from './derive.js'
 import { HOME_METRIC_IDS } from './home.js'
+import { registry } from './definitions/index.js'
+import { strategyReading } from './strategy/read.js'
 import type { FeatureId, FeatureObservation, FeatureResult } from './market/features.js'
 import { FEATURE_SPEC_BY_ID } from './market/features.js'
 import { STATUS_SPEC_BY_METRIC } from './status-specs.js'
 import type { StatusFailureReason, StatusTone } from './status.js'
 import type { LocalizedText, MetricStatus } from './status.js'
-import type { SeriesPoint } from './types.js'
+import type { MetricModel, SeriesPoint } from './types.js'
 
 export const HOME_READ_VERSION = 'home-read-v1'
 
@@ -42,6 +45,8 @@ export type HomeReading = Readonly<{
 export type InterpretInput = Readonly<{
   features: Readonly<Partial<Record<FeatureId, FeatureResult>>>
   series: Readonly<Record<string, readonly SeriesPoint[] | undefined>>
+  /** 披露附注。没有它时，持仓减少不会被说成卖出。 */
+  models?: Readonly<Record<string, MetricModel | undefined>>
 }>
 
 const UNKNOWN: LocalizedText = { en: 'no data', zh: '缺数据' }
@@ -517,8 +522,68 @@ export function interpretMetric(metricId: string, input: InterpretInput): HomeRe
     case 'fees-total':
       return fees(input)
     default:
-      return null
+      return strategyReading(metricId, input)
   }
+}
+
+/**
+ * 目录里没有专门规则的指标，只说近 30 日变了多少。
+ * 色档保持中性：这里不是「偏强 / 偏弱」，只是变化方向。
+ */
+function catalogChange(metricId: string, input: InterpretInput): HomeReading {
+  const points = input.series[metricId]
+  const last = lastPoint(points)
+  if (!last || last.value === null) return fail(metricId, 'catalog-change-v1', 'missing', 'change')
+  const signed = registry.has(metricId) && registry.get(metricId).canBeNegative === true
+  if (signed) {
+    return {
+      metricId,
+      ruleId: 'catalog-change-v1',
+      ruleVersion: HOME_READ_VERSION,
+      asOf: last.ts,
+      basisKind: 'change',
+      ok: true,
+      reason: null,
+      word: { en: 'reading', zh: '读数' },
+      tone: 'flat',
+      basis: { en: 'signed level', zh: '有正有负' },
+    }
+  }
+  const change = latestChange(points ?? [], 30)
+  if (change === null) return fail(metricId, 'catalog-change-v1', 'insufficient-history', 'change')
+  const word =
+    Math.abs(change) < 0.05
+      ? { en: 'flat', zh: '持平' }
+      : change > 0
+        ? { en: 'up', zh: '上升' }
+        : { en: 'down', zh: '下降' }
+  const basis =
+    Math.abs(change) < 0.05
+      ? { en: 'flat over 30d', zh: '30日基本没变' }
+      : { en: `30d ${change.toFixed(1)}%`, zh: `30日${change > 0 ? '+' : ''}${change.toFixed(1)}%` }
+  return {
+    metricId,
+    ruleId: 'catalog-change-v1',
+    ruleVersion: HOME_READ_VERSION,
+    asOf: last.ts,
+    basisKind: 'change',
+    ok: true,
+    reason: null,
+    word,
+    tone: 'flat',
+    basis,
+  }
+}
+
+/** 任何一个已注册指标都有一句状态。首页只用其中的精选。 */
+export function interpretAny(metricId: string, input: InterpretInput): HomeReading {
+  return interpretMetric(metricId, input) ?? catalogChange(metricId, input)
+}
+
+export function interpretAll(input: InterpretInput): ReadonlyMap<string, HomeReading> {
+  const out = new Map<string, HomeReading>()
+  for (const def of registry.all()) out.set(def.id, interpretAny(def.id, input))
+  return out
 }
 
 export function interpretHome(input: InterpretInput): ReadonlyMap<string, HomeReading> {
@@ -533,7 +598,7 @@ export function interpretHome(input: InterpretInput): ReadonlyMap<string, HomeRe
 /** 给状态胶囊用。词和色档来自同一条首页规则。 */
 export function readingAsStatus(reading: HomeReading): MetricStatus {
   const spec = STATUS_SPEC_BY_METRIC.get(reading.metricId)
-  const featureId = spec?.featureId ?? 'price.level365'
+  const featureId = spec?.featureId ?? 'disclosure'
   if (!reading.ok) {
     return {
       ok: false,
@@ -551,7 +616,7 @@ export function readingAsStatus(reading: HomeReading): MetricStatus {
     percentile: null,
     featureId,
     asOf: reading.asOf,
-    via: 'band',
+    via: spec ? 'band' : 'disclosure',
   }
 }
 

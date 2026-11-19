@@ -27,7 +27,7 @@ export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
 export default function OpengraphImage() {
-  const count = registry.byAsset('btc').length
+  const count = registry.all().length
 
   return new ImageResponse(
     (

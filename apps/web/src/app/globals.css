@@ -54,6 +54,7 @@
   --cat-fees: hsl(268 30% 96.5%);
   --cat-mining: hsl(190 34% 95.5%);
   --cat-valuation: hsl(48 38% 96.5%);
+  --cat-strategy: hsl(332 26% 96.5%);
 
   /*
    * 高亮绿。走势图上的彩色强调（CLAUDE.md §高亮绿）。
@@ -124,6 +125,12 @@
   --status-cold-ink: hsl(214 66% 36%);
   --status-void: hsl(240 6% 96.5%);
   --status-void-ink: hsl(240 5% 46%);
+  /* 披露里写明的比特币买入。色相和明度都不同于走势图高亮与牛市底色。 */
+  --status-buy: hsl(136 32% 94%);
+  --status-buy-ink: hsl(136 55% 28%);
+  /* 披露里写明的卖出。色相 0，和「偏强」的暖红不是同一支。 */
+  --status-sell: hsl(0 38% 95.5%);
+  --status-sell-ink: hsl(0 66% 32%);
 
   /*
    * 彩虹图分区（ADR-029）。只填彩虹详情图的九个色带。
@@ -163,6 +170,7 @@
     --cat-fees: hsl(268 26% 14%);
     --cat-mining: hsl(190 30% 13%);
     --cat-valuation: hsl(48 34% 13.5%);
+    --cat-strategy: hsl(332 22% 14%);
 
     /* 暗色下的高亮绿：明度提到 55%，否则深底上那条线几乎读不出来。 */
     --highlight: hsl(150 58% 55%);
@@ -187,6 +195,10 @@
     --status-cold-ink: hsl(214 72% 74%);
     --status-void: hsl(240 5% 18%);
     --status-void-ink: hsl(240 6% 58%);
+    --status-buy: hsl(136 28% 16%);
+    --status-buy-ink: hsl(136 42% 72%);
+    --status-sell: hsl(0 40% 17%);
+    --status-sell-ink: hsl(0 70% 72%);
 
     --rainbow-1: hsl(222 36% 30%);
     --rainbow-2: hsl(204 34% 28%);
@@ -217,6 +229,7 @@
   --color-cat-fees: var(--cat-fees);
   --color-cat-mining: var(--cat-mining);
   --color-cat-valuation: var(--cat-valuation);
+  --color-cat-strategy: var(--cat-strategy);
 
   /* 高亮绿同理：组件只认 `stroke-highlight` / `text-highlight`，
      不知道背后是哪个明度的绿（CLAUDE.md §高亮绿）。 */
@@ -236,6 +249,10 @@
   --color-status-cold-ink: var(--status-cold-ink);
   --color-status-void: var(--status-void);
   --color-status-void-ink: var(--status-void-ink);
+  --color-status-buy: var(--status-buy);
+  --color-status-buy-ink: var(--status-buy-ink);
+  --color-status-sell: var(--status-sell);
+  --color-status-sell-ink: var(--status-sell-ink);
 
   /* 彩虹分区：组件只认 fill-rainbow-N / bg-rainbow-N。 */
   --color-rainbow-1: var(--rainbow-1);

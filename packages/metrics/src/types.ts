@@ -9,7 +9,7 @@
 
 // ── 基础枚举 ──────────────────────────────────────────────
 
-export const ASSETS = ['btc', 'eth', 'sol'] as const
+export const ASSETS = ['btc', 'eth', 'sol', 'mstr'] as const
 export type Asset = (typeof ASSETS)[number]
 
 /**
@@ -44,6 +44,7 @@ export const METRIC_CATEGORIES = [
   'fees',
   'mining',
   'valuation',
+  'strategy',
 ] as const
 export type MetricCategory = (typeof METRIC_CATEGORIES)[number]
 
@@ -131,7 +132,7 @@ export type MetricContract = Readonly<{
   /** 区间聚合方式 */
   aggregation: 'sum' | 'mean' | 'last' | 'none'
   /** 时间窗口径 */
-  window: 'calendar-day-utc' | 'rolling-24h' | 'block-144' | 'point'
+  window: 'calendar-day-utc' | 'rolling-24h' | 'block-144' | 'point' | 'us-equity-close'
   /**
    * 实体标注口径说明。涉及交易所 / 巨鲸 / 矿池的指标必填，
    * 且必须与 `sources[].labelConfidence` 的可信度相符。
@@ -235,6 +236,7 @@ export const LOCAL_FORMULA_IDS = [
   'sma-200w',
   'ma-2y',
   'hash-ribbons',
+  'mstr-btc-beta-90d',
 ] as const
 export type LocalFormulaId = (typeof LOCAL_FORMULA_IDS)[number]
 
@@ -251,6 +253,7 @@ export const LOCAL_FORMULA_PARENTS: Readonly<Record<LocalFormulaId, readonly str
   'sma-200w': ['price'],
   'ma-2y': ['price'],
   'hash-ribbons': ['hashrate'],
+  'mstr-btc-beta-90d': ['mstr-price', 'btc-price-us-close'],
 }
 
 export type Derivation =
@@ -279,13 +282,24 @@ export type FormatSpec =
   | { kind: 'days' }
   /** 序数分区。`3` + `of: 9` 显示成「第3/9区」。百分比变化对序数没有含义。 */
   | { kind: 'zone'; of: number }
+  /** 弹性或估值倍数。`decimals` 位小数，后缀是 ×。 */
+  | { kind: 'multiple'; decimals: number }
+  /** 每股比特币，单位是聪。 */
+  | { kind: 'sats' }
+  /** 股数。中文带「股」，避免和 BTC 枚数混在一列里。 */
+  | { kind: 'shares' }
 
 export type MetricDefinition = Readonly<{
   id: string
   asset: Asset
   category: MetricCategory
-  /** 指标名 */
+  /** 指标名。详情页标题用这个。 */
   name: Localized
+  /**
+   * 表格里的短名。省略时用 `name`。
+   * 首页一行放不下完整口径时才填，详情页仍用全名。
+   */
+  shortName?: Localized
   /** 这个数说明了什么 */
   description: Localized
   /** 计算公式本身，不是公式的名字 */
@@ -340,6 +354,17 @@ export type MetricDefinition = Readonly<{
    * 否则它会和上游直给的指标一样被标成"不做任何运算"。
    */
   computedLocally?: true
+  /**
+   * 谁来抓这个指标。省略 = 跟资产走。
+   * `strategy` 表示虽然资产可能是 btc（美股收盘时刻的 BTC），
+   * 也不进 BTC 日更循环，避免没有适配器的指标每天被标成失败。
+   */
+  ingestGroup?: 'strategy'
+  /**
+   * 允许父序列属于另一个资产。
+   * 只有明确写成跨资产统计的指标才能开，例如 MSTR 对 BTC 的 Beta。
+   */
+  crossAsset?: true
 }>
 
 // ── 发布快照 ────────────────────────────────────────────
@@ -424,6 +449,40 @@ export type DcaDistribution = Readonly<{
   max: number
 }>
 
+/**
+ * 一次计算或一次披露的附注。
+ *
+ * 序列本身只放数字。样本数、R²、披露日和持仓截止日如果塞进价值序列，
+ * 读者会把它们当成另一天的行情。所以它们跟在快照上，不跟在点上。
+ */
+export type MetricModel = Readonly<{
+  kind: 'beta' | 'disclosure'
+  version: string
+  quality?: 'ok' | 'insufficient' | 'weak' | 'unstable' | 'stale'
+  reason?: string
+  samples?: number
+  beta?: number
+  correlation?: number
+  r2?: number
+  intercept?: number
+  residualStd?: number
+  windowSessions?: number
+  asOf?: string
+  filedOn?: string
+  periodStart?: string
+  periodEnd?: string
+  accession?: string
+  deltaClass?: 'buy' | 'sell' | 'adjustment' | 'unchanged'
+  btcDelta?: number
+  quoteType?: 'close' | 'regular' | 'pre' | 'post'
+  sessionDate?: string
+  proceedsUsd?: number
+  averageUsd?: number
+  marketUsd?: number
+  holdings?: number
+  briefingUrl?: string
+}>
+
 export type MetricSnapshot = Readonly<{
   metricId: string
   asset: Asset
@@ -447,4 +506,6 @@ export type MetricSnapshot = Readonly<{
   worstCase?: DcaWorstCase
   /** 等待天数的统计分布（当前只有定投等待期） */
   distribution?: DcaDistribution
+  /** Beta 诊断或披露附注。没有这项的指标就是普通序列。 */
+  model?: MetricModel
 }>

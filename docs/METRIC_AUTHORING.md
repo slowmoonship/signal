@@ -20,8 +20,8 @@
 | 字段 | 要求 | 常见错误 |
 |---|---|---|
 | `id` | 全局唯一，小写连字符 | 与其他指标重名 |
-| `asset` | `btc` \| `eth` \| `sol` | 写死成字符串字面量而非联合类型 |
-| `category` | 六个固定分类之一 | 新造分类导致首页分组失控 |
+| `asset` | `btc` \| `eth` \| `sol` \| `mstr` | 把股票指标登记成 BTC |
+| `category` | 七个固定分类之一 | 新造分类导致首页分组失控 |
 | `name` | `{ en, zh }` 齐全 | 只写一种语言 |
 | `description` | `{ en, zh }`，回答"这个数说明了什么" | 复述指标名，毫无信息量 |
 | `methodology` | `{ en, zh }`，**计算公式本身**，不是公式的名字 | 写"见官方文档" |
@@ -50,11 +50,13 @@
 | `blocks` | 区块数 | 整数 + `blocks` |
 | `days` | 天数 | 整数 + `days` |
 
-**分类只有这六个**（`MetricCategory`）：`market`（市场）、`onchain`（链上活动）、
+**分类有七个**（`MetricCategory`）：`market`（市场）、`onchain`（链上活动）、
 `exchange`（交易所·持仓）、`fees`（费用与区块）、`mining`（矿工·安全）、
-`valuation`（估值·周期）。新增分类要同时改 `types.ts` 的联合、
+`valuation`（估值·周期）、`strategy`（Strategy 的披露与股价）。
+`strategy` 不是链上分类。新增分类要同时改 `types.ts` 的联合、
 `METRIC_CATEGORIES` 数组、`apps/web/src/lib/categories.ts` 的 `CATEGORY_TINT`
 （少改任何一处都会编译失败），并在 `globals.css` 里补一对明暗 token。
+首页只展示 `HOME_GROUPS`。新指标还要放进 `CATALOG_GROUPS`，而且只能出现一次。
 
 **换算必须在派生层做并注明。** 例如美元费用由 `PriceUSD × FeeTotNtv` 得到时，
 `methodology` 里必须写出这个乘式，不能只说"美元手续费"。

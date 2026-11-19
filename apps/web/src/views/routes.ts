@@ -14,9 +14,9 @@ import { registry, SITE_LOCALE } from '@slowmoonship/metrics'
 import { getDictionary } from '@/i18n/dictionaries'
 import { BASE_PATH } from '@/lib/base-path'
 
-/** 可生成详情页的全部指标 id。 */
-export function btcMetricParams(): { id: string }[] {
-  return registry.byAsset('btc').map((def) => ({ id: def.id }))
+/** 可生成详情页的全部指标 id。BTC 和 MSTR 都在这里，不能只生成一半。 */
+export function metricParams(): { id: string }[] {
+  return registry.all().map((def) => ({ id: def.id }))
 }
 
 /** 别名页要不要声明"不进索引"。 */
