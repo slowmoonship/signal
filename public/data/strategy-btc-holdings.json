@@ -539,7 +539,7 @@
     }
   ],
   "sourceTime": "2026-11-16T00:00:00.000Z",
-  "ingestedAt": "2026-11-19T13:49:07.068Z",
+  "ingestedAt": "2026-11-20T13:31:39.719Z",
   "stale": false,
   "sources": [
     {
@@ -574,71 +574,6 @@
     "averageUsd": 75452
   },
   "disclosures": [
-    {
-      "holdingsAsOf": "2020-08-11",
-      "filedOn": "2020-08-11",
-      "periodStart": null,
-      "periodEnd": null,
-      "btcDelta": null,
-      "flowClass": null,
-      "holdings": 21454,
-      "averageUsd": 11653,
-      "aggregateBillions": 0.25,
-      "accession": "0001193125-20-215604",
-      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312520215604/0001193125-20-215604-index.html"
-    },
-    {
-      "holdingsAsOf": "2020-09-14",
-      "filedOn": "2020-09-15",
-      "periodStart": null,
-      "periodEnd": null,
-      "btcDelta": null,
-      "flowClass": null,
-      "holdings": 38250,
-      "averageUsd": 11111,
-      "aggregateBillions": 0.425,
-      "accession": "0001193125-20-245835",
-      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312520245835/0001193125-20-245835-index.html"
-    },
-    {
-      "holdingsAsOf": "2020-12-04",
-      "filedOn": "2020-12-04",
-      "periodStart": null,
-      "periodEnd": null,
-      "btcDelta": null,
-      "flowClass": null,
-      "holdings": 40824,
-      "averageUsd": 11635,
-      "aggregateBillions": 0.475,
-      "accession": "0001193125-20-310787",
-      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312520310787/0001193125-20-310787-index.html"
-    },
-    {
-      "holdingsAsOf": "2021-01-22",
-      "filedOn": "2021-01-22",
-      "periodStart": null,
-      "periodEnd": null,
-      "btcDelta": null,
-      "flowClass": null,
-      "holdings": 70784,
-      "averageUsd": 16035,
-      "aggregateBillions": 1.135,
-      "accession": "0001193125-21-014227",
-      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312521014227/0001193125-21-014227-index.html"
-    },
-    {
-      "holdingsAsOf": "2021-02-02",
-      "filedOn": "2021-02-02",
-      "periodStart": null,
-      "periodEnd": null,
-      "btcDelta": null,
-      "flowClass": null,
-      "holdings": 71079,
-      "averageUsd": 16109,
-      "aggregateBillions": 1.145,
-      "accession": "0001193125-21-025369",
-      "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1050446/000119312521025369/0001193125-21-025369-index.html"
-    },
     {
       "holdingsAsOf": "2021-03-01",
       "filedOn": "2021-03-01",
