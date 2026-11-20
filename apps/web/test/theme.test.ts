@@ -66,12 +66,7 @@ describe('视觉红线守卫', () => {
       { re: /\brounded-(full|3xl|2xl|xl)\b/, why: '胶囊 / 大圆角' },
     ]
     for (const file of files) {
-      let src = stripComments(readFileSync(file, 'utf8'), file.endsWith('.css') ? '.css' : '.tsx')
-      // 市场状态卡片底部照片只允许这一处淡出，避免上沿切成一条硬边。
-      // 淡出层只盖住图片条，不盖标题和读数。其余渐变仍然违规。
-      if (file.endsWith('globals.css')) {
-        src = src.replace(/\.market-photo-scrim\s*\{[^}]*\}/, '')
-      }
+      const src = stripComments(readFileSync(file, 'utf8'), file.endsWith('.css') ? '.css' : '.tsx')
       for (const { re, why } of banned) {
         if (re.test(src)) offenders.push(`${file.replace(WEB_SRC, '')}: ${why}`)
       }
@@ -475,6 +470,20 @@ describe('市场状态卡片底色', () => {
         new RegExp(`--color-market-${tone}:\\s*var\\(--market-${tone}\\)`),
       )
     }
+  })
+
+  it('氛围图铺在全站底层，市场状态卡片里没有图片', () => {
+    const layout = readFileSync(join(WEB_SRC, 'app/layout.tsx'), 'utf8')
+    const hero = readFileSync(join(WEB_SRC, 'components/HeroMetric.tsx'), 'utf8')
+    expect(layout).toContain('site-backdrop')
+    expect(layout).toContain('/market/day.png')
+    expect(layout).toContain('/market/night.png')
+    expect(css).toContain('position: fixed')
+    expect(css).toContain('object-fit: cover')
+    expect(hero).not.toContain('day.png')
+    expect(hero).not.toContain('night.png')
+    expect(hero).not.toContain('ridge.svg')
+    expect(css).not.toContain('market-photo')
   })
 
   it('只有市场状态卡片用 bg-market-*——右栏表格一个都不用', () => {

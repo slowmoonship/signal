@@ -138,7 +138,7 @@ export function MetricTable({
      * 裁剪的代价：焦点环画在外侧的那一圈会被裁掉，因此窄屏下
      * 指标名列留了 4px 左边距（`pl-1 lg:pl-0`），刚好容下那圈焦点环。
      */
-    <div className="overflow-hidden border border-rule">
+    <div className="overflow-hidden border border-rule bg-surface">
       <table className="w-full border-collapse text-sm">
         <caption className="sr-only">{t.index}</caption>
         {/* 宽屏下列宽按列定义，避免长数字把判定依据挤窄后再撑开。 */}

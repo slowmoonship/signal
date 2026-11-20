@@ -95,7 +95,7 @@ export function MetricView({ id }: { readonly id: string }) {
         ← {t.backToIndex}
       </Link>
 
-      <header className="mt-6 max-w-prose">
+      <header className="mt-6 max-w-prose bg-surface px-4 py-4">
         <p className="text-xs font-medium uppercase tracking-widest text-ink-subtle">
           {t.categories[def.category]}
         </p>
@@ -128,13 +128,13 @@ export function MetricView({ id }: { readonly id: string }) {
       {result.ok && result.value.stale ? (
         /* stale 告警必须紧跟在大数值下面：新鲜度说明在页面更靠后的位置，
            而读者多半是只看那个大数字就走了。把提示留在原地才拦得住。 */
-        <p className="mt-6 border border-rule-strong px-3 py-2 text-xs text-ink-muted">
+        <p className="mt-6 border border-rule-strong bg-surface px-3 py-2 text-xs text-ink-muted">
           <span className="font-mono">{t.stale}</span> — {t.staleExplanation}
         </p>
       ) : null}
 
       {result.ok && result.value.fixture === true ? (
-        <p className="mt-6 border border-rule-strong px-3 py-2 font-mono text-xs text-ink-muted">
+        <p className="mt-6 border border-rule-strong bg-surface px-3 py-2 font-mono text-xs text-ink-muted">
           {t.fixtureBanner}
         </p>
       ) : null}
@@ -151,7 +151,7 @@ export function MetricView({ id }: { readonly id: string }) {
         <MetricChart def={def} locale={locale} points={drawable} />
       ) : null}
 
-      <div className="max-w-prose">
+      <div className="max-w-prose bg-surface px-4 pb-4">
       {reading ? (
         <Block title={t.whyThisStatus}>
           <p>{reading.basis[locale]}</p>

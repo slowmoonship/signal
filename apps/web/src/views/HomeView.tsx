@@ -80,7 +80,7 @@ export function HomeView() {
       <h1 className="text-base text-ink-muted sm:text-lg">{t.tagline}</h1>
 
       {hasFixture(data) ? (
-        <p className="mt-6 border border-rule-strong px-3 py-2 font-mono text-xs text-ink-muted">
+        <p className="mt-6 border border-rule-strong bg-surface px-3 py-2 font-mono text-xs text-ink-muted">
           {t.fixtureBanner}
         </p>
       ) : null}
@@ -91,7 +91,7 @@ export function HomeView() {
           而它其实只是上一份快照在当时的读数。
           判定用的是**数据自带的时间戳**，不是构建时间：构建时间永远是"现在"。 */}
       {outdated ? (
-        <p className="mt-6 border border-rule-strong px-3 py-2 text-xs text-ink-muted">
+        <p className="mt-6 border border-rule-strong bg-surface px-3 py-2 text-xs text-ink-muted">
           <span className="font-medium text-ink">{t.snapshotOutdated}</span>
           {' — '}
           {t.snapshotOutdatedNote}

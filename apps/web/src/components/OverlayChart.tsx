@@ -118,7 +118,7 @@ export function OverlayChart({
   ).filter((tick) => tickLabel(tick, chart, locale) !== '')
 
   return (
-    <figure className="mt-8">
+    <figure className="mt-8 bg-surface">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         role="img"

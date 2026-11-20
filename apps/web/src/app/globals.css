@@ -102,7 +102,6 @@
   /* 数据故障单独用中性暖灰，不能借震荡的蓝。 */
   --market-fault: hsl(30 8% 96%);
   --ridge: hsl(168 8% 42%);
-  --market-scrim: var(--market-range);
 
   /*
    * 状态色。首页"当前状态"列的三个色档（CLAUDE.md §视觉红线 §状态色）。
@@ -287,25 +286,49 @@
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
-/* 市场状态卡片底部的照片淡入卡片底色。只盖住图片那一条，不盖正文。 */
-[data-regime='bull'] { --market-scrim: var(--market-bull); }
-[data-regime='bear'] { --market-scrim: var(--market-bear); }
-[data-regime='range'] { --market-scrim: var(--market-range); }
-[data-regime='fault'] { --market-scrim: var(--market-fault); }
+/*
+ * 全站氛围图。固定铺满视口，滚动时不换图、不拼贴。
+ * 浅色遮罩只压一点明度，好让两侧留白仍能认出茶杯和山；
+ * 数据卡片、表格和图表各自用 --surface，不让照片透进数字。
+ */
+.site-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
 
-.market-photo-night { display: none; }
+.site-backdrop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-.market-photo-scrim {
-  background-image: linear-gradient(to bottom, var(--market-scrim), transparent 68%);
+.site-backdrop-day { object-position: center 42%; }
+.site-backdrop-night { display: none; object-position: center 36%; }
+
+.site-backdrop-veil {
+  position: absolute;
+  inset: 0;
+  background-color: rgb(255 252 248 / 0.34);
+}
+
+@media (max-width: 640px) {
+  .site-backdrop-day { object-position: 28% 72%; }
+  .site-backdrop-night { object-position: center 58%; }
 }
 
 @media (prefers-color-scheme: dark) {
-  .market-photo-day { display: none; }
-  .market-photo-night { display: block; }
+  .site-backdrop-day { display: none; }
+  .site-backdrop-night { display: block; }
+  .site-backdrop-veil { background-color: rgb(6 10 18 / 0.42); }
 }
 
 body {
-  background-color: var(--surface);
+  background-color: transparent;
   color: var(--ink);
   /* 中文没有词间空格，长数字与长链接在 320px 宽度上必须能断行，
      否则一个市值数字就能撑破布局。 */

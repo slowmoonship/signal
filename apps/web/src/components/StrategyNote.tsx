@@ -39,7 +39,7 @@ export function StrategyNote({ id, model }: { readonly id: string; readonly mode
   if (!quote && !beta && !dates && id !== 'strategy-btc-per-share' && id !== 'strategy-btc-cost' && id !== 'mstr-price') return null
 
   return (
-    <div className="mt-6 max-w-prose space-y-4 text-sm leading-relaxed text-ink-muted">
+    <div className="mt-6 max-w-prose space-y-4 bg-surface px-4 py-4 text-sm leading-relaxed text-ink-muted">
       {quote ? (
         <p>
           <span className="font-medium text-ink">{quote}</span>
@@ -179,7 +179,7 @@ function BetaNote({ model }: { readonly model: MetricModel | undefined }) {
       </p>
       <p>这是历史统计敏感度，不是固定杠杆，也不是同样的钱能买到多少倍比特币。</p>
       {demo ? (
-        <div className="border border-rule px-3 py-3">
+        <div className="border border-rule bg-surface px-3 py-3">
           <p className="font-medium text-ink">{t.betaDemoTitle}</p>
           <p className="mt-2">
             以 {formatValue(demo.notional, { kind: 'usd' }, SITE_LOCALE)} 为例。若 BTC 简单收益率是 +5%，直接持有
@@ -192,7 +192,7 @@ function BetaNote({ model }: { readonly model: MetricModel | undefined }) {
         </div>
       ) : null}
       {path ? (
-        <div className="border border-rule px-3 py-3">
+        <div className="border border-rule bg-surface px-3 py-3">
           <p className="font-medium text-ink">{t.betaPathTitle}</p>
           <p className="mt-2 font-mono text-xs">
             {path.from} 至 {path.to} · BTC {formatValue(path.btcPnl, { kind: 'usd' }, SITE_LOCALE)} · MSTR{' '}

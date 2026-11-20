@@ -37,7 +37,6 @@ import {
 } from '@slowmoonship/metrics'
 
 import { getDictionary } from '@/i18n/dictionaries'
-import { BASE_PATH } from '@/lib/base-path'
 import { formatUtcDateTime } from '@/lib/format-time'
 
 import { PriceSparkline } from './PriceSparkline'
@@ -71,7 +70,7 @@ export function HeroMetric({
   const formatted = formatValue(latest?.value ?? null, def.format, locale)
 
   return (
-    <section className="rounded-lg border border-rule p-5">
+    <section className="rounded-lg border border-rule bg-surface p-5">
       <Link href={`/metrics/${def.id}`} className="group block focus-visible:outline-offset-4">
         <p className="text-sm font-medium text-ink-muted group-hover:text-ink">{t.heroTitle}</p>
 
@@ -201,24 +200,8 @@ export function MarketRead({
   return (
     <section
       data-regime={scene}
-      className={`relative mt-4 overflow-hidden rounded-lg border border-rule p-5 pb-28 ${sceneClass}`}
+      className={`mt-4 rounded-lg border border-rule p-5 ${sceneClass}`}
     >
-      {faulted ? null : (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24" aria-hidden="true">
-          <img
-            src={`${BASE_PATH}/market/day.png`}
-            alt=""
-            className="market-photo-day h-full w-full object-cover object-bottom opacity-80"
-          />
-          <img
-            src={`${BASE_PATH}/market/night.png`}
-            alt=""
-            className="market-photo-night h-full w-full object-cover object-bottom opacity-55"
-          />
-          <div className="market-photo-scrim absolute inset-0" />
-        </div>
-      )}
-      <div className="relative">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm font-medium text-ink-muted">{t.marketRead}</p>
         {/* 状态词用等宽字体：它是这一张卡片的结论，
@@ -252,7 +235,6 @@ export function MarketRead({
       {read.status === 'unknown' && !faulted ? (
         <p className="mt-1.5 font-mono text-xs text-ink-subtle">{t.marketReadUnknown}</p>
       ) : null}
-      </div>
     </section>
   )
 }
