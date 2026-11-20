@@ -141,6 +141,15 @@ export function MetricTable({
     <div className="overflow-hidden border border-rule">
       <table className="w-full border-collapse text-sm">
         <caption className="sr-only">{t.index}</caption>
+        {/* 宽屏下列宽按列定义，避免长数字把判定依据挤窄后再撑开。 */}
+        <colgroup className="max-xl:hidden">
+          <col className="w-24" />
+          <col />
+          <col className="w-36" />
+          <col className="w-20" />
+          <col className="w-24" />
+          <col className="w-44" />
+        </colgroup>
         <thead>
           <tr className="border-b border-rule-strong">
             {/* 列在窄屏收起时表头必须跟着一起收：表头数量与列数对不上时，
@@ -162,7 +171,7 @@ export function MetricTable({
             <th scope="col" className="w-20 px-2 py-2 text-center align-middle font-medium text-ink-subtle xl:border-r xl:border-rule">
               {t.colStatus}
             </th>
-            <th scope="col" className="hidden w-28 px-2 py-2 text-center align-middle font-medium text-ink-subtle xl:table-cell">
+            <th scope="col" className="hidden w-44 px-2 py-2 text-center align-middle font-medium text-ink-subtle xl:table-cell">
               {t.colBasis}
             </th>
           </tr>

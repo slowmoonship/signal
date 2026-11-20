@@ -45,13 +45,31 @@ export type HomeGroup = Readonly<{
  */
 export const HOME_GROUPS: readonly HomeGroup[] = [
   { key: 'marketOverview', metricIds: ['price', 'drawdown-ath'] },
-  { key: 'valuationAnchors', metricIds: ['ahr999', 'rainbow-zone', 'mvrv-zscore', 'btc-realized-price'] },
-  { key: 'cycle', metricIds: ['pi-cycle-top', 'sma-200w', 'puell-multiple'] },
-  { key: 'exchangeFlows', metricIds: ['exchange-netflow'] },
+  {
+    key: 'valuationAnchors',
+    metricIds: [
+      'ahr999',
+      'rainbow-zone',
+      'mvrv',
+      'mvrv-zscore',
+      'nupl',
+      'mayer-multiple',
+      'btc-realized-price',
+      'btc-realized-premium',
+    ],
+  },
+  { key: 'cycle', metricIds: ['pi-cycle-top', 'sma-200w', 'ma-2y', 'puell-multiple'] },
+  { key: 'exchangeFlows', metricIds: ['exchange-netflow', 'exchange-balance'] },
   { key: 'onchainActivity', metricIds: ['active-addresses'] },
   {
     key: 'strategy',
-    metricIds: ['mstr-price', 'strategy-btc-holdings', 'strategy-btc-cost', 'strategy-btc-per-share'],
+    metricIds: [
+      'mstr-price',
+      'strategy-btc-holdings',
+      'strategy-btc-cost',
+      'strategy-btc-per-share',
+      'strategy-btc-unrealized',
+    ],
   },
 ]
 

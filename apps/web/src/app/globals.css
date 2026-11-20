@@ -102,6 +102,7 @@
   /* 数据故障单独用中性暖灰，不能借震荡的蓝。 */
   --market-fault: hsl(30 8% 96%);
   --ridge: hsl(168 8% 42%);
+  --market-scrim: var(--market-range);
 
   /*
    * 状态色。首页"当前状态"列的三个色档（CLAUDE.md §视觉红线 §状态色）。
@@ -284,6 +285,23 @@
     -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', 'Noto Sans SC',
     'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+/* 市场状态卡片底部的照片淡入卡片底色。只盖住图片那一条，不盖正文。 */
+[data-regime='bull'] { --market-scrim: var(--market-bull); }
+[data-regime='bear'] { --market-scrim: var(--market-bear); }
+[data-regime='range'] { --market-scrim: var(--market-range); }
+[data-regime='fault'] { --market-scrim: var(--market-fault); }
+
+.market-photo-night { display: none; }
+
+.market-photo-scrim {
+  background-image: linear-gradient(to bottom, var(--market-scrim), transparent 68%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .market-photo-day { display: none; }
+  .market-photo-night { display: block; }
 }
 
 body {

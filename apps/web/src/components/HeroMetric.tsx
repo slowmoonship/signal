@@ -201,14 +201,22 @@ export function MarketRead({
   return (
     <section
       data-regime={scene}
-      className={`relative mt-4 overflow-hidden rounded-lg border border-rule p-5 pb-16 ${sceneClass}`}
+      className={`relative mt-4 overflow-hidden rounded-lg border border-rule p-5 pb-28 ${sceneClass}`}
     >
       {faulted ? null : (
-        <img
-          src={`${BASE_PATH}/market/ridge.svg`}
-          alt=""
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 w-full"
-        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24" aria-hidden="true">
+          <img
+            src={`${BASE_PATH}/market/day.png`}
+            alt=""
+            className="market-photo-day h-full w-full object-cover object-bottom opacity-80"
+          />
+          <img
+            src={`${BASE_PATH}/market/night.png`}
+            alt=""
+            className="market-photo-night h-full w-full object-cover object-bottom opacity-55"
+          />
+          <div className="market-photo-scrim absolute inset-0" />
+        </div>
       )}
       <div className="relative">
       <div className="flex items-baseline justify-between gap-3">

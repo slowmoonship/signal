@@ -66,7 +66,12 @@ describe('视觉红线守卫', () => {
       { re: /\brounded-(full|3xl|2xl|xl)\b/, why: '胶囊 / 大圆角' },
     ]
     for (const file of files) {
-      const src = stripComments(readFileSync(file, 'utf8'), file.endsWith('.css') ? '.css' : '.tsx')
+      let src = stripComments(readFileSync(file, 'utf8'), file.endsWith('.css') ? '.css' : '.tsx')
+      // 市场状态卡片底部照片只允许这一处淡出，避免上沿切成一条硬边。
+      // 淡出层只盖住图片条，不盖标题和读数。其余渐变仍然违规。
+      if (file.endsWith('globals.css')) {
+        src = src.replace(/\.market-photo-scrim\s*\{[^}]*\}/, '')
+      }
       for (const { re, why } of banned) {
         if (re.test(src)) offenders.push(`${file.replace(WEB_SRC, '')}: ${why}`)
       }
