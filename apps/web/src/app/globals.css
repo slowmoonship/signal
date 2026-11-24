@@ -286,8 +286,49 @@
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
+/*
+ * 全站氛围图。固定铺满视口，滚动时不换图、不拼贴。
+ * 浅色遮罩只压一点明度，好让两侧留白仍能认出茶杯和山；
+ * 数据卡片、表格和图表各自用 --surface，不让照片透进数字。
+ */
+.site-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.site-backdrop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.site-backdrop-day { object-position: center 42%; }
+.site-backdrop-night { display: none; object-position: center 36%; }
+
+.site-backdrop-veil {
+  position: absolute;
+  inset: 0;
+  background-color: rgb(255 252 248 / 0.34);
+}
+
+@media (max-width: 640px) {
+  .site-backdrop-day { object-position: 28% 72%; }
+  .site-backdrop-night { object-position: center 58%; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .site-backdrop-day { display: none; }
+  .site-backdrop-night { display: block; }
+  .site-backdrop-veil { background-color: rgb(6 10 18 / 0.42); }
+}
+
 body {
-  background-color: var(--surface);
+  background-color: transparent;
   color: var(--ink);
   /* 中文没有词间空格，长数字与长链接在 320px 宽度上必须能断行，
      否则一个市值数字就能撑破布局。 */

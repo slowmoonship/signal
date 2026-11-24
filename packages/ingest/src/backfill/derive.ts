@@ -9,6 +9,7 @@
  *    与 Blockstream 的字段逐位相同（见 blocks.ts 的说明）。
  *
  * 2. `block-weight` —— 同一个链尖区块的 `weight` 字段。同一个区块，同一个口径。
+ *    `block-tx-count` 是这个区块的 `tx_count`。字段没带上时整天不产点。
  *
  * 3. `pool-concentration` —— 采样时刻往前一个月的**出块份额** HHI。
  *    每日抓取走 mempool.space 的 `/api/v1/mining/pools/1m`；
@@ -60,14 +61,33 @@ export type DeriveOptions = Readonly<{
 export type DerivedSeries = Readonly<{
   readonly difficulty: readonly SeriesPoint[]
   readonly blockWeight: readonly SeriesPoint[]
+  readonly blockTxCount: readonly SeriesPoint[]
   readonly poolConcentration: readonly SeriesPoint[]
   /** 回填覆盖的起止 UTC 日期（ISO） */
   readonly coveredFrom: string
   readonly coveredTo: string
 }>
 
+/** 每个采样日的链尖区块。选择规则与难度、权重用的是同一条。 */
+export function dailyTipBlocks(
+  blocks: readonly CachedBlock[],
+  opts: DeriveOptions,
+): CachedBlock[] {
+  const sorted = [...blocks].sort((a, b) => a.ts - b.ts)
+  const sampleOffset = opts.sampleHour * 3_600 + opts.sampleMinute * 60
+  const tips: CachedBlock[] = []
+  let tip = 0
+  for (let day = opts.fromDay; day <= opts.toDay; day += DAY_SECONDS) {
+    const sampleTs = day + sampleOffset
+    while (tip + 1 < sorted.length && (sorted[tip + 1]?.ts ?? Infinity) <= sampleTs) tip += 1
+    const tipBlock = sorted[tip]
+    if (tipBlock && tipBlock.ts <= sampleTs && tipBlock.ts > day - DAY_SECONDS) tips.push(tipBlock)
+  }
+  return tips
+}
+
 /**
- * 推出三条序列。
+ * 推出四条序列。
  *
  * 每天一个点；某一天算不出来（那天没有区块、或者矿池标注全缺）时，
  * 那一天**不产生点**——历史缺失就是缺失，不用 0 顶替（CLAUDE.md 红线 1）。
@@ -81,23 +101,25 @@ export function deriveBackfillSeries(
 
   const difficulty: SeriesPoint[] = []
   const blockWeight: SeriesPoint[] = []
+  const blockTxCount: SeriesPoint[] = []
   const poolConcentration: SeriesPoint[] = []
 
+  for (const tipBlock of dailyTipBlocks(sorted, opts)) {
+    const d = difficultyFromBits(tipBlock.bits)
+    // 难度算不出来就整天不产出难度点，但权重是另一个字段，可以单独产出
+    if (d !== null) difficulty.push({ ts: tipBlock.ts, value: d })
+    blockWeight.push({ ts: tipBlock.ts, value: tipBlock.weight })
+    const txCount = tipBlock.txCount
+    // 没有带上笔数，或笔数不是正整数，就不要用 0 去填。区块至少有一笔 coinbase。
+    if (typeof txCount === 'number' && Number.isInteger(txCount) && txCount >= 1) {
+      blockTxCount.push({ ts: tipBlock.ts, value: txCount })
+    }
+  }
+
   // 按时间排序后用双指针：窗口右端点每天前移一天，左端点同步左移。
-  let tip = 0
   let winStart = 0
   for (let day = opts.fromDay; day <= opts.toDay; day += DAY_SECONDS) {
     const sampleTs = day + sampleOffset
-
-    // 链尖区块：采样时刻之前最后一个出块
-    while (tip + 1 < sorted.length && (sorted[tip + 1]?.ts ?? Infinity) <= sampleTs) tip += 1
-    const tipBlock = sorted[tip]
-    if (tipBlock && tipBlock.ts <= sampleTs && tipBlock.ts > day - DAY_SECONDS) {
-      const d = difficultyFromBits(tipBlock.bits)
-      // 难度算不出来就整天不产出难度点，但权重是另一个字段，可以单独产出
-      if (d !== null) difficulty.push({ ts: tipBlock.ts, value: d })
-      blockWeight.push({ ts: tipBlock.ts, value: tipBlock.weight })
-    }
 
     // 矿池集中度：采样时刻往前 poolWindowDays 天的出块份额 HHI
     const windowStart = sampleTs - opts.poolWindowDays * DAY_SECONDS
@@ -127,6 +149,7 @@ export function deriveBackfillSeries(
   return {
     difficulty,
     blockWeight,
+    blockTxCount,
     poolConcentration,
     coveredFrom: new Date(opts.fromDay * 1000).toISOString().slice(0, 10),
     coveredTo: new Date(opts.toDay * 1000).toISOString().slice(0, 10),

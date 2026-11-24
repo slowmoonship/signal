@@ -199,9 +199,10 @@ async function main(): Promise<number> {
       const from = flag(rest, '--from')
       const to = flag(rest, '--to')
       if (!from || !to) {
-        console.error('用法：tsx src/cli.ts backfill:btc --from YYYY-MM-DD --to YYYY-MM-DD [--live]')
+        console.error('用法：tsx src/cli.ts backfill:btc --from YYYY-MM-DD --to YYYY-MM-DD [--live] [--only id]')
         return 1
       }
+      const only = flag(rest, '--only')
       return runBackfill({
         from,
         to,
@@ -210,6 +211,7 @@ async function main(): Promise<number> {
         live,
         delayMs: Number(flag(rest, '--delay-ms') ?? '400'),
         poolWindowDays: Number(flag(rest, '--pool-window-days') ?? '31'),
+        only: only ? only.split(',').filter((id) => id.length > 0) : null,
       })
     }
     case 'sources': {

@@ -66,13 +66,13 @@ export function CatalogBrowser({ rows }: { readonly rows: readonly CatalogRow[] 
         </p>
       </div>
 
-      <div className="mt-5 flex flex-col gap-3">
+      <div className="mt-5 flex flex-col gap-3 bg-surface px-3 py-3">
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder={t.searchPlaceholder}
           aria-label={t.searchPlaceholder}
-          className="w-full border border-rule bg-transparent px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-subtle"
+          className="w-full border border-rule bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-subtle"
         />
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm" role="group" aria-label="资产">
           <FilterButton pressed={asset === 'all'} onClick={() => setAsset('all')}>
@@ -99,7 +99,7 @@ export function CatalogBrowser({ rows }: { readonly rows: readonly CatalogRow[] 
       {visible.length === 0 ? (
         <p className="mt-8 text-sm text-ink-muted">{t.noSearchHits}</p>
       ) : (
-        <div className="mt-6 overflow-hidden border border-rule">
+        <div className="mt-6 overflow-hidden border border-rule bg-surface">
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-rule-strong">

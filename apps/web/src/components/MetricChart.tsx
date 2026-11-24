@@ -110,7 +110,7 @@ export function MetricChart({ def, locale, points }: Props) {
   const lastDate = formatUtcDay(lastTs)
 
   return (
-    <figure className="mt-2">
+    <figure className="mt-2 bg-surface">
       <svg
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         className="w-full"

@@ -25,22 +25,6 @@ const GENESIS_HISTORY = {
   mayBeRevised: false,
 } as const
 
-/**
- * 时点类指标的共用历史说明。
- *
- * 这类指标的数值来自"每日一次采样"，历史是我们自己从上线那天起累积的，
- * 上游并没有历史序列可回溯。因此 availableFrom 为 null，
- * 页面必须显式说明数据自 Signal 开始采集起才存在（METRIC_AUTHORING §历史口径）。
- */
-const selfCollected = {
-  availableFrom: null,
-  note: {
-    en: 'Sampled once per daily run: history starts on the day Signal began collecting, and grows one point per day. No earlier values exist to backfill.',
-    zh: '每日抓取时采样一次：历史从 Signal 开始采集之日起累积，每天增加一个点。更早的数值不存在，也无法补齐。',
-  },
-  mayBeRevised: false,
-} as const
-
 export const feesTotal = defineMetric({
   id: 'fees-total',
   asset: 'btc',
@@ -191,7 +175,14 @@ export const blockTxCount = defineMetric({
       labelConfidence: 'verified',
     },
   ],
-  history: { ...selfCollected },
+  history: {
+    availableFrom: '2025-10-01',
+    note: {
+      en: 'One point per day: the transaction count of the chain-tip block at sampling time, not a daily average. From 2025-10-01 the series is reconstructed from block history, using the tx_count of the same block the daily run would have sampled. Earlier history can be reconstructed the same way, but Signal does not fetch it.',
+      zh: '每天一个点，取采样时链尖区块的交易笔数，不是当日平均。2025-10-01 起的历史由区块历史重建，用的是每日采样本应取到的那个区块的 tx_count。更早的历史同样可以重建，Signal 不再往前抓取。',
+    },
+    mayBeRevised: false,
+  },
   missingPolicy: 'null',
   betterWhen: null,
 })

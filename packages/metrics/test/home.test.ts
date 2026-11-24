@@ -77,17 +77,24 @@ describe('首页白名单', () => {
       'drawdown-ath',
       'ahr999',
       'rainbow-zone',
+      'mvrv',
       'mvrv-zscore',
+      'nupl',
+      'mayer-multiple',
       'btc-realized-price',
+      'btc-realized-premium',
       'pi-cycle-top',
       'sma-200w',
+      'ma-2y',
       'puell-multiple',
       'exchange-netflow',
+      'exchange-balance',
       'active-addresses',
       'mstr-price',
       'strategy-btc-holdings',
       'strategy-btc-cost',
       'strategy-btc-per-share',
+      'strategy-btc-unrealized',
     ])
   })
 
@@ -107,6 +114,8 @@ describe('首页白名单', () => {
       'strategy-btc-cost',
       'strategy-btc-per-share',
       'btc-realized-price',
+      'btc-realized-premium',
+      'strategy-btc-unrealized',
     ])
     for (const id of HOME_METRIC_IDS) {
       if (disclosed.has(id)) {
@@ -119,8 +128,8 @@ describe('首页白名单', () => {
     }
   })
 
-  it('首页精选是 15 行，指标库覆盖全部已注册指标', () => {
-    expect(HOME_METRIC_IDS).toHaveLength(15)
+  it('首页精选是 22 行，指标库覆盖全部已注册指标', () => {
+    expect(HOME_METRIC_IDS).toHaveLength(22)
     expect(validateCatalog()).toEqual([])
     expect(CATALOG_METRIC_IDS).toHaveLength(registry.all().length)
     for (const id of HOME_METRIC_IDS) expect(CATALOG_METRIC_IDS).toContain(id)

@@ -62,6 +62,11 @@ export type CachedBlock = Readonly<{
   readonly weight: number
   /** mempool.space 的矿池标注 slug；null = 该区块没有可用标注 */
   readonly pool: string | null
+  /**
+   * 区块内交易笔数。缓存 v1 不存这个字段，所以它是可选的。
+   * 只有回填「每区块交易笔数」时才填上，缺了就整天不产点。
+   */
+  readonly txCount?: number | null
 }>
 
 /** 缓存文件格式。数组而不是对象：体积小一半，解析也快。 */
@@ -117,6 +122,7 @@ type RawBlock = {
   readonly timestamp?: unknown
   readonly bits?: unknown
   readonly weight?: unknown
+  readonly tx_count?: unknown
   readonly extras?: { readonly pool?: { readonly slug?: unknown } | null } | null
 }
 
@@ -260,6 +266,78 @@ function toCachedBlock(raw: RawBlock): CachedBlock | null {
     weight,
     pool: typeof slug === 'string' && slug.length > 0 ? slug : null,
   }
+}
+
+/**
+ * 给指定高度补上 `tx_count`。
+ *
+ * 区块缓存只留了难度和权重需要的字段。交易笔数和权重是同一个链尖区块上的
+ * 另一个字段，所以只抓每日链尖那一个高度，不把 6 万个区块重下一遍。
+ * 上游一页 15 个区块，响应里对得上高度的那一条才采用。
+ */
+export async function fetchTxCounts(
+  heights: readonly number[],
+  known: Map<number, number>,
+  ctx: FetchContext,
+  logger: Logger,
+  delayMs = 400,
+  persist?: () => void,
+): Promise<void> {
+  const missing = [...new Set(heights)].filter((h) => !known.has(h)).sort((a, b) => b - a)
+  let calls = 0
+  for (const height of missing) {
+    const url = `${BASE}${BLOCKS_PATH.replace('{height}', String(height))}`
+    const body = await fetchJson<readonly RawBlock[]>(url, ctx, {
+      provider: PROVIDER,
+      metric: 'backfill.tx-count',
+    })
+    calls += 1
+    if (!Array.isArray(body)) throw new Error(`区块响应不是数组：${url}`)
+    const raw = (body as readonly RawBlock[]).find((b) => b.height === height)
+    const count = raw?.tx_count
+    if (typeof count !== 'number' || !Number.isInteger(count) || count < 1) {
+      throw new Error(`高度 ${height} 没有可用的 tx_count，停止回填，不写发布文件`)
+    }
+    known.set(height, count)
+    if (calls % 25 === 0) {
+      persist?.()
+      logger.info(`已核对 ${calls} 个链尖区块的交易笔数`)
+    }
+    await sleep(delayMs)
+  }
+  persist?.()
+  logger.info(`交易笔数核对完成：本次请求 ${calls} 次，已知 ${known.size} 个高度`)
+}
+
+type TxCountCacheFile = {
+  readonly version: 1
+  readonly counts: readonly (readonly [number, number])[]
+}
+
+export function loadTxCountCache(path: string): Map<number, number> {
+  const out = new Map<number, number>()
+  if (!existsSync(path)) return out
+  const raw = JSON.parse(readFileSync(path, 'utf8')) as TxCountCacheFile
+  if (raw.version !== 1 || !Array.isArray(raw.counts)) {
+    throw new Error(`交易笔数缓存 ${path} 的格式不对`)
+  }
+  // 与区块缓存同一原因：Array.isArray 会把元组收成 any，这里取回声明的形状。
+  const rows = raw.counts as TxCountCacheFile['counts']
+  for (const [height, count] of rows) {
+    if (Number.isInteger(count) && count >= 1) out.set(height, count)
+  }
+  return out
+}
+
+export function saveTxCountCache(path: string, counts: ReadonlyMap<number, number>): void {
+  mkdirSync(dirname(path), { recursive: true })
+  const file = {
+    version: 1 as const,
+    counts: [...counts.entries()].sort((a, b) => a[0] - b[0]),
+  }
+  const tmp = `${path}.tmp`
+  writeFileSync(tmp, JSON.stringify(file), 'utf8')
+  renameSync(tmp, path)
 }
 
 function sleep(ms: number): Promise<void> {

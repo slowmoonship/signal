@@ -472,6 +472,20 @@ describe('市场状态卡片底色', () => {
     }
   })
 
+  it('氛围图铺在全站底层，市场状态卡片里没有图片', () => {
+    const layout = readFileSync(join(WEB_SRC, 'app/layout.tsx'), 'utf8')
+    const hero = readFileSync(join(WEB_SRC, 'components/HeroMetric.tsx'), 'utf8')
+    expect(layout).toContain('site-backdrop')
+    expect(layout).toContain('/market/day.png')
+    expect(layout).toContain('/market/night.png')
+    expect(css).toContain('position: fixed')
+    expect(css).toContain('object-fit: cover')
+    expect(hero).not.toContain('day.png')
+    expect(hero).not.toContain('night.png')
+    expect(hero).not.toContain('ridge.svg')
+    expect(css).not.toContain('market-photo')
+  })
+
   it('只有市场状态卡片用 bg-market-*——右栏表格一个都不用', () => {
     // 给每个指标都染上底色，读者会以为整张表在表达同一个判断。
     const users: string[] = []

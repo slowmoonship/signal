@@ -71,10 +71,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
      */
     <html lang="zh-CN" className={fontVariables} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        {/* 全站背景。放在内容之前、层级更低，点击会穿过它。 */}
+        <div className="site-backdrop" aria-hidden="true">
+          <img src={`${BASE_PATH}/market/day.png`} alt="" className="site-backdrop-day" />
+          <img src={`${BASE_PATH}/market/night.png`} alt="" className="site-backdrop-night" />
+          <div className="site-backdrop-veil" />
+        </div>
         {/* max-w-6xl：首页要并排放"摘要 + 5 列表格"，768px 下两栏都读不了。
             详情页自己再收窄（见 metrics/[id] 视图的 max-w-prose），
             因为散文在 1152px 上每行超过 100 个字符反而更难读。 */}
-        <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-5 sm:px-6">
+        <div className="relative z-10 mx-auto flex min-h-screen max-w-6xl flex-col px-5 sm:px-6">
           {/* 首页有十几行链接，键盘用户每翻一页都要 Tab 过它们；
               跳过链接是唯一便宜的解法——不加它就只能靠用户自己按 Tab 到吐。 */}
           <a className="skip-link" href="#content">

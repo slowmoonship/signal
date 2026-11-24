@@ -102,6 +102,7 @@ type Page = {
   locator: (sel: string) => Locator
   url: () => string
   evaluate: (expression: string) => Promise<unknown>
+  emulateMedia: (opts: { colorScheme: 'light' | 'dark' }) => Promise<void>
   mouse: { click: (x: number, y: number) => Promise<void> }
   waitForURL: (url: string, opts?: { timeout?: number }) => Promise<void>
   close: () => Promise<void>
@@ -282,7 +283,7 @@ describe.skipIf(!available)('真实浏览器：排版', () => {
       const bases = (await page.evaluate(`(() => {
         return Array.from(document.querySelectorAll('[data-basis]')).map((c) => (c.textContent || '').trim())
       })()`)) as string[]
-      expect(bases.length).toBe(15)
+      expect(bases.length).toBe(22)
       for (const text of bases) expect(text).not.toMatch(/P\d+/)
       const body = (await page.evaluate(`document.body.innerText`)) as string
       expect(body, '首页仍出现分位缩写').not.toMatch(/P\d+/)
@@ -375,6 +376,64 @@ describe.skipIf(!available)('真实浏览器：市场状态与页脚', () => {
         return section ? String(section.className) : ''
       })()`)) as string
       expect(cls).toMatch(/bg-market-(bull|bear|range)/)
+      const imgs = (await page.evaluate(`(() => {
+        const section = Array.from(document.querySelectorAll('section')).find((s) =>
+          (s.textContent || '').includes('市场状态'),
+        )
+        return section ? section.querySelectorAll('img').length : -1
+      })()`)) as number
+      expect(imgs, '市场状态卡片里不该再有图片').toBe(0)
+    } finally {
+      await browser.close()
+    }
+  }, TIMEOUT)
+
+  it('浅色用 day.png，深色用 night.png，图片铺在全站底层', async () => {
+    const browser = await launch()
+    try {
+      const page = await openHome(browser, 1440)
+      const read = `(() => {
+        const layer = document.querySelector('.site-backdrop')
+        const day = document.querySelector('.site-backdrop-day')
+        const night = document.querySelector('.site-backdrop-night')
+        const card = document.querySelector('section[data-regime]')
+        return {
+          layer: Boolean(layer),
+          fixed: layer ? getComputedStyle(layer).position : '',
+          daySrc: day ? day.getAttribute('src') : '',
+          nightSrc: night ? night.getAttribute('src') : '',
+          dayDisplay: day ? getComputedStyle(day).display : '',
+          nightDisplay: night ? getComputedStyle(night).display : '',
+          cardImgs: card ? card.querySelectorAll('img').length : -1,
+          cover: day ? getComputedStyle(day).objectFit : '',
+        }
+      })()`
+      const light = (await page.evaluate(read)) as {
+        layer: boolean
+        fixed: string
+        daySrc: string
+        nightSrc: string
+        dayDisplay: string
+        nightDisplay: string
+        cardImgs: number
+        cover: string
+      }
+      expect(light.layer).toBe(true)
+      expect(light.fixed).toBe('fixed')
+      expect(light.daySrc).toBe(`${BASE_PATH}/market/day.png`)
+      expect(light.nightSrc).toBe(`${BASE_PATH}/market/night.png`)
+      expect(light.dayDisplay).not.toBe('none')
+      expect(light.nightDisplay).toBe('none')
+      expect(light.cardImgs).toBe(0)
+      expect(light.cover).toBe('cover')
+      for (const src of [light.daySrc, light.nightSrc]) {
+        const res = await fetch(`${BASE_URL}${src}`)
+        expect(res.status, src).toBe(200)
+      }
+      await page.emulateMedia({ colorScheme: 'dark' })
+      const dark = (await page.evaluate(read)) as { dayDisplay: string; nightDisplay: string }
+      expect(dark.dayDisplay).toBe('none')
+      expect(dark.nightDisplay).not.toBe('none')
     } finally {
       await browser.close()
     }
