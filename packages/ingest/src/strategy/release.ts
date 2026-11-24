@@ -25,6 +25,39 @@ export function mergedPoints(
   return collapseToDailySamples(mergePublishedPoints(previous, fresh))
 }
 
+/**
+ * 披露明细和持仓点数同一条规则：这一轮没再解析到的旧申报要留下。
+ *
+ * SEC 列表或旧 8-K 版式偶尔解析不出持仓。若直接用本轮结果覆盖
+ * `disclosures`，点数还在，但 2024-11-17 那份 8-K 的出处会消失。
+ * 同一截止日以本轮解析到的记录为准。
+ */
+export function mergedDisclosures(previous: unknown, fresh: unknown): Record<string, unknown>[] {
+  const byAsOf = new Map<string, Record<string, unknown>>()
+  for (const row of disclosureRows(previous)) byAsOf.set(row.holdingsAsOf, row.record)
+  for (const row of disclosureRows(fresh)) byAsOf.set(row.holdingsAsOf, row.record)
+  return [...byAsOf.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map((entry) => entry[1])
+}
+
+function disclosureRows(
+  value: unknown,
+): { holdingsAsOf: string; record: Record<string, unknown> }[] {
+  if (!Array.isArray(value)) return []
+  const out: { holdingsAsOf: string; record: Record<string, unknown> }[] = []
+  for (const item of value) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) continue
+    const record = item as Record<string, unknown>
+    const holdingsAsOf = record.holdingsAsOf
+    const holdings = record.holdings
+    if (typeof holdingsAsOf !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(holdingsAsOf)) continue
+    if (typeof holdings !== 'number' || !Number.isFinite(holdings)) continue
+    out.push({ holdingsAsOf, record })
+  }
+  return out
+}
+
 export function snapshotFile(
   metricId: string,
   points: readonly SeriesPoint[],
