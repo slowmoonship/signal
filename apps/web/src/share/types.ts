@@ -1,11 +1,12 @@
 /**
- * 分享卡的数据。只有字符串和数字，好让服务端组件把它交给按钮。
+ * 分享海报的数据。只有字符串和数字，好让服务端组件把它交给按钮。
  *
  * 绘制在浏览器里发生。这里不放函数，也不放「近一年 P44」这种表格内部写法。
+ * 首页和详情页共用 1920×1080。尺寸写死，不跟窗口宽度或设备像素比走。
  */
 
-export const SHARE_WIDTH = 1200
-export const SHARE_HEIGHT = 630
+export const SHARE_WIDTH = 1920
+export const SHARE_HEIGHT = 1080
 
 export type SharePaint =
   | 'ink'
@@ -52,7 +53,24 @@ export type ShareChart = Readonly<{
   legend: readonly { label: string; paint: SharePaint }[]
 }>
 
-export type ShareStat = Readonly<{ label: string; value: string }>
+export type PosterTone = 'up' | 'down' | 'plain'
+
+/** 海报上的一个读数：名称、当前值、一句短解释。 */
+export type PosterStat = Readonly<{
+  id: string
+  name: string
+  value: string
+  note: string
+  tone: PosterTone
+}>
+
+export type PosterPanel = Readonly<{
+  id: 'market' | 'valuation' | 'cycle' | 'strategy'
+  title: string
+  blurb: string
+  columns: 2 | 3
+  items: readonly PosterStat[]
+}>
 
 export type HomeShareCard = Readonly<{
   kind: 'home'
@@ -63,9 +81,14 @@ export type HomeShareCard = Readonly<{
   regime: 'bull' | 'bear' | 'range' | 'fault'
   regimeLabel: string
   sentence: string
-  price: ShareStat
-  stats: readonly ShareStat[]
-  asOf: string
+  price: PosterStat
+  drawdown: PosterStat
+  change90: PosterStat
+  panels: readonly PosterPanel[]
+  dca: string
+  priceAsOf: string
+  strategyAsOf: string | null
+  sources: readonly string[]
 }>
 
 export type MetricShareCard = Readonly<{
@@ -82,8 +105,7 @@ export type MetricShareCard = Readonly<{
   rangeLabel: string
   chart: ShareChart | null
   emptyChart: string
+  sources: readonly string[]
 }>
 
 export type ShareCard = HomeShareCard | MetricShareCard
-
-export type ShareTheme = 'light' | 'dark'

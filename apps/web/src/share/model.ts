@@ -8,7 +8,6 @@
 
 import {
   buildDetailChart,
-  classifyRegime,
   detailChartParents,
   formatAxisTick,
   formatHashRate,
@@ -16,75 +15,29 @@ import {
   formatValue,
   latestKnown,
   logMajorTicks,
-  marketSentence,
   MISSING,
-  readMarketScenario,
-  REGIME_DATA_FAULT,
-  REGIME_LABEL,
   registry,
-  SHARE_HOME_METRIC_IDS,
   SITE_LOCALE,
   timeAxisTicks,
   type DetailChart,
-  type FeatureTable,
-  type PublishedMetric,
+  type FormatSpec,
   type SeriesPoint,
 } from '@slowmoonship/metrics'
 
-import { loadMetric, type LoadResult } from '@/data/load.js'
+import { loadMetric } from '@/data/load.js'
 import { siteRead } from '@/data/read.js'
 import { getDictionary } from '@/i18n/dictionaries.js'
-import { formatUtcDateTime, formatUtcDay } from '@/lib/format-time.js'
+import { formatUtcDay } from '@/lib/format-time.js'
 
-import type { HomeShareCard, MetricShareCard, ShareChart, SharePaint, SharePoint } from './types.js'
+import { lineageOf } from './lineage.js'
+import { posterUsd } from './poster.js'
+import type { MetricShareCard, ShareChart, SharePaint, SharePoint } from './types.js'
+
+export { buildHomeShareCard } from './poster.js'
 
 const DAY = 86_400
 /** 内部表格用的分位缩写。分享图上不出现。 */
 const PERCENTILE = /P\d+/
-
-export function buildHomeShareCard(
-  data: ReadonlyMap<string, LoadResult<PublishedMetric>>,
-  features: FeatureTable,
-): HomeShareCard {
-  const t = getDictionary()
-  const locale = SITE_LOCALE
-  const read = readMarketScenario(features)
-  const regime = classifyRegime(features)
-  const regimeKind: HomeShareCard['regime'] =
-    regime.status === 'unknown' || regime.regime === null ? 'fault' : regime.regime
-  const regimeLabel =
-    regimeKind === 'fault' ? t.marketReadFault : REGIME_LABEL[regimeKind][locale]
-  const rawSentence =
-    regimeKind === 'fault'
-      ? REGIME_DATA_FAULT[locale]
-      : marketSentence(read, features, locale)
-  const sentence =
-    publicLine(rawSentence) ??
-    (regimeKind === 'fault' ? '' : publicLine(regime.basis[locale]) ?? '')
-
-  const stats = SHARE_HOME_METRIC_IDS.map((id) => shareStat(id, data))
-  const price = stats[0] ?? { label: t.sharePrice, value: MISSING }
-  const rest = stats.slice(1)
-  const priceData = data.get('price')
-  const newest = priceData?.ok ? priceData.value.sourceTime : null
-  const asOf = newest
-    ? `价格数据截止 ${formatUtcDateTime(newest)} UTC`
-    : `${t.updatedAt} ${MISSING}`
-
-  return {
-    kind: 'home',
-    filename: 'signal-home.png',
-    shareText: `${t.siteTitle} · ${regimeLabel}`,
-    title: t.siteTitle,
-    subtitle: t.shareSubtitle,
-    regime: regimeKind,
-    regimeLabel,
-    sentence,
-    price,
-    stats: rest,
-    asOf,
-  }
-}
 
 export function buildMetricShareCard(id: string): MetricShareCard | null {
   if (!registry.has(id)) return null
@@ -94,7 +47,8 @@ export function buildMetricShareCard(id: string): MetricShareCard | null {
   const loaded = loadMetric(id)
   const points = loaded.ok ? loaded.value.points : []
   const latest = latestKnown(points)
-  const formatted = latest ? formatValue(latest.value, def.format, locale) : null
+  const raw = latest?.value
+  const formatted = typeof raw === 'number' ? shareValue(raw, def.format) : null
   const reading = siteRead().readings.get(id)
   const basis = reading ? publicLine(reading.basis[locale]) ?? '' : ''
   const status = reading ? publicLine(reading.word[locale]) ?? t.shareNoHistory : t.shareNoHistory
@@ -116,23 +70,13 @@ export function buildMetricShareCard(id: string): MetricShareCard | null {
     rangeLabel: rangeLabel(points, def.category),
     chart,
     emptyChart: t.shareNoHistory,
+    sources: lineageOf([id]),
   }
 }
 
-function shareStat(
-  id: (typeof SHARE_HOME_METRIC_IDS)[number],
-  data: ReadonlyMap<string, LoadResult<PublishedMetric>>,
-): { label: string; value: string } {
-  const t = getDictionary()
-  const locale = SITE_LOCALE
-  if (!registry.has(id)) return { label: id, value: MISSING }
-  const def = registry.get(id)
-  const loaded = data.get(id)
-  const points = loaded?.ok === true ? loaded.value.points : []
-  const latest = latestKnown(points)
-  const formatted = latest ? formatValue(latest.value, def.format, locale) : null
-  const label = id === 'price' ? t.sharePrice : id === 'dca-max-wait-days' ? '定投赚5%最长等待' : (def.shortName?.[locale] ?? def.name[locale])
-  return { label, value: formatted ?? MISSING }
+function shareValue(value: number, spec: FormatSpec): string | null {
+  if (spec.kind === 'usd') return posterUsd(value, value % 1 === 0 ? 0 : 2)
+  return formatValue(value, spec, SITE_LOCALE)
 }
 
 function publicLine(text: string): string | null {
@@ -268,7 +212,7 @@ function chartFromSeries(metricId: string, points: readonly SeriesPoint[]): Shar
   const xMin = known[0]?.ts
   const xMax = known[known.length - 1]?.ts
   if (xMin === undefined || xMax === undefined || !(xMax > xMin) || !(yMax > yMin)) return null
-  const runs = splitGap(known, gap)
+  const runs = splitShareRuns(known, gap)
     .map((run) => thin(run, 180))
     .filter((run) => run.length >= 2)
   return {
@@ -445,7 +389,8 @@ function stridePair(
   return { lower: outL, upper: outU }
 }
 
-function splitGap(
+/** 日频缺口切开之后才抽稀。抽稀拉大的间隔不是缺失，不能再拿 1.5 天去切。 */
+export function splitShareRuns(
   points: readonly { ts: number; value: number }[],
   gap: number,
 ): { ts: number; value: number }[][] {

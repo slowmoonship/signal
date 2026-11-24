@@ -1,0 +1,72 @@
+[
+  {
+    "id": "landscape",
+    "file": "/share/backgrounds/landscape.webp",
+    "title": "Lake Mountain Landscape",
+    "author": "Bonnie Moreland",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Lake_Mountain_Landscape.jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "credit": "Bonnie Moreland / CC0",
+    "fetchedAt": "2026-11-24T14:32:00Z",
+    "width": 1920,
+    "height": 1280,
+    "fallback": true
+  },
+  {
+    "id": "night",
+    "file": "/share/backgrounds/night.webp",
+    "title": "Quezon City skyline at night",
+    "author": "RFNirmala",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Quezon_City_skyline_at_night_(Quezon_Avenue,_West_Avenue,_West_Triangle)_02.jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "credit": "RFNirmala / CC0",
+    "fetchedAt": "2026-11-24T14:32:00Z",
+    "width": 1920,
+    "height": 1152,
+    "fallback": false
+  },
+  {
+    "id": "warm",
+    "file": "/share/backgrounds/warm.webp",
+    "title": "Bank of pink clouds over Gåseberg",
+    "author": "W.carter",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bank_of_pink_clouds_over_G%C3%A5seberg_3.jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "credit": "W.carter / CC0",
+    "fetchedAt": "2026-11-24T14:32:00Z",
+    "width": 1920,
+    "height": 1080,
+    "fallback": false
+  },
+  {
+    "id": "architecture",
+    "file": "/share/backgrounds/architecture.webp",
+    "title": "Modern architecture in Seevorstadt, Dresden",
+    "author": "Robert von Oliva",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:The_example_of_the_modern_architecture_in_Seevorstadt,_Dresden.jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "credit": "Robert von Oliva / CC0",
+    "fetchedAt": "2026-11-24T14:32:00Z",
+    "width": 1920,
+    "height": 1284,
+    "fallback": false
+  },
+  {
+    "id": "blue",
+    "file": "/share/backgrounds/blue.webp",
+    "title": "Saint Peter's Basilica at blue hour",
+    "author": "Jebulon",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Basilica_Sancti_Petri_blue_hour.jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "credit": "Jebulon / CC0",
+    "fetchedAt": "2026-11-24T14:32:00Z",
+    "width": 1920,
+    "height": 1367,
+    "fallback": false
+  }
+]

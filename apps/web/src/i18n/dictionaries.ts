@@ -120,6 +120,8 @@ export type Dictionary = Readonly<{
   navCatalog: string
   /** 全站只有一个分享按钮，文案就这一句 */
   share: string
+  /** 海报还在画的时候，按钮上的临时文字 */
+  shareBusy: string
   /** 分享卡副标题。比站点 tagline 短，卡片上放得下 */
   shareSubtitle: string
   /** 分享卡上的价格名。指标定义里的名字是「价格」，离开页面后不够用 */
@@ -264,6 +266,7 @@ const zh: Dictionary = {
   navOverview: '市场概览',
   navCatalog: '指标库',
   share: '分享',
+  shareBusy: '生成中…',
   shareSubtitle: '比特币市场与链上指标',
   sharePrice: 'BTC 价格',
   shareStatus: '当前状态',

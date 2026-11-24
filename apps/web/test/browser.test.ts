@@ -20,7 +20,9 @@
  * 而那段代码本来就是在浏览器里跑的，字符串反而更贴近它的运行环境。
  */
 
-import { existsSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
@@ -87,17 +89,28 @@ type Locator = {
   innerText: () => Promise<string>
   count: () => Promise<number>
   boundingBox: () => Promise<Box | null>
-  click: (opts?: { timeout?: number }) => Promise<void>
+  click: (opts?: { timeout?: number; clickCount?: number }) => Promise<void>
 }
 
 type ResponseLike = { status: () => number; url: () => string }
 
 type Download = {
   suggestedFilename: () => string
+  saveAs: (path: string) => Promise<void>
+}
+
+type ConsoleMessage = {
+  type: () => string
+  text: () => string
 }
 
 type Page = {
-  on: (event: 'response', handler: (res: ResponseLike) => void) => void
+  on: {
+    (event: 'response', handler: (res: ResponseLike) => void): void
+    (event: 'console', handler: (msg: ConsoleMessage) => void): void
+    (event: 'pageerror', handler: (err: Error) => void): void
+  }
+  route: (url: string, handler: (route: { abort: () => Promise<void> }) => unknown) => Promise<void>
   waitForEvent: (event: 'download', opts?: { timeout?: number }) => Promise<Download>
   waitForTimeout: (ms: number) => Promise<void>
   goto: (
@@ -141,6 +154,76 @@ async function openHome(browser: Browser, width = 1366): Promise<Page> {
  * 真正的跳转要等 RSC payload 回来。点完立刻读 `page.url()` 会读到旧地址，
  * 于是"点 A 却停在原页"会被误判成"链接坏了"。
  */
+function trackPage(page: Page): string[] {
+  const problems: string[] = []
+  page.on('pageerror', (err) => problems.push(String(err)))
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') problems.push(msg.text())
+  })
+  return problems
+}
+
+function pngSize(file: string): { width: number; height: number } {
+  const buf = readFileSync(file)
+  expect(buf.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a')
+  expect(buf.byteLength).toBeGreaterThan(8_000)
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+}
+
+async function saveShare(
+  page: Page,
+  selector: string,
+  filename: string,
+  dest: string,
+  click?: { clickCount?: number },
+): Promise<string> {
+  const pending = page.waitForEvent('download', { timeout: TIMEOUT })
+  await page.locator(selector).click({ timeout: TIMEOUT, ...click })
+  const download = await pending
+  expect(download.suggestedFilename()).toBe(filename)
+  await download.saveAs(dest)
+  expect(pngSize(dest)).toEqual({ width: 1920, height: 1080 })
+  return dest
+}
+
+async function stubShare(page: Page, mode: 'ok' | 'abort' | 'refuse'): Promise<void> {
+  const body =
+    mode === 'ok'
+      ? 'Promise.resolve()'
+      : mode === 'abort'
+        ? `Promise.reject(new DOMException('cancelled', 'AbortError'))`
+        : `Promise.reject(new DOMException('blocked', 'NotAllowedError'))`
+  await page.evaluate(`
+    const share = () => ${body}
+    Object.defineProperty(navigator, 'share', { configurable: true, value: share })
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => true })
+  `)
+}
+
+async function expectNoDownload(page: Page): Promise<void> {
+  let downloaded = false
+  page
+    .waitForEvent('download', { timeout: 20_000 })
+    .then(() => {
+      downloaded = true
+    })
+    .catch(() => undefined)
+  await page.locator('button[data-share-kind="home"]').click({ timeout: TIMEOUT })
+  let sawBusy = false
+  const started = Date.now()
+  while (Date.now() - started < 20_000) {
+    const busy = (await page.evaluate(
+      `document.querySelector('button[data-share-kind="home"]')?.getAttribute('aria-busy')`,
+    )) as string | null
+    if (busy === 'true') sawBusy = true
+    if (sawBusy && busy === 'false') break
+    await page.waitForTimeout(40)
+  }
+  await page.waitForTimeout(300)
+  expect(sawBusy).toBe(true)
+  expect(downloaded).toBe(false)
+}
+
 async function clickAndWait(page: Page, selector: string, expected: string): Promise<void> {
   await page.locator(selector).first().click({ timeout: TIMEOUT })
   await page.waitForURL(expected, { timeout: TIMEOUT })
@@ -642,27 +725,108 @@ describe.skipIf(!available)('真实浏览器：静态导出', () => {
     }
   }, TIMEOUT)
 
-  it('首页和 AHR999 的分享按钮各下载一张 PNG', async () => {
+  it('首页和详情分享图都是 1920×1080，背景按需加载', async () => {
     const browser = await launch()
+    const dir = process.env['SIGNAL_POSTER_DIR'] ?? mkdtempSync(join(tmpdir(), 'signal-poster-'))
+    const keep = Boolean(process.env['SIGNAL_POSTER_DIR'])
     try {
-      const home = await openHome(browser)
+      const home = await openHome(browser, 375)
+      const problems = trackPage(home)
       expect(await home.locator('button[data-share-kind]').count()).toBe(1)
       expect(await home.locator('button[data-share-kind]').innerText()).toBe('分享')
-      const homeDownload = home.waitForEvent('download', { timeout: TIMEOUT })
-      await home.locator('button[data-share-kind="home"]').click()
-      expect((await homeDownload).suggestedFilename()).toBe('signal-home.png')
+      const overflow = (await home.evaluate(
+        'document.documentElement.scrollWidth > document.documentElement.clientWidth + 1',
+      )) as boolean
+      expect(overflow).toBe(false)
+      const preloaded = (await home.evaluate(
+        `performance.getEntriesByType('resource').map((entry) => entry.name)`,
+      )) as string[]
+      expect(preloaded.filter((name) => name.includes('/share/backgrounds/') && name.endsWith('.webp'))).toEqual([])
 
-      const detail = await browser.newPage({ viewport: { width: 1366, height: 768 } })
-      await detail.goto(`${SITE}/metrics/ahr999/`, { waitUntil: 'networkidle', timeout: TIMEOUT })
-      expect(await detail.locator('button[data-share-kind]').count()).toBe(1)
-      const detailDownload = detail.waitForEvent('download', { timeout: TIMEOUT })
-      await detail.locator('button[data-share-kind="metric"]').click()
-      expect((await detailDownload).suggestedFilename()).toBe('signal-ahr999.png')
-      await detail.close()
+      const catalog = (await home.evaluate(
+        `fetch(${JSON.stringify(`${BASE_PATH}/share/backgrounds.json`)}).then((res) => res.json())`,
+      )) as { id: string; file: string }[]
+      expect(catalog.length).toBeGreaterThan(0)
+      for (const item of catalog) {
+        const status = (await home.evaluate(
+          `fetch(${JSON.stringify(`${BASE_PATH}${item.file}`)}).then((res) => res.status)`,
+        )) as number
+        expect(status, item.file).toBe(200)
+      }
+
+      await saveShare(home, 'button[data-share-kind="home"]', 'signal-home.png', join(dir, 'home-default.png'))
+      for (const id of catalog.map((item) => item.id)) {
+        await home.evaluate(`window.__signalShareBackground = ${JSON.stringify(id)}`)
+        await saveShare(home, 'button[data-share-kind="home"]', 'signal-home.png', join(dir, `home-${id}.png`))
+      }
+
+      await home.evaluate(`
+        window.__signalToBlob = 0
+        const original = HTMLCanvasElement.prototype.toBlob
+        HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+          window.__signalToBlob += 1
+          return original.call(this, callback, type, quality)
+        }
+      `)
+      await saveShare(home, 'button[data-share-kind="home"]', 'signal-home.png', join(dir, 'home-double.png'), {
+        clickCount: 2,
+      })
+      expect(await home.evaluate('window.__signalToBlob')).toBe(1)
+
+      for (const [id, file] of [
+        ['ahr999', 'signal-ahr999.png'],
+        ['rainbow-zone', 'signal-rainbow-zone.png'],
+        ['strategy-btc-cost', 'signal-strategy-btc-cost.png'],
+      ] as const) {
+        const detail = await browser.newPage({ viewport: { width: 1366, height: 768 } })
+        const detailProblems = trackPage(detail)
+        await detail.goto(`${SITE}/metrics/${id}/`, { waitUntil: 'networkidle', timeout: TIMEOUT })
+        expect(await detail.locator('button[data-share-kind]').count()).toBe(1)
+        await saveShare(detail, 'button[data-share-kind="metric"]', file, join(dir, `${id}.png`))
+        expect(detailProblems, id).toEqual([])
+        await detail.close()
+      }
+      expect(problems).toEqual([])
+    } finally {
+      await browser.close()
+      if (!keep) rmSync(dir, { recursive: true, force: true })
+    }
+  }, 180_000)
+
+  it('能分享时不下载，取消时不下载，拒绝或图片失败时仍下载', async () => {
+    const browser = await launch()
+    try {
+      const shared = await openHome(browser)
+      await stubShare(shared, 'ok')
+      await expectNoDownload(shared)
+
+      const aborted = await openHome(browser)
+      await stubShare(aborted, 'abort')
+      await expectNoDownload(aborted)
+
+      const refused = await openHome(browser)
+      await stubShare(refused, 'refuse')
+      const refusedFile = await saveShare(
+        refused,
+        'button[data-share-kind="home"]',
+        'signal-home.png',
+        join(tmpdir(), `signal-refuse-${Date.now()}.png`),
+      )
+      rmSync(refusedFile, { force: true })
+
+      const broken = await openHome(browser)
+      await broken.route('**/*share/backgrounds/*.webp', (route) => route.abort())
+      const brokenFile = await saveShare(
+        broken,
+        'button[data-share-kind="home"]',
+        'signal-home.png',
+        join(tmpdir(), `signal-broken-${Date.now()}.png`),
+      )
+      rmSync(brokenFile, { force: true })
     } finally {
       await browser.close()
     }
-  }, TIMEOUT)
+  }, 180_000)
 
   it('canonical 指向带子路径的规范地址', async () => {
     const browser = await launch()

@@ -15,6 +15,7 @@
  */
 
 import { registry } from './definitions/index.js'
+import type { FeatureId } from './market/features.js'
 
 /**
  * 首页展示分组。
@@ -83,19 +84,44 @@ export const HERO_METRIC_ID = 'dca-max-wait-days'
 export const SPARKLINE_PRICE_METRIC_ID = 'price'
 
 /**
- * 首页分享卡上的关键数字。
+ * 分享海报用到的已注册指标。
  *
- * 这不是新指标，也不改口径：只是从首页白名单里挑出一张社交卡片放得下的几项。
- * 放在这里，是为了让页面层不必再写死一份 id 列表。
- * 顺序就是卡片上的阅读顺序：价格单独放大，其余五项排成一行。
+ * 这不是新指标，也不改口径。30 日和 90 日价格变化不是独立指标，
+ * 海报读特征层已经算好的 `price.30d` / `price.90d`。
+ * `price-change-7d` 在指标库里，不在首页表格：顶部已经放了距高点和 90 日，
+ * 行情面板改放 7 日，避免同一张图上同一个数出现两次。
+ * 定投等待期是首页头条，不是表格行。
  */
 export const SHARE_HOME_METRIC_IDS = [
   'price',
   'drawdown-ath',
+  'price-change-7d',
+  'active-addresses',
   'ahr999',
+  'rainbow-zone',
+  'mvrv-zscore',
   'btc-realized-price',
-  'dca-max-wait-days',
+  'pi-cycle-top',
+  'sma-200w',
+  'puell-multiple',
+  'ma-2y',
   'strategy-btc-holdings',
+  'strategy-btc-cost',
+  'strategy-btc-per-share',
+  'dca-max-wait-days',
+] as const
+
+/** 海报上的价格窗口。值来自特征表，绘制层不再算一遍百分比。 */
+export const SHARE_POSTER_FEATURES = {
+  change30: 'price.30d',
+  change90: 'price.90d',
+} as const satisfies Record<string, FeatureId>
+
+export const SHARE_POSTER_GROUPS = [
+  { id: 'market', metricIds: ['price-change-7d', 'active-addresses'] },
+  { id: 'valuation', metricIds: ['ahr999', 'rainbow-zone', 'mvrv-zscore', 'btc-realized-price'] },
+  { id: 'cycle', metricIds: ['pi-cycle-top', 'sma-200w', 'puell-multiple', 'ma-2y'] },
+  { id: 'strategy', metricIds: ['strategy-btc-holdings', 'strategy-btc-cost', 'strategy-btc-per-share'] },
 ] as const
 
 /**
@@ -120,10 +146,17 @@ export function validateHomeWhitelist(): readonly string[] {
   }
   const shareSeen = new Set<string>()
   for (const id of SHARE_HOME_METRIC_IDS) {
-    if (!registry.has(id)) issues.push(`分享卡指标 "${id}" 没有注册`)
-    if (!seen.has(id) && id !== HERO_METRIC_ID) issues.push(`分享卡指标 "${id}" 不在首页白名单里`)
-    if (shareSeen.has(id)) issues.push(`分享卡指标 "${id}" 出现了两次`)
+    if (!registry.has(id)) issues.push(`分享海报指标 "${id}" 没有注册`)
+    if (shareSeen.has(id)) issues.push(`分享海报指标 "${id}" 出现了两次`)
     shareSeen.add(id)
+  }
+  const grouped = new Set<string>()
+  for (const group of SHARE_POSTER_GROUPS) {
+    for (const id of group.metricIds) {
+      if (!shareSeen.has(id)) issues.push(`分享海报分组 "${group.id}" 里的 "${id}" 不在海报指标清单里`)
+      if (grouped.has(id)) issues.push(`分享海报分组里的 "${id}" 出现了两次`)
+      grouped.add(id)
+    }
   }
   return issues
 }
