@@ -123,6 +123,19 @@ describe('回填派生：与日更段同口径', () => {
     expect(series.blockWeight[0]?.value).toBe(3_000_000)
     // 采样点的时间戳是区块自身的 timestamp
     expect(series.difficulty[0]?.ts).toBe(fromDay + 4.5 * 3600)
+    // 没带交易笔数时不产点，也不用 0 填
+    expect(series.blockTxCount).toHaveLength(0)
+  })
+
+  it('交易笔数取采样时刻的链尖区块，不取当天下午的块', () => {
+    const blocks = makeBlocks(fromDay, 3, () => 'foundry').map((b) => ({
+      ...b,
+      txCount: b.weight === 4_000_000 ? 99 : 10 + b.height,
+    }))
+    const series = deriveBackfillSeries(blocks, { ...OPTS, fromDay, toDay: fromDay + 2 * DAY })
+    expect(series.blockTxCount).toHaveLength(3)
+    expect(series.blockTxCount[0]?.value).toBe(10 + 900_000)
+    expect(series.blockTxCount[0]?.ts).toBe(fromDay + 4.5 * 3600)
   })
 
   it('矿池集中度按 31 天窗口的出块份额算 HHI', () => {

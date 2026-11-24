@@ -5,7 +5,7 @@
  *
  * 它做三件事：
  * 1. 抓历史区块（带本地缓存，可断点续传）；
- * 2. 由区块推出 `difficulty` / `block-weight` / `pool-concentration` 三条日频序列；
+ * 2. 由区块推出 `difficulty` / `block-weight` / `block-tx-count` / `pool-concentration`；
  * 3. 把序列**合并**进 `public/data/*.json`（不覆盖：ADR-025 的合并规则）。
  *
  * ## 与每日流水线的关系
@@ -41,13 +41,17 @@ import {
   difficultyFromBits,
   fetchBlocksUntil,
   fetchTipHeight,
+  fetchTxCounts,
   loadBlockCache,
+  loadTxCountCache,
   saveBlockCache,
+  saveTxCountCache,
   type CachedBlock,
 } from './blocks.js'
 import {
   DEFAULT_SAMPLE_UTC_HOUR,
   DEFAULT_SAMPLE_UTC_MINUTE,
+  dailyTipBlocks,
   deriveBackfillSeries,
 } from './derive.js'
 
@@ -57,8 +61,8 @@ const DAY_SECONDS = 86_400
 /** 默认缓存位置（不入库，见 .gitignore）。 */
 export const DEFAULT_CACHE_PATH = join(REPO_ROOT, 'data/backfill/blocks.json')
 
-/** 回填要写入的三个指标。 */
-export const BACKFILL_METRICS = ['difficulty', 'block-weight', 'pool-concentration'] as const
+/** 回填要写入的指标。交易笔数与权重是同一个链尖区块上的另一个字段。 */
+export const BACKFILL_METRICS = ['difficulty', 'block-weight', 'block-tx-count', 'pool-concentration'] as const
 
 export type BackfillArgs = {
   readonly from: string
@@ -68,6 +72,8 @@ export type BackfillArgs = {
   readonly live: boolean
   readonly delayMs: number
   readonly poolWindowDays: number
+  /** 只写入这些指标。空则写入全部回填指标。 */
+  readonly only: readonly string[] | null
 }
 
 /** `YYYY-MM-DD` → 该 UTC 自然日 00:00:00 的纪元秒。 */
@@ -199,7 +205,28 @@ export async function runBackfill(args: BackfillArgs): Promise<number> {
   })
 
   const blocks = [...cache.byHeight.values()]
-  const series = deriveBackfillSeries(blocks, {
+  const txCountPath = join(dirname(args.cachePath), 'tx-counts.json')
+  const txCounts = loadTxCountCache(txCountPath)
+  const tips = dailyTipBlocks(blocks, {
+    fromDay,
+    toDay,
+    sampleHour: DEFAULT_SAMPLE_UTC_HOUR,
+    sampleMinute: DEFAULT_SAMPLE_UTC_MINUTE,
+    poolWindowDays: args.poolWindowDays,
+  })
+  await fetchTxCounts(
+    tips.map((b) => b.height),
+    txCounts,
+    ctx,
+    consoleLogger,
+    args.delayMs,
+    () => saveTxCountCache(txCountPath, txCounts),
+  )
+  const withCounts: CachedBlock[] = blocks.map((b) => {
+    const count = txCounts.get(b.height)
+    return count === undefined ? b : { ...b, txCount: count }
+  })
+  const series = deriveBackfillSeries(withCounts, {
     fromDay,
     toDay,
     sampleHour: DEFAULT_SAMPLE_UTC_HOUR,
@@ -210,6 +237,7 @@ export async function runBackfill(args: BackfillArgs): Promise<number> {
   console.log(
     `推导完成：difficulty ${series.difficulty.length} 点、` +
       `block-weight ${series.blockWeight.length} 点、` +
+      `block-tx-count ${series.blockTxCount.length} 点、` +
       `pool-concentration ${series.poolConcentration.length} 点`,
   )
 
@@ -254,6 +282,17 @@ export async function runBackfill(args: BackfillArgs): Promise<number> {
       },
     ],
     [
+      'block-tx-count',
+      series.blockTxCount,
+      {
+        provider: 'mempool.space',
+        metric: 'mempool.BlockTxCount',
+        endpoint: BLOCKS_ENDPOINT,
+        auth: 'none' as const,
+        labelConfidence: 'verified' as const,
+      },
+    ],
+    [
       'pool-concentration',
       series.poolConcentration,
       {
@@ -266,6 +305,7 @@ export async function runBackfill(args: BackfillArgs): Promise<number> {
       },
     ],
   ] as const) {
+    if (args.only && !args.only.includes(metricId)) continue
     const result = mergeIntoPublished(dir, metricId, points, warnings, [backfillSource])
     console.log(
       `✓ ${metricId}: 合并后 ${result.total} 点（本次回填 ${result.added} 点）`,
