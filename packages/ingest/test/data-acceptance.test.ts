@@ -61,11 +61,15 @@ describe('发布数据的实际可用性', () => {
     expect((byDay.get('2024-11-17') ?? 0) + 55500).toBe(386700)
   })
 
-  it('最新持仓仍是 2026-11-15 的 850,849', () => {
+  it('2026-11-15 的 850,849 枚持仓还在', () => {
     const points = known(load('strategy-btc-holdings'))
+    const byDay = new Map(points.map((point) => [day(point.ts), point.value]))
+    expect(byDay.get('2026-11-15')).toBe(850849)
     const last = points.at(-1)
-    expect(last ? day(last.ts) : null).toBe('2026-11-15')
-    expect(last?.value).toBe(850849)
+    expect(last).toBeDefined()
+    if (!last) return
+    expect(day(last.ts) >= '2026-11-15').toBe(true)
+    expect(last.value).toBeGreaterThan(0)
   })
 
   it('2024-11-17 的持仓能回到那份 8-K', () => {

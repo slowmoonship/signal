@@ -2,7 +2,27 @@ import { describe, expect, it } from 'vitest'
 
 import { BETA_WINDOW } from '@slowmoonship/metrics'
 
-import { composeBetaFile } from '../src/strategy/release.js'
+import { composeBetaFile, mergedDisclosures } from '../src/strategy/release.js'
+
+describe('披露明细合并', () => {
+  it('本轮没有再解析到的旧申报仍然留下', () => {
+    const previous = [
+      {
+        holdingsAsOf: '2024-11-17',
+        holdings: 331200,
+        accession: '0001193125-24-260452',
+      },
+    ]
+    const fresh = [{ holdingsAsOf: '2026-11-22', holdings: 860000, accession: 'new' }]
+    expect(mergedDisclosures(previous, fresh)).toEqual([...previous, ...fresh])
+  })
+
+  it('同一截止日用本轮解析到的记录', () => {
+    const previous = [{ holdingsAsOf: '2026-11-22', holdings: 850849 }]
+    const fresh = [{ holdingsAsOf: '2026-11-22', holdings: 860000 }]
+    expect(mergedDisclosures(previous, fresh)).toEqual(fresh)
+  })
+})
 
 describe('Beta 发布', () => {
   it('收盘不够 90 日窗口时不写倍数', () => {

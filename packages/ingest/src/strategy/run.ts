@@ -36,7 +36,7 @@ import {
   seriesFromEvents,
   type DisclosureEvent,
 } from './filing.js'
-import { composeBetaFile, mergedPoints, snapshotFile } from './release.js'
+import { composeBetaFile, mergedDisclosures, mergedPoints, snapshotFile } from './release.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -441,7 +441,15 @@ function publishIfAny(
     logger.info(`${metricId}: dry-run，${points.length} 个点`)
     return true
   }
-  const file = { ...snapshotFile(metricId, points, sourceTime, ingestedAt, model, warnings, false), ...extra }
+  const publishedExtra = { ...extra }
+  if ('disclosures' in publishedExtra) {
+    const prior = previous as { disclosures?: unknown } | null
+    publishedExtra.disclosures = mergedDisclosures(prior?.disclosures, publishedExtra.disclosures)
+  }
+  const file = {
+    ...snapshotFile(metricId, points, sourceTime, ingestedAt, model, warnings, false),
+    ...publishedExtra,
+  }
   publishJson(dir, `${metricId}.json`, file)
   logger.info(`${metricId}: 发布 ${points.length} 个点`)
   return true
