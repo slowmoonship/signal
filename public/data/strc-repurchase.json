@@ -64,10 +64,14 @@
     {
       "ts": 1794700800,
       "value": 2282510
+    },
+    {
+      "ts": 1795305600,
+      "value": 2183747
     }
   ],
-  "sourceTime": "2026-11-16T00:00:00.000Z",
-  "ingestedAt": "2026-11-22T12:51:57.670Z",
+  "sourceTime": "2026-11-23T00:00:00.000Z",
+  "ingestedAt": "2026-11-24T04:47:13.929Z",
   "stale": false,
   "sources": [
     {
@@ -91,15 +95,15 @@
     "kind": "disclosure",
     "version": "strategy-8k-v1",
     "quality": "ok",
-    "asOf": "2026-11-15",
-    "filedOn": "2026-11-16",
-    "periodStart": "2026-11-09",
-    "periodEnd": "2026-11-15",
-    "accession": "0001193125-26-462151",
+    "asOf": "2026-11-22",
+    "filedOn": "2026-11-23",
+    "periodStart": "2026-11-16",
+    "periodEnd": "2026-11-22",
+    "accession": "0001193125-26-470961",
     "deltaClass": "buy",
-    "btcDelta": 485,
-    "holdings": 850849,
-    "averageUsd": 75452,
-    "proceedsUsd": 228100000
+    "btcDelta": 457,
+    "holdings": 851305,
+    "averageUsd": 75446,
+    "proceedsUsd": 211800000
   }
 }
