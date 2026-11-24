@@ -17,7 +17,7 @@ import {
   type PublishedMetric,
 } from '@slowmoonship/metrics'
 
-import { loadAll } from './load'
+import { loadAll } from './load.js'
 
 export type SiteRead = Readonly<{
   features: FeatureTable

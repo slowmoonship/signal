@@ -92,8 +92,13 @@ type Locator = {
 
 type ResponseLike = { status: () => number; url: () => string }
 
+type Download = {
+  suggestedFilename: () => string
+}
+
 type Page = {
   on: (event: 'response', handler: (res: ResponseLike) => void) => void
+  waitForEvent: (event: 'download', opts?: { timeout?: number }) => Promise<Download>
   waitForTimeout: (ms: number) => Promise<void>
   goto: (
     url: string,
@@ -632,6 +637,28 @@ describe.skipIf(!available)('真实浏览器：静态导出', () => {
       const body = (await page.evaluate('document.body.innerText')) as string
       expect(body).toContain('<urlset')
       expect(body).not.toContain('/en')
+    } finally {
+      await browser.close()
+    }
+  }, TIMEOUT)
+
+  it('首页和 AHR999 的分享按钮各下载一张 PNG', async () => {
+    const browser = await launch()
+    try {
+      const home = await openHome(browser)
+      expect(await home.locator('button[data-share-kind]').count()).toBe(1)
+      expect(await home.locator('button[data-share-kind]').innerText()).toBe('分享')
+      const homeDownload = home.waitForEvent('download', { timeout: TIMEOUT })
+      await home.locator('button[data-share-kind="home"]').click()
+      expect((await homeDownload).suggestedFilename()).toBe('signal-home.png')
+
+      const detail = await browser.newPage({ viewport: { width: 1366, height: 768 } })
+      await detail.goto(`${SITE}/metrics/ahr999/`, { waitUntil: 'networkidle', timeout: TIMEOUT })
+      expect(await detail.locator('button[data-share-kind]').count()).toBe(1)
+      const detailDownload = detail.waitForEvent('download', { timeout: TIMEOUT })
+      await detail.locator('button[data-share-kind="metric"]').click()
+      expect((await detailDownload).suggestedFilename()).toBe('signal-ahr999.png')
+      await detail.close()
     } finally {
       await browser.close()
     }

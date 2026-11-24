@@ -83,6 +83,22 @@ export const HERO_METRIC_ID = 'dca-max-wait-days'
 export const SPARKLINE_PRICE_METRIC_ID = 'price'
 
 /**
+ * 首页分享卡上的关键数字。
+ *
+ * 这不是新指标，也不改口径：只是从首页白名单里挑出一张社交卡片放得下的几项。
+ * 放在这里，是为了让页面层不必再写死一份 id 列表。
+ * 顺序就是卡片上的阅读顺序：价格单独放大，其余五项排成一行。
+ */
+export const SHARE_HOME_METRIC_IDS = [
+  'price',
+  'drawdown-ath',
+  'ahr999',
+  'btc-realized-price',
+  'dca-max-wait-days',
+  'strategy-btc-holdings',
+] as const
+
+/**
  * 校验白名单是否与注册表一致。
  *
  * 三个问题必须在这里问出来，而不是等页面上出现空白行：
@@ -101,6 +117,13 @@ export function validateHomeWhitelist(): readonly string[] {
   if (!registry.has(HERO_METRIC_ID)) issues.push(`头条指标 "${HERO_METRIC_ID}" 没有注册`)
   if (!registry.has(SPARKLINE_PRICE_METRIC_ID)) {
     issues.push(`走势图价格指标 "${SPARKLINE_PRICE_METRIC_ID}" 没有注册`)
+  }
+  const shareSeen = new Set<string>()
+  for (const id of SHARE_HOME_METRIC_IDS) {
+    if (!registry.has(id)) issues.push(`分享卡指标 "${id}" 没有注册`)
+    if (!seen.has(id) && id !== HERO_METRIC_ID) issues.push(`分享卡指标 "${id}" 不在首页白名单里`)
+    if (shareSeen.has(id)) issues.push(`分享卡指标 "${id}" 出现了两次`)
+    shareSeen.add(id)
   }
   return issues
 }

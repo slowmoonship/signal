@@ -33,6 +33,8 @@ import { loadAll, type LoadResult } from '@/data/load'
 import { siteRead } from '@/data/read'
 import { getDictionary } from '@/i18n/dictionaries'
 import { formatAge, formatUtcDateTime } from '@/lib/format-time'
+import { ShareButton } from '@/share/ShareButton'
+import { buildHomeShareCard } from '@/share/model'
 
 /** 首页变化列的默认窗口。与定义一致：7 天；定义可单独覆盖或关闭 */
 const CHANGE_WINDOW_DAYS = 7
@@ -77,7 +79,10 @@ export function HomeView() {
     <div>
       {/* 副标题退居其次：品牌字标（布局里的 siteTitle）才是这一屏的视觉锚点，
           这里只做一句注解，所以用小字号与弱色，不用标题级字号。 */}
-      <h1 className="text-base text-ink-muted sm:text-lg">{t.tagline}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="min-w-0 text-base text-ink-muted sm:text-lg">{t.tagline}</h1>
+        <ShareButton card={buildHomeShareCard(data, features)} label={t.share} />
+      </div>
 
       {hasFixture(data) ? (
         <p className="mt-6 border border-rule-strong bg-surface px-3 py-2 font-mono text-xs text-ink-muted">

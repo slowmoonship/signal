@@ -118,6 +118,19 @@ export type Dictionary = Readonly<{
   excludedCosts: string
   navOverview: string
   navCatalog: string
+  /** 全站只有一个分享按钮，文案就这一句 */
+  share: string
+  /** 分享卡副标题。比站点 tagline 短，卡片上放得下 */
+  shareSubtitle: string
+  /** 分享卡上的价格名。指标定义里的名字是「价格」，离开页面后不够用 */
+  sharePrice: string
+  shareStatus: string
+  shareNoHistory: string
+  shareHistory: string
+  shareDaily: string
+  /** 点与点之间隔了多日，不是日频曲线 */
+  shareSparse: string
+  shareAsOf: string
   viewAllMetrics: string
   catalogTitle: string
   catalogCount: string
@@ -250,6 +263,15 @@ const zh: Dictionary = {
   excludedCosts: '未计入手续费、滑点与税。',
   navOverview: '市场概览',
   navCatalog: '指标库',
+  share: '分享',
+  shareSubtitle: '比特币市场与链上指标',
+  sharePrice: 'BTC 价格',
+  shareStatus: '当前状态',
+  shareNoHistory: '历史不足',
+  shareHistory: '历史区间',
+  shareDaily: '日线',
+  shareSparse: '披露日',
+  shareAsOf: '截至',
   viewAllMetrics: '查看全部指标 →',
   catalogTitle: '完整指标库',
   catalogCount: '共 {n} 项',
