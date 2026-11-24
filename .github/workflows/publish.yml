@@ -39,14 +39,11 @@ permissions:
 
 jobs:
   publish:
-    name: 采集 · 校验 · 导出 · 部署
+    name: 采集 · 校验 · 导出
     runs-on: ubuntu-latest
     # 31 个指标串行抓取。本地公式排在父序列之后，同一轮用本轮库里的父数据重算。
     # 45 分钟是留给网络重试、定投回测与构建的余量，不是留给机器的。
     timeout-minutes: 45
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -174,6 +171,18 @@ jobs:
           # Next 静态导出的产物目录。里面是纯静态文件：HTML + _next 资源 + data/*.json。
           path: apps/web/out
 
+  # 部署单独成作业：upload 和 deploy 放在同一个作业里时，
+  # 产物刚上传完，deploy-pages 的列表接口会短暂返回 0 个产物
+  # （actions/deploy-pages#451）。隔一个作业再查，列表已经可见。
+  deploy:
+    name: 部署到 GitHub Pages
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: 部署到 GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
