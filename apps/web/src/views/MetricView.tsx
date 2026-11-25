@@ -47,6 +47,8 @@ import { loadMetric } from '@/data/load'
 import { siteRead } from '@/data/read'
 import { getDictionary } from '@/i18n/dictionaries'
 import { formatUtcDateTime } from '@/lib/format-time'
+import { ShareButton } from '@/share/ShareButton'
+import { buildMetricShareCard } from '@/share/model'
 
 /** 变化列的默认窗口；定义可用 changeWindowDays 覆盖，或置 null 关闭 */
 const CHANGE_WINDOW_DAYS = 7
@@ -87,6 +89,7 @@ export function MetricView({ id }: { readonly id: string }) {
           reading.basisKind,
         )
       : null
+  const share = buildMetricShareCard(def.id)
 
   return (
     // 叠加图需要比一段正文更宽。文字块自己仍收在 max-w-prose 里。
@@ -96,9 +99,12 @@ export function MetricView({ id }: { readonly id: string }) {
       </Link>
 
       <header className="mt-6 max-w-prose bg-surface px-4 py-4">
-        <p className="text-xs font-medium uppercase tracking-widest text-ink-subtle">
-          {t.categories[def.category]}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-xs font-medium uppercase tracking-widest text-ink-subtle">
+            {t.categories[def.category]}
+          </p>
+          {share ? <ShareButton card={share} label={t.share} /> : null}
+        </div>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">{def.name[locale]}</h1>
         {pill && basis ? (
           <p className="mt-3 flex items-center gap-3">
